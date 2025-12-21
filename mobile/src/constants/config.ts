@@ -1,5 +1,5 @@
 // API Configuration
-export const API_URL = 'https://aiheadshotgene.onrender.com';
+export const API_URL = 'https://aiheadshotgene-1.onrender.com';
 
 // Supabase Configuration
 export const SUPABASE_URL = 'https://pyziuothzjdijkvdryht.supabase.co';
