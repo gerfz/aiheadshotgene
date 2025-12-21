@@ -1,0 +1,22 @@
+-- Create Test Admin User
+-- Run this in your Supabase SQL Editor
+
+-- Note: You need to create the user through Supabase Auth first
+-- This script assumes the user exists in auth.users
+-- 
+-- To create the user:
+-- 1. Go to Supabase Dashboard > Authentication > Users
+-- 2. Click "Add user" > "Create new user"
+-- 3. Email: admin@admin.ee
+-- 4. Password: admin
+-- 5. Auto Confirm User: YES (check this box)
+-- 
+-- After creating the user, the trigger will automatically create their profile
+-- 
+-- If you want to give them extra credits or make them a subscriber, run:
+-- 
+-- UPDATE profiles 
+-- SET free_credits = 100,
+--     is_subscribed = true
+-- WHERE email = 'admin@admin.ee';
+
