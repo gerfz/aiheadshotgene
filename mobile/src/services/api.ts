@@ -209,12 +209,19 @@ export async function generatePortrait(
   });
   
   if (!response.ok) {
-    const error = await response.json();
-    // Check if this is a "no credits" error that requires signup
-    if (error.requiresSignup) {
-      throw { message: error.message, requiresSignup: true };
+    const text = await response.text();
+    console.error(`API Error (${response.status}):`, text);
+    try {
+      const error = JSON.parse(text);
+      // Check if this is a "no credits" error that requires signup
+      if (error.requiresSignup) {
+        throw { message: error.message, requiresSignup: true };
+      }
+      throw new Error(error.message || 'Generation failed');
+    } catch (e: any) {
+       if (e.requiresSignup) throw e;
+       throw new Error(`Server Error (${response.status}): ${text.substring(0, 100)}`);
     }
-    throw new Error(error.message || 'Generation failed');
   }
   
   return response.json();
