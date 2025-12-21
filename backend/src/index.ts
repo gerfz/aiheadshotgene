@@ -33,7 +33,7 @@ app.use('/api/generate', generateRoutes);
 app.use('/api/user', userRoutes);
 
 // 404 Handler - MUST be after all other routes
-app.use('*', (req, res) => {
+app.use((req, res) => {
   console.log(`404 Not Found: ${req.method} ${req.originalUrl}`);
   res.status(404).json({
     error: 'Route not found',
