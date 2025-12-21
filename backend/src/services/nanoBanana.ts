@@ -118,7 +118,11 @@ export async function generatePortrait(
     console.error('Unhandled output format:', output);
     throw new Error('Unexpected output format from Replicate');
   } catch (error: any) {
-    console.error('Replicate generation error:', error);
+    // Sanitize error logging to avoid leaking tokens
+    console.error('Replicate generation error:', error.message);
+    if (error.response) {
+      console.error('Replicate API Status:', error.response.status, error.response.statusText);
+    }
     throw new Error(`Image generation failed: ${error.message}`);
   }
 }
