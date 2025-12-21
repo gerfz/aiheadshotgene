@@ -28,6 +28,11 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
+// Root endpoint
+app.get('/', (req, res) => {
+  res.send('AI Portrait Studio API is running');
+});
+
 // Routes
 app.use('/api/generate', generateRoutes);
 app.use('/api/user', userRoutes);
