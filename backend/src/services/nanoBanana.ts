@@ -7,6 +7,11 @@ const replicate = new Replicate({
   auth: process.env.REPLICATE_API_TOKEN!,
 });
 
+console.log('Replicate initialized with token:', process.env.REPLICATE_API_TOKEN ? `Yes (Length: ${process.env.REPLICATE_API_TOKEN.length})` : 'No');
+if (process.env.REPLICATE_API_TOKEN && !process.env.REPLICATE_API_TOKEN.startsWith('r8_')) {
+  console.warn('WARNING: Replicate token does not start with "r8_". It might be invalid.');
+}
+
 // The Nano Banana model on Replicate
 const MODEL_ID = 'google/nano-banana';
 
