@@ -59,7 +59,6 @@
         }
       ],
       "expo-router",
-      "react-native-purchases",
       [
         "expo-media-library",
         {
