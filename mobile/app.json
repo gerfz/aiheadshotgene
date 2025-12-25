@@ -2,7 +2,7 @@
   "expo": {
     "name": "AI Portrait Studio",
     "slug": "ai-portrait-studio",
-    "version": "1.0.3",
+    "version": "1.0.4",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
@@ -26,14 +26,15 @@
         "backgroundColor": "#0F172A"
       },
       "package": "com.aiportrait.studio",
-      "versionCode": 4,
+      "versionCode": 5,
       "permissions": [
         "android.permission.READ_EXTERNAL_STORAGE",
         "android.permission.WRITE_EXTERNAL_STORAGE",
         "android.permission.CAMERA",
         "android.permission.READ_MEDIA_IMAGES",
         "android.permission.READ_MEDIA_VISUAL_USER_SELECTED",
-        "android.permission.ACCESS_MEDIA_LOCATION"
+        "android.permission.ACCESS_MEDIA_LOCATION",
+        "com.android.vending.BILLING"
       ],
       "blockedPermissions": [
         "ACCESS_FINE_LOCATION",
