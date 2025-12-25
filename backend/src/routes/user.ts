@@ -27,7 +27,8 @@ router.get(
       res.json({
         freeCredits: profile.free_credits,
         isSubscribed: profile.is_subscribed,
-        hasCredits: profile.is_subscribed || profile.free_credits > 0
+        hasCredits: profile.is_subscribed || profile.free_credits > 0,
+        emailVerified: profile.email_verified || false
       });
     } catch (error: any) {
       // If profile doesn't exist, create it
@@ -49,7 +50,8 @@ router.get(
           return res.json({
             freeCredits: data.free_credits,
             isSubscribed: data.is_subscribed,
-            hasCredits: true
+            hasCredits: true,
+            emailVerified: data.email_verified || false
           });
         } catch (insertErr: any) {
           return res.status(500).json({ error: insertErr.message });

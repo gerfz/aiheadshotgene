@@ -48,5 +48,6 @@ export interface CreditsInfo {
   freeCredits: number;
   isSubscribed: boolean;
   hasCredits: boolean;
+  emailVerified?: boolean;
 }
 

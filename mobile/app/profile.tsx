@@ -71,6 +71,19 @@ export default function ProfileScreen() {
             ) : (
               <>
                 <Text style={styles.email}>{user?.email}</Text>
+                <View style={styles.verificationContainer}>
+                  {credits?.emailVerified ? (
+                    <View style={styles.verifiedBadge}>
+                      <Text style={styles.verifiedIcon}>✓</Text>
+                      <Text style={styles.verifiedText}>Email Verified</Text>
+                    </View>
+                  ) : (
+                    <View style={styles.unverifiedBadge}>
+                      <Text style={styles.unverifiedIcon}>!</Text>
+                      <Text style={styles.unverifiedText}>Email Not Verified</Text>
+                    </View>
+                  )}
+                </View>
                 <Text style={styles.userId}>ID: {user?.id?.slice(0, 8)}...</Text>
               </>
             )}
@@ -190,6 +203,54 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#9CA3AF',
     textAlign: 'center',
+  },
+  verificationContainer: {
+    marginTop: 8,
+    marginBottom: 4,
+  },
+  verifiedBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(16, 185, 129, 0.3)',
+  },
+  verifiedIcon: {
+    color: '#10B981',
+    fontSize: 14,
+    fontWeight: 'bold',
+    marginRight: 6,
+  },
+  verifiedText: {
+    color: '#10B981',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  unverifiedBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(251, 191, 36, 0.1)',
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(251, 191, 36, 0.3)',
+  },
+  unverifiedIcon: {
+    color: '#F59E0B',
+    fontSize: 14,
+    fontWeight: 'bold',
+    marginRight: 6,
+  },
+  unverifiedText: {
+    color: '#F59E0B',
+    fontSize: 12,
+    fontWeight: '600',
   },
   guestTitle: {
     fontSize: 20,

@@ -23,6 +23,32 @@ export async function getUserProfile(userId: string) {
     .single();
   
   if (error) throw error;
+  
+  // Check if user's email is verified and award credits if needed
+  if (data && !data.credits_awarded) {
+    await checkAndAwardVerificationCredits(userId);
+    // Refetch profile to get updated credits
+    const { data: updatedData } = await supabaseAdmin
+      .from('profiles')
+      .select('*')
+      .eq('id', userId)
+      .single();
+    return updatedData || data;
+  }
+  
+  return data;
+}
+
+// Check and award credits if email is verified
+export async function checkAndAwardVerificationCredits(userId: string) {
+  const { data, error } = await supabaseAdmin.rpc('award_verification_credits', {
+    user_id: userId
+  });
+  
+  if (error) {
+    console.error('Error awarding verification credits:', error);
+  }
+  
   return data;
 }
 
