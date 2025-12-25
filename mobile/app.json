@@ -53,11 +53,13 @@
             "kotlinVersion": "2.0.21",
             "compileSdkVersion": 35,
             "targetSdkVersion": 35,
-            "minSdkVersion": 24
+            "minSdkVersion": 24,
+            "usesCleartextTraffic": false
           }
         }
       ],
       "expo-router",
+      "react-native-purchases",
       [
         "expo-media-library",
         {
