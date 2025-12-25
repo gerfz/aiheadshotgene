@@ -33,10 +33,21 @@ export default function SubscriptionScreen() {
 
   const loadOfferings = async () => {
     try {
+      console.log('🔄 Loading offerings...');
       const availablePackages = await getOfferings();
+      console.log('📦 Received packages:', availablePackages.length);
+      console.log('📦 Package details:', availablePackages.map(p => ({
+        id: p.identifier,
+        product: p.product.identifier,
+        price: p.product.priceString
+      })));
       setPackages(availablePackages);
+      
+      if (availablePackages.length === 0) {
+        console.warn('⚠️ No packages available. Check RevenueCat dashboard!');
+      }
     } catch (error) {
-      console.error('Failed to load offerings:', error);
+      console.error('❌ Failed to load offerings:', error);
       Alert.alert('Error', 'Failed to load subscription options. Please try again.');
     } finally {
       setLoading(false);
@@ -174,6 +185,9 @@ export default function SubscriptionScreen() {
   const yearlyPackage = getPackageByIdentifier(PACKAGE_IDS.ANNUAL);
   const lifetimePackage = getPackageByIdentifier(PACKAGE_IDS.LIFETIME);
 
+  // If no specific packages found, show all available packages (for preview mode)
+  const hasSpecificPackages = monthlyPackage || yearlyPackage || lifetimePackage;
+
   return (
     <>
       <Stack.Screen
@@ -200,28 +214,58 @@ export default function SubscriptionScreen() {
               <ActivityIndicator size="large" color="#6366F1" />
               <Text style={styles.loadingText}>Loading options...</Text>
             </View>
+          ) : packages.length === 0 ? (
+            <View style={styles.loadingContainer}>
+              <Text style={styles.headerTitle}>⚠️ No Packages Available</Text>
+              <Text style={styles.footerText}>
+                Please make sure:{'\n\n'}
+                1. Products are created in Google Play Console{'\n'}
+                2. Products are synced to RevenueCat{'\n'}
+                3. An offering is created and set as "Current"{'\n'}
+                4. App is installed from Play Store (not sideloaded)
+              </Text>
+              <TouchableOpacity
+                style={styles.restoreButton}
+                onPress={loadOfferings}
+              >
+                <Text style={styles.restoreButtonText}>Retry</Text>
+              </TouchableOpacity>
+            </View>
           ) : (
             <>
-              {/* Packages */}
-              {yearlyPackage && renderPackageCard(
-                yearlyPackage,
-                'Yearly',
-                'Best value - Save 33%',
-                undefined,
-                true
-              )}
+              {/* Show specific packages if available */}
+              {hasSpecificPackages ? (
+                <>
+                  {yearlyPackage && renderPackageCard(
+                    yearlyPackage,
+                    'Yearly',
+                    'Best value - Save 33%',
+                    undefined,
+                    true
+                  )}
 
-              {monthlyPackage && renderPackageCard(
-                monthlyPackage,
-                'Monthly',
-                'Cancel anytime'
-              )}
+                  {monthlyPackage && renderPackageCard(
+                    monthlyPackage,
+                    'Monthly',
+                    'Cancel anytime'
+                  )}
 
-              {lifetimePackage && renderPackageCard(
-                lifetimePackage,
-                'Lifetime',
-                'One-time payment',
-                '🔥 Limited Time'
+                  {lifetimePackage && renderPackageCard(
+                    lifetimePackage,
+                    'Lifetime',
+                    'One-time payment',
+                    '🔥 Limited Time'
+                  )}
+                </>
+              ) : (
+                /* Show all available packages (preview mode or custom setup) */
+                packages.map((pkg, index) => renderPackageCard(
+                  pkg,
+                  pkg.identifier === 'preview-package-id' ? 'Preview Plan' : pkg.identifier,
+                  index === 0 ? 'Test subscription' : 'Available plan',
+                  undefined,
+                  index === 0
+                ))
               )}
 
               {/* Restore Button */}

@@ -22,9 +22,9 @@ export const ENTITLEMENT_ID = 'pro';
 
 // Package identifiers (must match RevenueCat offering)
 export const PACKAGE_IDS = {
-  MONTHLY: 'monthly',
-  ANNUAL: 'annual',
-  LIFETIME: 'lifetime',
+  MONTHLY: '$rc_monthly',
+  ANNUAL: '$rc_annual',
+  LIFETIME: '$rc_lifetime',
 };
 
 /**
