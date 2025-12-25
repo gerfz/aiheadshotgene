@@ -9,8 +9,10 @@ import {
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
+  Image,
 } from 'react-native';
 import { router, Stack } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { signIn, signUp } from '../src/services/supabase';
 import { migrateGuestData } from '../src/services/api';
 import { getGuestId, clearGuestId } from '../src/services/guestStorage';
@@ -22,6 +24,7 @@ export default function LoginScreen() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
 
   const { setUser, setGuestId: setStoreGuestId, guestId } = useAppStore();
 
@@ -87,92 +90,126 @@ export default function LoginScreen() {
         <ScrollView
           contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
         >
           <View style={styles.header}>
-            <Text style={styles.logo}>✨</Text>
+            <View style={styles.logoContainer}>
+              <Image 
+                source={require('../assets/logo.png')} 
+                style={styles.logoImage} 
+                resizeMode="cover"
+              />
+            </View>
             <Text style={styles.title}>AI Portrait Studio</Text>
             <Text style={styles.subtitle}>
-              Transform your photos into professional headshots
+              Professional headshots in seconds
             </Text>
           </View>
 
-          <View style={styles.form}>
-            <Text style={styles.formTitle}>
-              {isLogin ? 'Welcome Back' : 'Create Account'}
-            </Text>
-            
-            {!isLogin && (
-              <Text style={styles.signupBenefit}>
-                Get 3 free portrait generations!
-              </Text>
-            )}
+          <View style={styles.formCard}>
+            <View style={styles.tabContainer}>
+              <TouchableOpacity 
+                style={[styles.tab, isLogin && styles.activeTab]} 
+                onPress={() => { setIsLogin(true); setError(''); }}
+              >
+                <Text style={[styles.tabText, isLogin && styles.activeTabText]}>Sign In</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.tab, !isLogin && styles.activeTab]} 
+                onPress={() => { setIsLogin(false); setError(''); }}
+              >
+                <Text style={[styles.tabText, !isLogin && styles.activeTabText]}>Sign Up</Text>
+              </TouchableOpacity>
+            </View>
 
-            <TextInput
-              style={styles.input}
-              placeholder="Email"
-              placeholderTextColor="#6B7280"
-              value={email}
-              onChangeText={setEmail}
-              keyboardType="email-address"
-              autoCapitalize="none"
-            />
-
-            <TextInput
-              style={styles.input}
-              placeholder="Password"
-              placeholderTextColor="#6B7280"
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry
-            />
-
-            {error ? <Text style={styles.error}>{error}</Text> : null}
-
-            <TouchableOpacity
-              style={[styles.button, loading && styles.buttonDisabled]}
-              onPress={handleSubmit}
-              disabled={loading}
-            >
-              {loading ? (
-                <ActivityIndicator color="#FFFFFF" />
-              ) : (
-                <Text style={styles.buttonText}>
-                  {isLogin ? 'Sign In' : 'Sign Up'}
-                </Text>
+            <View style={styles.formContent}>
+              {!isLogin && (
+                <View style={styles.benefitBadge}>
+                  <Ionicons name="gift-outline" size={16} color="#10B981" style={{ marginRight: 6 }} />
+                  <Text style={styles.benefitText}>Get 3 free generations!</Text>
+                </View>
               )}
-            </TouchableOpacity>
 
-            <TouchableOpacity
-              onPress={() => setIsLogin(!isLogin)}
-              style={styles.switchButton}
-            >
-              <Text style={styles.switchText}>
-                {isLogin
-                  ? "Don't have an account? Sign Up"
-                  : 'Already have an account? Sign In'}
-              </Text>
-            </TouchableOpacity>
+              <View style={styles.inputContainer}>
+                <Ionicons name="mail-outline" size={20} color="#94A3B8" style={styles.inputIcon} />
+                <TextInput
+                  style={styles.input}
+                  placeholder="Email Address"
+                  placeholderTextColor="#64748B"
+                  value={email}
+                  onChangeText={setEmail}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                />
+              </View>
+
+              <View style={styles.inputContainer}>
+                <Ionicons name="lock-closed-outline" size={20} color="#94A3B8" style={styles.inputIcon} />
+                <TextInput
+                  style={styles.input}
+                  placeholder="Password"
+                  placeholderTextColor="#64748B"
+                  value={password}
+                  onChangeText={setPassword}
+                  secureTextEntry={!showPassword}
+                />
+                <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeIcon}>
+                  <Ionicons name={showPassword ? "eye-off-outline" : "eye-outline"} size={20} color="#94A3B8" />
+                </TouchableOpacity>
+              </View>
+
+              {error ? (
+                <View style={styles.errorContainer}>
+                  <Ionicons name="alert-circle" size={16} color="#EF4444" />
+                  <Text style={styles.errorText}>{error}</Text>
+                </View>
+              ) : null}
+
+              <TouchableOpacity
+                style={[styles.button, loading && styles.buttonDisabled]}
+                onPress={handleSubmit}
+                disabled={loading}
+              >
+                {loading ? (
+                  <ActivityIndicator color="#FFFFFF" />
+                ) : (
+                  <Text style={styles.buttonText}>
+                    {isLogin ? 'Welcome Back' : 'Create Account'}
+                  </Text>
+                )}
+              </TouchableOpacity>
+            </View>
           </View>
 
           <TouchableOpacity 
             onPress={handleContinueAsGuest}
             style={styles.guestButton}
+            activeOpacity={0.7}
           >
-            <Text style={styles.guestButtonText}>Continue without account</Text>
+            <Text style={styles.guestButtonText}>Try as Guest</Text>
+            <Ionicons name="arrow-forward" size={16} color="#94A3B8" style={{ marginLeft: 4 }} />
           </TouchableOpacity>
 
-          <View style={styles.features}>
-            <View style={styles.feature}>
-              <Text style={styles.featureIcon}>📸</Text>
-              <Text style={styles.featureText}>Upload any photo</Text>
+          <View style={styles.footerFeatures}>
+            <View style={styles.featureItem}>
+              <View style={styles.featureIconBg}>
+                <Ionicons name="camera-outline" size={20} color="#6366F1" />
+              </View>
+              <Text style={styles.featureLabel}>Upload Photo</Text>
             </View>
-            <View style={styles.feature}>
-              <Text style={styles.featureIcon}>🎨</Text>
-              <Text style={styles.featureText}>Choose your style</Text>
+            <View style={styles.divider} />
+            <View style={styles.featureItem}>
+              <View style={styles.featureIconBg}>
+                <Ionicons name="color-wand-outline" size={20} color="#EC4899" />
+              </View>
+              <Text style={styles.featureLabel}>Choose Style</Text>
             </View>
-            <View style={styles.feature}>
-              <Text style={styles.featureIcon}>⚡</Text>
-              <Text style={styles.featureText}>AI transforms it</Text>
+            <View style={styles.divider} />
+            <View style={styles.featureItem}>
+              <View style={styles.featureIconBg}>
+                <Ionicons name="flash-outline" size={20} color="#F59E0B" />
+              </View>
+              <Text style={styles.featureLabel}>AI Magic</Text>
             </View>
           </View>
         </ScrollView>
@@ -193,55 +230,131 @@ const styles = StyleSheet.create({
   },
   header: {
     alignItems: 'center',
-    marginBottom: 40,
+    marginBottom: 32,
   },
-  logo: {
-    fontSize: 64,
-    marginBottom: 16,
+  logoContainer: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: 'transparent',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 20,
+    borderWidth: 0,
+    overflow: 'hidden', // Ensures logo stays inside circle
+  },
+  logoImage: {
+    width: '100%',
+    height: '100%',
   },
   title: {
     fontSize: 28,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
+    fontWeight: '700',
+    color: '#F8FAFC',
     marginBottom: 8,
+    letterSpacing: -0.5,
   },
   subtitle: {
     fontSize: 16,
-    color: '#9CA3AF',
+    color: '#94A3B8',
     textAlign: 'center',
   },
-  form: {
+  formCard: {
     backgroundColor: '#1E293B',
-    borderRadius: 24,
-    padding: 24,
-    marginBottom: 16,
+    borderRadius: 20,
+    overflow: 'hidden',
+    marginBottom: 24,
+    borderWidth: 1,
+    borderColor: '#334155',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 4.65,
+    elevation: 8,
   },
-  formTitle: {
-    fontSize: 22,
+  tabContainer: {
+    flexDirection: 'row',
+    borderBottomWidth: 1,
+    borderBottomColor: '#334155',
+  },
+  tab: {
+    flex: 1,
+    paddingVertical: 16,
+    alignItems: 'center',
+    backgroundColor: 'rgba(15, 23, 42, 0.3)',
+  },
+  activeTab: {
+    backgroundColor: '#1E293B',
+    borderBottomWidth: 2,
+    borderBottomColor: '#6366F1',
+  },
+  tabText: {
+    fontSize: 15,
     fontWeight: '600',
-    color: '#FFFFFF',
-    marginBottom: 8,
-    textAlign: 'center',
+    color: '#64748B',
   },
-  signupBenefit: {
-    fontSize: 14,
-    color: '#10B981',
-    textAlign: 'center',
+  activeTabText: {
+    color: '#FFFFFF',
+  },
+  formContent: {
+    padding: 24,
+  },
+  benefitBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
     marginBottom: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(16, 185, 129, 0.2)',
+  },
+  benefitText: {
+    color: '#10B981',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  inputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#0F172A',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#334155',
+    marginBottom: 16,
+    height: 56,
+  },
+  inputIcon: {
+    marginLeft: 16,
+    marginRight: 12,
   },
   input: {
-    backgroundColor: '#334155',
-    borderRadius: 12,
-    padding: 16,
-    fontSize: 16,
+    flex: 1,
     color: '#FFFFFF',
+    fontSize: 16,
+    height: '100%',
+  },
+  eyeIcon: {
+    padding: 12,
+  },
+  errorContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+    padding: 12,
+    borderRadius: 8,
     marginBottom: 16,
   },
-  error: {
+  errorText: {
     color: '#EF4444',
-    fontSize: 14,
-    marginBottom: 16,
-    textAlign: 'center',
+    fontSize: 13,
+    marginLeft: 8,
+    flex: 1,
   },
   button: {
     backgroundColor: '#6366F1',
@@ -249,46 +362,68 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: 'center',
     marginTop: 8,
+    shadowColor: '#6366F1',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
   buttonDisabled: {
-    opacity: 0.5,
+    opacity: 0.7,
+    backgroundColor: '#4F46E5',
   },
   buttonText: {
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
-  },
-  switchButton: {
-    marginTop: 20,
-    alignItems: 'center',
-  },
-  switchText: {
-    color: '#6366F1',
-    fontSize: 14,
+    letterSpacing: 0.5,
   },
   guestButton: {
+    flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 16,
-    marginBottom: 24,
+    justifyContent: 'center',
+    paddingVertical: 12,
+    marginBottom: 40,
   },
   guestButtonText: {
-    color: '#9CA3AF',
-    fontSize: 14,
+    color: '#94A3B8',
+    fontSize: 15,
+    fontWeight: '500',
   },
-  features: {
+  footerFeatures: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
-  },
-  feature: {
+    justifyContent: 'space-between',
     alignItems: 'center',
+    paddingTop: 24,
+    borderTopWidth: 1,
+    borderTopColor: '#1E293B',
   },
-  featureIcon: {
-    fontSize: 32,
+  featureItem: {
+    alignItems: 'center',
+    flex: 1,
+  },
+  featureIconBg: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#1E293B',
+    alignItems: 'center',
+    justifyContent: 'center',
     marginBottom: 8,
+    borderWidth: 1,
+    borderColor: '#334155',
   },
-  featureText: {
-    color: '#9CA3AF',
+  featureLabel: {
+    color: '#94A3B8',
     fontSize: 12,
-    textAlign: 'center',
+    fontWeight: '500',
+  },
+  divider: {
+    width: 1,
+    height: 30,
+    backgroundColor: '#1E293B',
   },
 });

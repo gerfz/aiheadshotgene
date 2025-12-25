@@ -98,24 +98,18 @@ export default function HomeScreen() {
           }
         >
           <View style={styles.header}>
-            <View>
-              {isGuest ? (
-                <Text style={styles.guestText}>Logged in as guest</Text>
-              ) : (
-                <>
-                  <Text style={styles.greeting}>Welcome back,</Text>
-                  <Text style={styles.email}>{user?.email}</Text>
-                </>
-              )}
-            </View>
             {isGuest ? (
-              <TouchableOpacity onPress={() => router.push('/login')} style={styles.loginButton}>
-                <Text style={styles.loginButtonText}>Log In</Text>
-              </TouchableOpacity>
+              <>
+                <Text style={styles.guestText}>Logged in as guest</Text>
+                <TouchableOpacity onPress={() => router.push('/login')} style={styles.loginButton}>
+                  <Text style={styles.loginButtonText}>Log In</Text>
+                </TouchableOpacity>
+              </>
             ) : (
-              <TouchableOpacity onPress={handleLogout} style={styles.logoutButton}>
-                <Text style={styles.logoutText}>Logout</Text>
-              </TouchableOpacity>
+              <View>
+                <Text style={styles.greeting}>Welcome back,</Text>
+                <Text style={styles.email}>{user?.email}</Text>
+              </View>
             )}
           </View>
 
