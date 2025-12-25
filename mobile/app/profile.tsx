@@ -11,12 +11,14 @@ import {
 import { router, Stack, useFocusEffect } from 'expo-router';
 import { useAppStore } from '../src/store/useAppStore';
 import { signOut } from '../src/services/supabase';
-import { CreditsDisplay, BottomNav } from '../src/components';
+import { CreditsDisplay, BottomNav, Toast } from '../src/components';
 import { getCredits, getGenerations } from '../src/services/api';
 
 export default function ProfileScreen() {
   const { user, isGuest, credits, generations, setUser } = useAppStore();
   const [refreshing, setRefreshing] = useState(false);
+  const [showCreditsToast, setShowCreditsToast] = useState(false);
+  const [previousCredits, setPreviousCredits] = useState<number | null>(null);
 
   // Refresh credits and generations
   const refreshData = async () => {
@@ -24,11 +26,21 @@ export default function ProfileScreen() {
     
     setRefreshing(true);
     try {
+      // Store previous credits before refresh
+      const oldCredits = credits?.freeCredits || 0;
+      
       // Force refresh from backend
       const [creditsData, generationsData] = await Promise.all([
         getCredits(),
         getGenerations()
       ]);
+      
+      // Check if credits increased (email verification)
+      const newCredits = creditsData.freeCredits || 0;
+      if (newCredits > oldCredits && creditsData.emailVerified && !credits?.emailVerified) {
+        // Email was just verified and credits were awarded
+        setShowCreditsToast(true);
+      }
       
       // Update store with fresh data
       useAppStore.setState({ 
@@ -86,6 +98,13 @@ export default function ProfileScreen() {
         options={{ 
           headerShown: false,
         }} 
+      />
+      <Toast
+        message="🎉 3 Free Credits Added!"
+        visible={showCreditsToast}
+        onHide={() => setShowCreditsToast(false)}
+        duration={2000}
+        icon="gift"
       />
       <View style={styles.container}>
         <ScrollView 

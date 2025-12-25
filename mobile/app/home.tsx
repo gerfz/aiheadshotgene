@@ -53,6 +53,13 @@ export default function HomeScreen() {
     loadData();
   }, []);
 
+  // Reload data when user changes (e.g., after login/migration)
+  useEffect(() => {
+    if (!isGuest && user) {
+      loadData();
+    }
+  }, [user?.id, isGuest]);
+
   const onRefresh = async () => {
     setRefreshing(true);
     await loadData();

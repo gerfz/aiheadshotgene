@@ -8,10 +8,12 @@ import { initializePurchases, loginUser } from '../src/services/purchases';
 import { getOrCreateGuestId } from '../src/services/guestStorage';
 import { getCredits } from '../src/services/api';
 import { ErrorBoundary } from '../src/components/ErrorBoundary';
+import { Toast } from '../src/components';
 
 export default function RootLayout() {
   const { setUser, setGuestId, setIsLoading } = useAppStore();
   const [initializing, setInitializing] = useState(true);
+  const [showVerificationToast, setShowVerificationToast] = useState(false);
 
   useEffect(() => {
     const initApp = async () => {
@@ -69,11 +71,20 @@ export default function RootLayout() {
           try {
             await loginUser(session.user.id);
             
+            // Get previous verification status
+            const previousCredits = useAppStore.getState().credits;
+            const wasVerified = previousCredits?.emailVerified || false;
+            
             // Refresh credits to get latest verification status
             // This is especially important after email verification
             const creditsData = await getCredits();
             useAppStore.setState({ credits: creditsData });
             console.log('Credits refreshed after auth change:', creditsData);
+            
+            // Show toast if email was just verified
+            if (!wasVerified && creditsData.emailVerified) {
+              setShowVerificationToast(true);
+            }
           } catch (error) {
             console.error('Error during auth state change:', error);
           }
@@ -109,6 +120,13 @@ export default function RootLayout() {
   return (
     <ErrorBoundary>
       <StatusBar style="light" />
+      <Toast
+        message="🎉 3 Free Credits Added!"
+        visible={showVerificationToast}
+        onHide={() => setShowVerificationToast(false)}
+        duration={2000}
+        icon="gift"
+      />
       <Stack
         screenOptions={{
           headerStyle: { backgroundColor: '#0F172A' },
