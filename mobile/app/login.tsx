@@ -43,22 +43,23 @@ export default function LoginScreen() {
         // Sign in
         const { user } = await signIn(email, password);
         if (user) {
-          setUser({ id: user.id, email: user.email! });
+          // Clear guest state when signing in
+          await clearGuestId();
           setStoreGuestId(null);
+          
+          // Set authenticated user
+          setUser({ id: user.id, email: user.email! });
           router.replace('/home');
         }
       } else {
         // Sign up - includes migration of guest data
         const { user } = await signUp(email, password);
         if (user) {
-          setUser({ id: user.id, email: user.email! });
-          
-          // Migrate guest data if exists
+          // Migrate guest data if exists BEFORE setting user
           const currentGuestId = guestId || await getGuestId();
           if (currentGuestId) {
             try {
               await migrateGuestData(currentGuestId);
-              await clearGuestId();
               console.log('Guest data migrated successfully');
             } catch (migrationError) {
               // Migration is optional - don't block signup
@@ -66,7 +67,13 @@ export default function LoginScreen() {
             }
           }
           
+          // Clear guest state completely
+          await clearGuestId();
           setStoreGuestId(null);
+          
+          // Now set the authenticated user
+          setUser({ id: user.id, email: user.email! });
+          
           router.replace('/home');
         }
       }
