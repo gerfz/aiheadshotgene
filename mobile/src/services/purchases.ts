@@ -117,8 +117,14 @@ export async function getOfferings(): Promise<PurchasesPackage[]> {
  */
 export async function purchasePackage(pkg: PurchasesPackage): Promise<CustomerInfo | null> {
   try {
+    console.log('🛒 Attempting purchase:', pkg.identifier);
     const { customerInfo } = await Purchases.purchasePackage(pkg);
-    console.log('✅ Purchase successful');
+    
+    console.log('✅ Purchase successful!');
+    console.log('📦 Purchased products:', customerInfo.allPurchasedProductIdentifiers);
+    console.log('🎫 Active entitlements:', Object.keys(customerInfo.entitlements.active));
+    console.log('📱 Active subscriptions:', customerInfo.activeSubscriptions);
+    
     return customerInfo;
   } catch (error: any) {
     if (error.userCancelled) {
@@ -136,9 +142,24 @@ export async function purchasePackage(pkg: PurchasesPackage): Promise<CustomerIn
 export async function checkProStatus(): Promise<boolean> {
   try {
     const customerInfo = await Purchases.getCustomerInfo();
+    
+    // Log full customer info for debugging
+    console.log('📊 Customer Info:', {
+      entitlements: Object.keys(customerInfo.entitlements.active),
+      allPurchases: customerInfo.allPurchasedProductIdentifiers,
+      activeSubscriptions: customerInfo.activeSubscriptions,
+    });
+    
+    // Check if user has the 'pro' entitlement
     const hasProAccess = customerInfo.entitlements.active[ENTITLEMENT_ID] !== undefined;
-    console.log('Pro status:', hasProAccess);
-    return hasProAccess;
+    
+    // Also check if user has any active subscriptions (for sandbox testing)
+    const hasAnySubscription = customerInfo.activeSubscriptions.length > 0;
+    
+    const isPro = hasProAccess || hasAnySubscription;
+    console.log('Pro status:', isPro, '(Entitlement:', hasProAccess, ', Active subs:', hasAnySubscription, ')');
+    
+    return isPro;
   } catch (error) {
     console.error('❌ Failed to check pro status:', error);
     return false;
