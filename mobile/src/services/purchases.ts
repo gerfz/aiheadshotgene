@@ -8,6 +8,7 @@ import { Platform } from 'react-native';
 
 // RevenueCat API Keys
 const REVENUECAT_API_KEY = 'goog_pRdUmhCVrwRHxsVlgpxTHlaZKHi';
+const REVENUECAT_APP_USER_ID = 'app34a2bf623c'; // Your RevenueCat app ID
 
 // Product identifiers (must match Google Play Console)
 export const PRODUCT_IDS = {
@@ -84,12 +85,26 @@ export async function getOfferings(): Promise<PurchasesPackage[]> {
   try {
     const offerings: PurchasesOfferings = await Purchases.getOfferings();
     
+    console.log('📦 RevenueCat Offerings Response:', {
+      current: offerings.current?.identifier,
+      all: Object.keys(offerings.all),
+      packagesCount: offerings.current?.availablePackages.length || 0
+    });
+    
     if (offerings.current && offerings.current.availablePackages.length > 0) {
-      console.log('✅ Available packages:', offerings.current.availablePackages.length);
+      console.log('✅ Available packages:', offerings.current.availablePackages.map(p => ({
+        identifier: p.identifier,
+        product: p.product.identifier,
+        price: p.product.priceString
+      })));
       return offerings.current.availablePackages;
     }
     
-    console.warn('⚠️ No offerings available');
+    console.warn('⚠️ No offerings available. Make sure you:');
+    console.warn('1. Created products in Google Play Console');
+    console.warn('2. Synced products to RevenueCat');
+    console.warn('3. Created an offering in RevenueCat dashboard');
+    console.warn('4. Set the offering as "Current"');
     return [];
   } catch (error) {
     console.error('❌ Failed to get offerings:', error);

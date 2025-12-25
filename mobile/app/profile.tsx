@@ -60,7 +60,19 @@ export default function ProfileScreen() {
   useFocusEffect(
     React.useCallback(() => {
       refreshData();
-    }, [isGuest])
+      
+      // Poll for verification status every 5 seconds if not verified
+      let interval: NodeJS.Timeout | null = null;
+      if (!isGuest && credits && !credits.emailVerified) {
+        interval = setInterval(() => {
+          refreshData();
+        }, 5000); // Check every 5 seconds
+      }
+      
+      return () => {
+        if (interval) clearInterval(interval);
+      };
+    }, [isGuest, credits?.emailVerified])
   );
 
   const handleLogout = async () => {
