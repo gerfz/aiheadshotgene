@@ -40,7 +40,9 @@ router.get(
               id: req.userId,
               email: req.userEmail,
               free_credits: 3,
-              is_subscribed: false
+              is_subscribed: false,
+              email_verified: true,
+              credits_awarded: true
             })
             .select()
             .single();
