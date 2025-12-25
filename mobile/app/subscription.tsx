@@ -19,6 +19,8 @@ import {
 } from '../src/services/purchases';
 import type { PurchasesPackage } from 'react-native-purchases';
 import { useAppStore } from '../src/store/useAppStore';
+import { supabase } from '../src/services/supabase';
+import { API_URL } from '../src/constants/config';
 
 export default function SubscriptionScreen() {
   const [packages, setPackages] = useState<PurchasesPackage[]>([]);
@@ -62,6 +64,24 @@ export default function SubscriptionScreen() {
       const customerInfo = await purchasePackage(pkg);
       
       if (customerInfo) {
+        // Update subscription status in backend
+        try {
+          const response = await fetch(`${API_URL}/api/user/subscription`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
+            },
+            body: JSON.stringify({ isSubscribed: true }),
+          });
+          
+          if (response.ok) {
+            console.log('✅ Subscription status updated in database');
+          }
+        } catch (updateError) {
+          console.error('Failed to update subscription status:', updateError);
+        }
+        
         Alert.alert(
           '🎉 Success!',
           'You now have unlimited AI portrait generations!',

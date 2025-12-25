@@ -173,9 +173,22 @@ export default function ProfileScreen() {
             <Text style={styles.cardTitle}>
               {isGuest ? 'Free Credits' : 'Subscription'}
             </Text>
-            <View style={styles.creditsWrapper}>
-              <CreditsDisplay credits={credits} />
-            </View>
+            
+            {/* Subscription Status */}
+            {!isGuest && credits?.isSubscribed && (
+              <View style={styles.proBadge}>
+                <Text style={styles.proIcon}>⭐</Text>
+                <Text style={styles.proText}>Pro Member - Unlimited Generations</Text>
+              </View>
+            )}
+            
+            {/* Credits Display */}
+            {!credits?.isSubscribed && (
+              <View style={styles.creditsWrapper}>
+                <CreditsDisplay credits={credits} />
+              </View>
+            )}
+            
             {isGuest ? (
               <View style={styles.guestCreditsInfo}>
                 <Text style={styles.guestCreditsText}>
@@ -190,11 +203,22 @@ export default function ProfileScreen() {
                 )}
               </View>
             ) : (
-              <TouchableOpacity style={styles.upgradeButton} onPress={handleSubscription}>
-                <Text style={styles.upgradeButtonText}>
-                  {credits?.isSubscribed ? 'Manage Subscription' : 'Upgrade to Pro'}
-                </Text>
-              </TouchableOpacity>
+              <>
+                {!credits?.isSubscribed && (
+                  <View style={styles.guestCreditsInfo}>
+                    <Text style={styles.guestCreditsText}>
+                      {credits?.hasCredits 
+                        ? `${credits.freeCredits} free generation${credits.freeCredits === 1 ? '' : 's'} remaining`
+                        : 'No free credits remaining'}
+                    </Text>
+                  </View>
+                )}
+                <TouchableOpacity style={styles.upgradeButton} onPress={handleSubscription}>
+                  <Text style={styles.upgradeButtonText}>
+                    {credits?.isSubscribed ? 'Manage Subscription' : 'Upgrade to Pro'}
+                  </Text>
+                </TouchableOpacity>
+              </>
             )}
           </View>
 
@@ -373,6 +397,25 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#9CA3AF',
     marginBottom: 12,
+  },
+  proBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#6366F1',
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    marginBottom: 16,
+  },
+  proIcon: {
+    fontSize: 24,
+    marginRight: 12,
+  },
+  proText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+    flex: 1,
   },
   upgradeButton: {
     backgroundColor: '#6366F1',
