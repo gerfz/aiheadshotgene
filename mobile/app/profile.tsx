@@ -90,7 +90,9 @@ export default function ProfileScreen() {
     router.push('/subscription');
   };
 
-  const completedCount = generations.filter(g => g.status === 'completed').length;
+  const completedCount = Array.isArray(generations) 
+    ? generations.filter(g => g.status === 'completed').length 
+    : 0;
 
   return (
     <>

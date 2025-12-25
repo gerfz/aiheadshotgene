@@ -43,9 +43,11 @@ export default function HomeScreen() {
         getGenerations(),
       ]);
       setCredits(creditsData);
-      setGenerations(generationsData.generations);
+      setGenerations(generationsData?.generations || []);
     } catch (error) {
       console.error('Failed to load data:', error);
+      // Set empty array on error to prevent undefined
+      setGenerations([]);
     }
   };
 
@@ -91,7 +93,9 @@ export default function HomeScreen() {
     router.push({ pathname: '/login', params: { mode: 'signup' } });
   };
 
-  const completedGenerations = generations.filter(g => g.status === 'completed');
+  const completedGenerations = Array.isArray(generations) 
+    ? generations.filter(g => g.status === 'completed')
+    : [];
   const recentGenerations = completedGenerations.slice(0, 3);
 
   return (
