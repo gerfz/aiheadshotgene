@@ -22,13 +22,48 @@ router.get(
   async (req: AuthenticatedRequest, res: Response) => {
     try {
       const userId = req.userId!;
+      
+      // First, check if email is verified in auth.users
+      const { data: authUser } = await supabaseAdmin.auth.admin.getUserById(userId);
+      const isEmailVerified = authUser?.user?.email_confirmed_at !== null;
+      
+      // Get profile
       const profile = await getUserProfile(userId);
+      
+      // If email is verified in auth but not in profile, sync it
+      if (isEmailVerified && !profile.email_verified && !profile.credits_awarded) {
+        // Award credits for verification
+        await supabaseAdmin
+          .from('profiles')
+          .update({
+            email_verified: true,
+            credits_awarded: true,
+            free_credits: profile.free_credits + 3
+          })
+          .eq('id', userId);
+        
+        // Refetch profile
+        const { data: updatedProfile } = await supabaseAdmin
+          .from('profiles')
+          .select('*')
+          .eq('id', userId)
+          .single();
+        
+        if (updatedProfile) {
+          return res.json({
+            freeCredits: updatedProfile.free_credits,
+            isSubscribed: updatedProfile.is_subscribed,
+            hasCredits: updatedProfile.is_subscribed || updatedProfile.free_credits > 0,
+            emailVerified: true
+          });
+        }
+      }
 
       res.json({
         freeCredits: profile.free_credits,
         isSubscribed: profile.is_subscribed,
         hasCredits: profile.is_subscribed || profile.free_credits > 0,
-        emailVerified: profile.email_verified || false
+        emailVerified: isEmailVerified || profile.email_verified || false
       });
     } catch (error: any) {
       // If profile doesn't exist, create it
