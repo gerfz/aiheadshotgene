@@ -1,159 +1,260 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
   StyleSheet,
-  SafeAreaView,
   ScrollView,
   TouchableOpacity,
+  ActivityIndicator,
   Alert,
 } from 'react-native';
 import { router, Stack } from 'expo-router';
-
-type PlanType = 'monthly' | 'yearly';
+import { Ionicons } from '@expo/vector-icons';
+import { 
+  getOfferings, 
+  purchasePackage, 
+  restorePurchases,
+  checkProStatus,
+  PACKAGE_IDS 
+} from '../src/services/purchases';
+import type { PurchasesPackage } from 'react-native-purchases';
+import { useAppStore } from '../src/store/useAppStore';
 
 export default function SubscriptionScreen() {
-  const [selectedPlan, setSelectedPlan] = useState<PlanType>('yearly');
+  const [packages, setPackages] = useState<PurchasesPackage[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [purchasing, setPurchasing] = useState(false);
+  const [selectedPackage, setSelectedPackage] = useState<string | null>(null);
+  const { setCredits } = useAppStore();
 
-  const handleSubscribe = async () => {
-    Alert.alert(
-      'Setup Required',
-      'To enable purchases, configure RevenueCat with a development build (not Expo Go)',
-      [{ text: 'OK' }]
+  useEffect(() => {
+    loadOfferings();
+  }, []);
+
+  const loadOfferings = async () => {
+    try {
+      const availablePackages = await getOfferings();
+      setPackages(availablePackages);
+    } catch (error) {
+      console.error('Failed to load offerings:', error);
+      Alert.alert('Error', 'Failed to load subscription options. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handlePurchase = async (pkg: PurchasesPackage) => {
+    setPurchasing(true);
+    setSelectedPackage(pkg.identifier);
+
+    try {
+      const customerInfo = await purchasePackage(pkg);
+      
+      if (customerInfo) {
+        Alert.alert(
+          '🎉 Success!',
+          'You now have unlimited AI portrait generations!',
+          [
+            {
+              text: 'Start Creating',
+              onPress: () => router.back(),
+            },
+          ]
+        );
+        
+        // Refresh credits to show unlimited
+        const isPro = await checkProStatus();
+        if (isPro) {
+          setCredits({ 
+            freeCredits: 999, 
+            hasCredits: true, 
+            isSubscribed: true 
+          });
+        }
+      }
+    } catch (error: any) {
+      if (!error.userCancelled) {
+        Alert.alert('Purchase Failed', 'Something went wrong. Please try again.');
+      }
+    } finally {
+      setPurchasing(false);
+      setSelectedPackage(null);
+    }
+  };
+
+  const handleRestore = async () => {
+    setPurchasing(true);
+    try {
+      const customerInfo = await restorePurchases();
+      
+      if (customerInfo) {
+        const isPro = await checkProStatus();
+        if (isPro) {
+          Alert.alert(
+            '✅ Restored!',
+            'Your subscription has been restored.',
+            [{ text: 'OK', onPress: () => router.back() }]
+          );
+        } else {
+          Alert.alert('No Purchases Found', 'No active subscriptions to restore.');
+        }
+      }
+    } catch (error) {
+      Alert.alert('Restore Failed', 'Could not restore purchases. Please try again.');
+    } finally {
+      setPurchasing(false);
+    }
+  };
+
+  const getPackageByIdentifier = (identifier: string) => {
+    return packages.find(pkg => pkg.identifier === identifier);
+  };
+
+  const renderPackageCard = (
+    pkg: PurchasesPackage,
+    title: string,
+    subtitle: string,
+    badge?: string,
+    isPopular?: boolean
+  ) => {
+    const isSelected = selectedPackage === pkg.identifier;
+    const isPurchasing = purchasing && isSelected;
+
+    return (
+      <TouchableOpacity
+        style={[
+          styles.packageCard,
+          isPopular && styles.popularCard,
+        ]}
+        onPress={() => handlePurchase(pkg)}
+        disabled={purchasing}
+        activeOpacity={0.7}
+      >
+        {isPopular && (
+          <View style={styles.popularBadge}>
+            <Text style={styles.popularBadgeText}>⭐ BEST VALUE</Text>
+          </View>
+        )}
+        
+        {badge && !isPopular && (
+          <View style={styles.badge}>
+            <Text style={styles.badgeText}>{badge}</Text>
+          </View>
+        )}
+
+        <View style={styles.packageHeader}>
+          <View>
+            <Text style={styles.packageTitle}>{title}</Text>
+            <Text style={styles.packageSubtitle}>{subtitle}</Text>
+          </View>
+          <Text style={styles.packagePrice}>{pkg.product.priceString}</Text>
+        </View>
+
+        <View style={styles.featuresList}>
+          <FeatureItem text="Unlimited AI portraits" />
+          <FeatureItem text="All styles included" />
+          <FeatureItem text="Priority processing" />
+          <FeatureItem text="No watermarks" />
+        </View>
+
+        <View style={styles.buttonContainer}>
+          {isPurchasing ? (
+            <ActivityIndicator color="#FFFFFF" />
+          ) : (
+            <Text style={styles.buttonText}>
+              {isPopular ? 'Get Started' : 'Subscribe'}
+            </Text>
+          )}
+        </View>
+      </TouchableOpacity>
     );
   };
 
-  const plans = {
-    monthly: {
-      price: '$4.99',
-      period: 'month',
-      savings: null,
-    },
-    yearly: {
-      price: '$39.99',
-      period: 'year',
-      savings: 'Save 33%',
-    },
-  };
+  const monthlyPackage = getPackageByIdentifier(PACKAGE_IDS.MONTHLY);
+  const yearlyPackage = getPackageByIdentifier(PACKAGE_IDS.ANNUAL);
+  const lifetimePackage = getPackageByIdentifier(PACKAGE_IDS.LIFETIME);
 
   return (
     <>
-      <Stack.Screen options={{ title: 'Go Pro', presentation: 'modal' }} />
-      <SafeAreaView style={styles.container}>
+      <Stack.Screen
+        options={{
+          title: 'Upgrade to Pro',
+          headerStyle: { backgroundColor: '#0F172A' },
+          headerTintColor: '#FFFFFF',
+          headerBackTitle: 'Back',
+        }}
+      />
+      <View style={styles.container}>
         <ScrollView contentContainerStyle={styles.content}>
+          {/* Header */}
           <View style={styles.header}>
-            <Text style={styles.icon}>⭐</Text>
-            <Text style={styles.title}>Upgrade to Pro</Text>
-            <Text style={styles.subtitle}>
-              Unlock unlimited professional portraits
+            <Text style={styles.headerTitle}>Unlock Unlimited Portraits</Text>
+            <Text style={styles.headerSubtitle}>
+              Create as many AI portraits as you want with Pro
             </Text>
           </View>
 
-          <View style={styles.features}>
-            <View style={styles.feature}>
-              <Text style={styles.featureIcon}>✓</Text>
-              <Text style={styles.featureText}>Unlimited portrait generations</Text>
+          {/* Loading State */}
+          {loading ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color="#6366F1" />
+              <Text style={styles.loadingText}>Loading options...</Text>
             </View>
-            <View style={styles.feature}>
-              <Text style={styles.featureIcon}>✓</Text>
-              <Text style={styles.featureText}>All professional styles</Text>
-            </View>
-            <View style={styles.feature}>
-              <Text style={styles.featureIcon}>✓</Text>
-              <Text style={styles.featureText}>High-resolution downloads</Text>
-            </View>
-            <View style={styles.feature}>
-              <Text style={styles.featureIcon}>✓</Text>
-              <Text style={styles.featureText}>Priority processing</Text>
-            </View>
-            <View style={styles.feature}>
-              <Text style={styles.featureIcon}>✓</Text>
-              <Text style={styles.featureText}>New styles added regularly</Text>
-            </View>
-          </View>
-
-          <View style={styles.plans}>
-            <TouchableOpacity
-              style={[
-                styles.plan,
-                selectedPlan === 'yearly' && styles.planSelected,
-              ]}
-              onPress={() => setSelectedPlan('yearly')}
-            >
-              {plans.yearly.savings && (
-                <View style={styles.savingsBadge}>
-                  <Text style={styles.savingsText}>{plans.yearly.savings}</Text>
-                </View>
+          ) : (
+            <>
+              {/* Packages */}
+              {yearlyPackage && renderPackageCard(
+                yearlyPackage,
+                'Yearly',
+                'Best value - Save 33%',
+                undefined,
+                true
               )}
-              <View style={styles.planRadio}>
-                <View
-                  style={[
-                    styles.radioOuter,
-                    selectedPlan === 'yearly' && styles.radioOuterSelected,
-                  ]}
-                >
-                  {selectedPlan === 'yearly' && (
-                    <View style={styles.radioInner} />
-                  )}
-                </View>
-              </View>
-              <View style={styles.planInfo}>
-                <Text style={styles.planName}>Yearly</Text>
-                <Text style={styles.planPrice}>
-                  {plans.yearly.price}
-                  <Text style={styles.planPeriod}>/{plans.yearly.period}</Text>
+
+              {monthlyPackage && renderPackageCard(
+                monthlyPackage,
+                'Monthly',
+                'Cancel anytime'
+              )}
+
+              {lifetimePackage && renderPackageCard(
+                lifetimePackage,
+                'Lifetime',
+                'One-time payment',
+                '🔥 Limited Time'
+              )}
+
+              {/* Restore Button */}
+              <TouchableOpacity
+                style={styles.restoreButton}
+                onPress={handleRestore}
+                disabled={purchasing}
+              >
+                <Text style={styles.restoreButtonText}>
+                  Restore Purchases
                 </Text>
-                <Text style={styles.planNote}>$3.33/month, billed annually</Text>
-              </View>
-            </TouchableOpacity>
+              </TouchableOpacity>
 
-            <TouchableOpacity
-              style={[
-                styles.plan,
-                selectedPlan === 'monthly' && styles.planSelected,
-              ]}
-              onPress={() => setSelectedPlan('monthly')}
-            >
-              <View style={styles.planRadio}>
-                <View
-                  style={[
-                    styles.radioOuter,
-                    selectedPlan === 'monthly' && styles.radioOuterSelected,
-                  ]}
-                >
-                  {selectedPlan === 'monthly' && (
-                    <View style={styles.radioInner} />
-                  )}
-                </View>
-              </View>
-              <View style={styles.planInfo}>
-                <Text style={styles.planName}>Monthly</Text>
-                <Text style={styles.planPrice}>
-                  {plans.monthly.price}
-                  <Text style={styles.planPeriod}>/{plans.monthly.period}</Text>
-                </Text>
-              </View>
-            </TouchableOpacity>
-          </View>
-
-          <TouchableOpacity style={styles.subscribeButton} onPress={handleSubscribe}>
-            <Text style={styles.subscribeButtonText}>Subscribe Now</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            onPress={() => router.back()}
-            style={styles.skipButton}
-          >
-            <Text style={styles.skipText}>Maybe later</Text>
-          </TouchableOpacity>
-
-          <Text style={styles.terms}>
-            Subscription automatically renews unless cancelled at least 24 hours
-            before the end of the current period. Cancel anytime.
-          </Text>
+              {/* Footer */}
+              <Text style={styles.footerText}>
+                • Subscriptions auto-renew unless cancelled{'\n'}
+                • Cancel anytime in Google Play{'\n'}
+                • Unlimited generations with any plan
+              </Text>
+            </>
+          )}
         </ScrollView>
-      </SafeAreaView>
+      </View>
     </>
+  );
+}
+
+function FeatureItem({ text }: { text: string }) {
+  return (
+    <View style={styles.featureItem}>
+      <Ionicons name="checkmark-circle" size={20} color="#10B981" />
+      <Text style={styles.featureText}>{text}</Text>
+    </View>
   );
 }
 
@@ -163,152 +264,136 @@ const styles = StyleSheet.create({
     backgroundColor: '#0F172A',
   },
   content: {
-    padding: 24,
+    padding: 20,
+    paddingBottom: 40,
   },
   header: {
     alignItems: 'center',
-    marginBottom: 32,
-    marginTop: 20,
+    marginBottom: 30,
   },
-  icon: {
-    fontSize: 64,
-    marginBottom: 16,
-  },
-  title: {
+  headerTitle: {
     fontSize: 28,
     fontWeight: 'bold',
     color: '#FFFFFF',
+    textAlign: 'center',
     marginBottom: 8,
   },
-  subtitle: {
+  headerSubtitle: {
     fontSize: 16,
-    color: '#9CA3AF',
+    color: '#94A3B8',
     textAlign: 'center',
   },
-  features: {
-    backgroundColor: '#1E293B',
-    borderRadius: 20,
-    padding: 24,
-    marginBottom: 24,
-  },
-  feature: {
-    flexDirection: 'row',
+  loadingContainer: {
     alignItems: 'center',
-    marginBottom: 16,
+    justifyContent: 'center',
+    paddingVertical: 60,
   },
-  featureIcon: {
-    color: '#10B981',
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginRight: 12,
-  },
-  featureText: {
-    color: '#FFFFFF',
+  loadingText: {
+    color: '#94A3B8',
+    marginTop: 16,
     fontSize: 16,
   },
-  plans: {
-    gap: 12,
-    marginBottom: 24,
-  },
-  plan: {
+  packageCard: {
     backgroundColor: '#1E293B',
     borderRadius: 16,
     padding: 20,
-    flexDirection: 'row',
-    alignItems: 'center',
+    marginBottom: 16,
     borderWidth: 2,
-    borderColor: 'transparent',
-    position: 'relative',
-    overflow: 'hidden',
+    borderColor: '#334155',
   },
-  planSelected: {
+  popularCard: {
     borderColor: '#6366F1',
+    backgroundColor: '#1E293B',
   },
-  savingsBadge: {
+  popularBadge: {
     position: 'absolute',
-    top: 0,
-    right: 0,
-    backgroundColor: '#10B981',
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderBottomLeftRadius: 12,
+    top: -12,
+    alignSelf: 'center',
+    backgroundColor: '#6366F1',
+    paddingHorizontal: 16,
+    paddingVertical: 6,
+    borderRadius: 20,
+    zIndex: 1,
   },
-  savingsText: {
+  popularBadgeText: {
     color: '#FFFFFF',
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: 'bold',
   },
-  planRadio: {
-    marginRight: 16,
-  },
-  radioOuter: {
-    width: 24,
-    height: 24,
+  badge: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
+    backgroundColor: '#EF4444',
+    paddingHorizontal: 12,
+    paddingVertical: 4,
     borderRadius: 12,
-    borderWidth: 2,
-    borderColor: '#6B7280',
-    alignItems: 'center',
-    justifyContent: 'center',
   },
-  radioOuterSelected: {
-    borderColor: '#6366F1',
-  },
-  radioInner: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    backgroundColor: '#6366F1',
-  },
-  planInfo: {
-    flex: 1,
-  },
-  planName: {
-    fontSize: 18,
-    fontWeight: '600',
+  badgeText: {
     color: '#FFFFFF',
-    marginBottom: 4,
+    fontSize: 11,
+    fontWeight: 'bold',
   },
-  planPrice: {
+  packageHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 16,
+  },
+  packageTitle: {
     fontSize: 24,
     fontWeight: 'bold',
     color: '#FFFFFF',
+    marginBottom: 4,
   },
-  planPeriod: {
-    fontSize: 16,
-    fontWeight: 'normal',
-    color: '#9CA3AF',
-  },
-  planNote: {
+  packageSubtitle: {
     fontSize: 14,
-    color: '#9CA3AF',
-    marginTop: 4,
+    color: '#94A3B8',
   },
-  subscribeButton: {
+  packagePrice: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: '#6366F1',
+  },
+  featuresList: {
+    marginBottom: 20,
+  },
+  featureItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  featureText: {
+    color: '#E2E8F0',
+    fontSize: 15,
+    marginLeft: 10,
+  },
+  buttonContainer: {
     backgroundColor: '#6366F1',
     paddingVertical: 16,
     borderRadius: 12,
     alignItems: 'center',
-    marginBottom: 12,
   },
-  subscribeButtonText: {
+  buttonText: {
     color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  restoreButton: {
+    alignItems: 'center',
+    paddingVertical: 16,
+    marginTop: 8,
+  },
+  restoreButtonText: {
+    color: '#6366F1',
     fontSize: 16,
     fontWeight: '600',
   },
-  skipButton: {
-    alignItems: 'center',
-    paddingVertical: 12,
-    marginBottom: 24,
-  },
-  skipText: {
-    color: '#6B7280',
-    fontSize: 16,
-  },
-  terms: {
-    fontSize: 12,
-    color: '#6B7280',
+  footerText: {
+    color: '#64748B',
+    fontSize: 13,
     textAlign: 'center',
-    lineHeight: 18,
+    marginTop: 20,
+    lineHeight: 20,
   },
 });
-
