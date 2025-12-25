@@ -64,43 +64,63 @@ export default function SubscriptionScreen() {
       const customerInfo = await purchasePackage(pkg);
       
       if (customerInfo) {
-        // Update subscription status in backend
-        try {
-          const response = await fetch(`${API_URL}/api/user/subscription`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
-            },
-            body: JSON.stringify({ isSubscribed: true }),
-          });
-          
-          if (response.ok) {
-            console.log('✅ Subscription status updated in database');
-          }
-        } catch (updateError) {
-          console.error('Failed to update subscription status:', updateError);
-        }
-        
-        Alert.alert(
-          '🎉 Success!',
-          'You now have unlimited AI portrait generations!',
-          [
-            {
-              text: 'Start Creating',
-              onPress: () => router.back(),
-            },
-          ]
-        );
-        
-        // Refresh credits to show unlimited
+        // Check if user has pro access
         const isPro = await checkProStatus();
+        
         if (isPro) {
-          setCredits({ 
-            freeCredits: 999, 
-            hasCredits: true, 
-            isSubscribed: true 
-          });
+          // Update subscription status in backend and wait for it
+          try {
+            const session = await supabase.auth.getSession();
+            const response = await fetch(`${API_URL}/api/user/subscription`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${session.data.session?.access_token}`,
+              },
+              body: JSON.stringify({ isSubscribed: true }),
+            });
+            
+            if (response.ok) {
+              console.log('✅ Subscription status updated in database');
+              
+              // Now update local state
+              setCredits({ 
+                freeCredits: 999, 
+                hasCredits: true, 
+                isSubscribed: true 
+              });
+            } else {
+              console.error('Failed to update subscription in backend');
+              // Still update local state
+              setCredits({ 
+                freeCredits: 999, 
+                hasCredits: true, 
+                isSubscribed: true 
+              });
+            }
+          } catch (updateError) {
+            console.error('Error updating subscription status:', updateError);
+            // Still update local state
+            setCredits({ 
+              freeCredits: 999, 
+              hasCredits: true, 
+              isSubscribed: true 
+            });
+          }
+          
+          // Wait a moment for backend to fully update
+          await new Promise(resolve => setTimeout(resolve, 500));
+          
+          Alert.alert(
+            '🎉 Success!',
+            'You now have unlimited AI portrait generations!',
+            [
+              {
+                text: 'Start Creating',
+                onPress: () => router.back(),
+              },
+            ]
+          );
         }
       }
     } catch (error: any) {

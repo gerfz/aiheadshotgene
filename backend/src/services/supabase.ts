@@ -155,12 +155,15 @@ export async function getOrCreateGuestProfile(deviceId: string) {
     return existing;
   }
   
-  // Create new guest profile
+  // Create new guest profile with upsert to handle race conditions
   const { data, error } = await supabaseAdmin
     .from('guest_profiles')
-    .insert({
+    .upsert({
       device_id: deviceId,
       free_credits: 3
+    }, {
+      onConflict: 'device_id',
+      ignoreDuplicates: false
     })
     .select()
     .single();
