@@ -49,6 +49,10 @@ export default function LoginScreen() {
           
           // Set authenticated user
           setUser({ id: user.id, email: user.email! });
+          
+          // Wait a bit for auth state to propagate
+          await new Promise(resolve => setTimeout(resolve, 500));
+          
           router.replace('/home');
         }
       } else {
@@ -73,6 +77,9 @@ export default function LoginScreen() {
           
           // Now set the authenticated user
           setUser({ id: user.id, email: user.email! });
+          
+          // Wait a bit for auth state to propagate
+          await new Promise(resolve => setTimeout(resolve, 500));
           
           router.replace('/home');
         }

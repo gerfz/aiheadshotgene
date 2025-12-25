@@ -38,6 +38,9 @@ export default function HomeScreen() {
 
   const loadData = async () => {
     try {
+      // Small delay to ensure auth state is updated after signup
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
       const [creditsData, generationsData] = await Promise.all([
         getCredits(),
         getGenerations(),
@@ -48,6 +51,20 @@ export default function HomeScreen() {
       console.error('Failed to load data:', error);
       // Set empty array on error to prevent undefined
       setGenerations([]);
+      
+      // Retry once after a short delay (in case of auth state sync issue)
+      setTimeout(async () => {
+        try {
+          const [creditsData, generationsData] = await Promise.all([
+            getCredits(),
+            getGenerations(),
+          ]);
+          setCredits(creditsData);
+          setGenerations(generationsData?.generations || []);
+        } catch (retryError) {
+          console.error('Retry failed:', retryError);
+        }
+      }, 1000);
     }
   };
 
