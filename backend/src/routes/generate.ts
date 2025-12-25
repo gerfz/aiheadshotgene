@@ -48,12 +48,22 @@ router.post(
       const file = req.file;
       const isGuest = req.isGuest;
 
+      console.log('Generate request - styleKey:', styleKey, 'customPrompt:', customPrompt);
+
       if (!file) {
         return res.status(400).json({ error: 'No image uploaded' });
       }
 
       if (!styleKey) {
         return res.status(400).json({ error: 'Style key is required' });
+      }
+
+      // Validate custom style requires custom prompt
+      if (styleKey === 'custom' && (!customPrompt || customPrompt.trim().length === 0)) {
+        return res.status(400).json({ 
+          error: 'Custom prompt is required',
+          message: 'Please provide a description for your custom style'
+        });
       }
 
       let hasCredits = false;
@@ -87,7 +97,7 @@ router.post(
         );
         
         // Create guest generation record
-        generation = await createGuestGeneration(deviceId, styleKey, originalImageUrl);
+        generation = await createGuestGeneration(deviceId, styleKey, originalImageUrl, customPrompt);
         
       } else {
         // Authenticated user flow
@@ -115,7 +125,7 @@ router.post(
         );
         
         // Create generation record
-        generation = await createGeneration(userId, styleKey, originalImageUrl);
+        generation = await createGeneration(userId, styleKey, originalImageUrl, customPrompt);
       }
 
       // Generate portrait using Nano Banana

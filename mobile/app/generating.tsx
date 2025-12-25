@@ -58,6 +58,8 @@ export default function GeneratingScreen() {
       return;
     }
 
+    console.log('Starting generation with:', { selectedStyle, customPrompt });
+
     setIsGenerating(true);
     setError(null);
 

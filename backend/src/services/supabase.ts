@@ -38,16 +38,23 @@ export async function decrementCredits(userId: string) {
 export async function createGeneration(
   userId: string,
   styleKey: string,
-  originalImageUrl: string
+  originalImageUrl: string,
+  customPrompt?: string
 ) {
+  const insertData: any = {
+    user_id: userId,
+    style_key: styleKey,
+    original_image_url: originalImageUrl,
+    status: 'pending'
+  };
+
+  if (customPrompt) {
+    insertData.custom_prompt = customPrompt;
+  }
+
   const { data, error } = await supabaseAdmin
     .from('generations')
-    .insert({
-      user_id: userId,
-      style_key: styleKey,
-      original_image_url: originalImageUrl,
-      status: 'pending'
-    })
+    .insert(insertData)
     .select()
     .single();
   
@@ -168,16 +175,23 @@ export async function decrementGuestCredits(deviceId: string) {
 export async function createGuestGeneration(
   deviceId: string,
   styleKey: string,
-  originalImageUrl: string
+  originalImageUrl: string,
+  customPrompt?: string
 ) {
+  const insertData: any = {
+    guest_device_id: deviceId,
+    style_key: styleKey,
+    original_image_url: originalImageUrl,
+    status: 'pending'
+  };
+
+  if (customPrompt) {
+    insertData.custom_prompt = customPrompt;
+  }
+
   const { data, error } = await supabaseAdmin
     .from('generations')
-    .insert({
-      guest_device_id: deviceId,
-      style_key: styleKey,
-      original_image_url: originalImageUrl,
-      status: 'pending'
-    })
+    .insert(insertData)
     .select()
     .single();
   

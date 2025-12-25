@@ -202,7 +202,10 @@ export async function generatePortrait(
   
   // Add custom prompt if provided
   if (customPrompt) {
+    console.log('Adding customPrompt to request:', customPrompt);
     formData.append('customPrompt', customPrompt);
+  } else {
+    console.log('No customPrompt provided for styleKey:', styleKey);
   }
   
   const response = await fetch(`${API_URL}/api/generate`, {

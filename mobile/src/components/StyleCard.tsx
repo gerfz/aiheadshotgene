@@ -35,6 +35,30 @@ export function StyleCard({ style, selected, onSelect }: StyleCardProps) {
     setActiveIndex(currentIndex);
   };
 
+  // For custom style, don't show image container
+  if (style.isCustom) {
+    return (
+      <TouchableOpacity
+        style={[styles.card, styles.customCard, selected && styles.selected]}
+        onPress={onSelect}
+        activeOpacity={0.8}
+      >
+        <View style={styles.customContent}>
+          <Text style={styles.customIcon}>✨</Text>
+          <Text style={styles.name}>{style.name}</Text>
+          <Text style={styles.description} numberOfLines={2}>
+            {style.description}
+          </Text>
+        </View>
+        {selected && (
+          <View style={[styles.checkmark, styles.checkmarkCustom]}>
+            <Text style={styles.checkmarkText}>✓</Text>
+          </View>
+        )}
+      </TouchableOpacity>
+    );
+  }
+
   return (
     <TouchableOpacity
       style={[styles.card, selected && styles.selected]}
@@ -239,5 +263,25 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 11,
     fontWeight: '600',
+  },
+  customCard: {
+    minHeight: 100,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  customContent: {
+    flex: 1,
+    padding: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  customIcon: {
+    fontSize: 40,
+    marginBottom: 8,
+  },
+  checkmarkCustom: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
   },
 });

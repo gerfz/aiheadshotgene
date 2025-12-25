@@ -45,8 +45,11 @@ export async function generatePortrait(
 ): Promise<string> {
   let prompt: string;
   
-  // If custom style with custom prompt, add face consistency prefix
-  if (styleKey === 'custom' && customPrompt) {
+  // If custom style, require custom prompt
+  if (styleKey === 'custom') {
+    if (!customPrompt || customPrompt.trim().length === 0) {
+      throw new Error('Custom prompt is required for custom style');
+    }
     prompt = FACE_CONSISTENCY_PREFIX + customPrompt;
   } else {
     // Use predefined style prompt

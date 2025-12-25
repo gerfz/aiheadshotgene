@@ -66,29 +66,29 @@ export default function StyleSelectScreen() {
                 }}
               />
             ))}
-
-            {isCustomSelected && (
-              <View style={styles.customPromptContainer}>
-                <Text style={styles.customPromptLabel}>
-                  Describe your desired portrait style:
-                </Text>
-                <TextInput
-                  style={styles.customPromptInput}
-                  placeholder="E.g., A professional photo in a modern office with natural lighting..."
-                  placeholderTextColor="#6B7280"
-                  value={localCustomPrompt}
-                  onChangeText={setLocalCustomPrompt}
-                  multiline
-                  numberOfLines={4}
-                  textAlignVertical="top"
-                  autoFocus
-                />
-                <Text style={styles.customPromptHint}>
-                  💡 Your face will be kept 100% accurate. Just describe the setting, style, and mood you want.
-                </Text>
-              </View>
-            )}
           </ScrollView>
+
+          {isCustomSelected && (
+            <View style={styles.customPromptContainer}>
+              <Text style={styles.customPromptLabel}>
+                Describe your desired portrait style:
+              </Text>
+              <TextInput
+                style={styles.customPromptInput}
+                placeholder="E.g., A professional photo in a modern office with natural lighting..."
+                placeholderTextColor="#6B7280"
+                value={localCustomPrompt}
+                onChangeText={setLocalCustomPrompt}
+                multiline
+                numberOfLines={3}
+                textAlignVertical="top"
+                autoFocus
+              />
+              <Text style={styles.customPromptHint}>
+                💡 Your face will be kept 100% accurate. Just describe the setting, style, and mood you want.
+              </Text>
+            </View>
+          )}
 
           <View style={styles.footer}>
             <TouchableOpacity
@@ -157,9 +157,9 @@ const styles = StyleSheet.create({
   },
   customPromptContainer: {
     backgroundColor: '#1F2937',
-    borderRadius: 16,
     padding: 20,
-    marginTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#374151',
   },
   customPromptLabel: {
     fontSize: 16,
@@ -173,7 +173,8 @@ const styles = StyleSheet.create({
     padding: 16,
     color: '#FFFFFF',
     fontSize: 15,
-    minHeight: 120,
+    minHeight: 100,
+    maxHeight: 150,
     borderWidth: 1,
     borderColor: '#4B5563',
   },
@@ -184,4 +185,3 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
 });
-
