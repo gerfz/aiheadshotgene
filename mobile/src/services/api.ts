@@ -172,7 +172,8 @@ export async function getGenerations(): Promise<{ generations: Generation[] }> {
 // Generate portrait (works for both authenticated users and guests)
 export async function generatePortrait(
   imageUri: string,
-  styleKey: string
+  styleKey: string,
+  customPrompt?: string | null
 ): Promise<{ success: boolean; generation: GenerationResult; requiresSignup?: boolean }> {
   const headers = await getHeaders();
   
@@ -198,6 +199,11 @@ export async function generatePortrait(
   } as any);
   
   formData.append('styleKey', styleKey);
+  
+  // Add custom prompt if provided
+  if (customPrompt) {
+    formData.append('customPrompt', customPrompt);
+  }
   
   const response = await fetch(`${API_URL}/api/generate`, {
     method: 'POST',

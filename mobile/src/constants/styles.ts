@@ -13,7 +13,22 @@ const VS_PHOTO_1 = require('../../assets/victoriasecret/G6TSEqzWYAIvaf9.jpg');
 const VS_PHOTO_2 = require('../../assets/victoriasecret/G6TSEscXQAAm3Lo.jpg');
 const VS_PHOTO_3 = require('../../assets/victoriasecret/G6TSEuEWEAAaR7N.jpg');
 
+// Face consistency prefix that will be added to all custom prompts
+export const FACE_CONSISTENCY_PREFIX = `Keep the facial features of the person in the uploaded image exactly consistent. Maintain 100% accuracy of the face from the reference image. Important: do not change the face. `;
+
 export const STYLE_PRESETS: Record<string, StylePreset> = {
+  custom: {
+    key: 'custom',
+    name: 'Custom Style',
+    description: 'Create your own unique portrait with a custom prompt',
+    thumbnail: require('../../assets/icon.png'), // Using app icon as placeholder
+    prompt: '', // Will be filled with user's custom prompt
+    isCustom: true,
+    badge: {
+      label: 'Your Idea',
+      type: 'info',
+    },
+  },
   business: {
     key: 'business',
     name: 'Business Photo',

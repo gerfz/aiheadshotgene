@@ -29,6 +29,7 @@ export interface StylePreset {
   thumbnail: any;
   thumbnails?: any[]; // Multiple thumbnails for swipable carousel
   prompt: string;
+  isCustom?: boolean; // Flag for custom style option
   badge?: {
     label: string;
     type: 'female' | 'male' | 'info';

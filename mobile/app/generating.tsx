@@ -22,7 +22,7 @@ const LOADING_MESSAGES = [
 ];
 
 export default function GeneratingScreen() {
-  const { selectedImage, selectedStyle, setIsGenerating } = useAppStore();
+  const { selectedImage, selectedStyle, customPrompt, setIsGenerating } = useAppStore();
   const [messageIndex, setMessageIndex] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const fadeAnim = useState(new Animated.Value(1))[0];
@@ -62,7 +62,7 @@ export default function GeneratingScreen() {
     setError(null);
 
     try {
-      const result = await generatePortrait(selectedImage, selectedStyle);
+      const result = await generatePortrait(selectedImage, selectedStyle, customPrompt);
       
       if (result.success) {
         router.replace({ 

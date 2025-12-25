@@ -17,6 +17,7 @@ interface AppState {
   // Generation state
   selectedImage: string | null;
   selectedStyle: string | null;
+  customPrompt: string | null;
   currentGeneration: Generation | null;
   generations: Generation[];
   isGenerating: boolean;
@@ -28,6 +29,7 @@ interface AppState {
   setCredits: (credits: CreditsInfo | null) => void;
   setSelectedImage: (uri: string | null) => void;
   setSelectedStyle: (styleKey: string | null) => void;
+  setCustomPrompt: (prompt: string | null) => void;
   setCurrentGeneration: (generation: Generation | null) => void;
   setGenerations: (generations: Generation[]) => void;
   setIsGenerating: (isGenerating: boolean) => void;
@@ -44,6 +46,7 @@ const initialState = {
   credits: null,
   selectedImage: null,
   selectedStyle: null,
+  customPrompt: null,
   currentGeneration: null,
   generations: [],
   isGenerating: false,
@@ -72,6 +75,8 @@ export const useAppStore = create<AppState>((set, get) => ({
   
   setSelectedStyle: (selectedStyle) => set({ selectedStyle }),
   
+  setCustomPrompt: (customPrompt) => set({ customPrompt }),
+  
   setCurrentGeneration: (currentGeneration) => set({ currentGeneration }),
   
   setGenerations: (generations) => set({ generations }),
@@ -86,6 +91,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     generations: [],
     selectedImage: null,
     selectedStyle: null,
+    customPrompt: null,
     currentGeneration: null,
     isGenerating: false,
   }),

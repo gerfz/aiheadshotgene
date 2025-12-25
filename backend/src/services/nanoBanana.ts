@@ -15,6 +15,9 @@ if (process.env.REPLICATE_API_TOKEN && !process.env.REPLICATE_API_TOKEN.startsWi
 // The Nano Banana model on Replicate
 const MODEL_ID = 'google/nano-banana';
 
+// Face consistency prefix for custom prompts
+export const FACE_CONSISTENCY_PREFIX = `Keep the facial features of the person in the uploaded image exactly consistent. Maintain 100% accuracy of the face from the reference image. Important: do not change the face. `;
+
 // Style prompts for professional headshots
 export const STYLE_PROMPTS: Record<string, string> = {
   // Business Photo style
@@ -37,12 +40,20 @@ export const STYLE_PROMPTS: Record<string, string> = {
 export async function generatePortrait(
   imageBase64: string,
   styleKey: string,
-  mimeType: string = 'image/jpeg'
+  mimeType: string = 'image/jpeg',
+  customPrompt?: string
 ): Promise<string> {
-  const prompt = STYLE_PROMPTS[styleKey];
+  let prompt: string;
   
-  if (!prompt) {
-    throw new Error(`Unknown style: ${styleKey}`);
+  // If custom style with custom prompt, add face consistency prefix
+  if (styleKey === 'custom' && customPrompt) {
+    prompt = FACE_CONSISTENCY_PREFIX + customPrompt;
+  } else {
+    // Use predefined style prompt
+    prompt = STYLE_PROMPTS[styleKey];
+    if (!prompt) {
+      throw new Error(`Unknown style: ${styleKey}`);
+    }
   }
 
   try {

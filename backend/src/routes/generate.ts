@@ -44,7 +44,7 @@ router.post(
   upload.single('image'),
   async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const { styleKey } = req.body;
+      const { styleKey, customPrompt } = req.body;
       const file = req.file;
       const isGuest = req.isGuest;
 
@@ -127,7 +127,8 @@ router.post(
         const generatedImageBase64 = await generatePortrait(
           imageBase64,
           styleKey,
-          file.mimetype
+          file.mimetype,
+          customPrompt
         );
 
         // Upload generated image
