@@ -10,13 +10,15 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Image,
+  Alert,
 } from 'react-native';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { signIn, signUp } from '../src/services/supabase';
+import { signIn, signUp, supabase } from '../src/services/supabase';
 import { migrateGuestData } from '../src/services/api';
 import { getGuestId, clearGuestId } from '../src/services/guestStorage';
 import { useAppStore } from '../src/store/useAppStore';
+import { Toast } from '../src/components';
 
 export default function LoginScreen() {
   const params = useLocalSearchParams();
@@ -26,6 +28,7 @@ export default function LoginScreen() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [showSuccessToast, setShowSuccessToast] = useState(false);
 
   const { setUser, setGuestId: setStoreGuestId, guestId } = useAppStore();
 
@@ -40,9 +43,21 @@ export default function LoginScreen() {
 
     try {
       if (isLogin) {
-        // Sign in
-        const { user } = await signIn(email, password);
-        if (user) {
+        // Sign in - includes migration of guest data
+        const { user, session } = await signIn(email, password);
+        if (user && session) {
+          // Migrate guest data if exists
+          const currentGuestId = guestId || await getGuestId();
+          if (currentGuestId) {
+            try {
+              await migrateGuestData(currentGuestId);
+              console.log('Guest data migrated successfully');
+            } catch (migrationError) {
+              // Migration is optional - don't block signin
+              console.log('Guest migration completed (may have had no data)');
+            }
+          }
+          
           // Clear guest state when signing in
           await clearGuestId();
           setStoreGuestId(null);
@@ -50,38 +65,20 @@ export default function LoginScreen() {
           // Set authenticated user
           setUser({ id: user.id, email: user.email! });
           
-          // Wait a bit for auth state to propagate
-          await new Promise(resolve => setTimeout(resolve, 500));
-          
           router.replace('/home');
         }
       } else {
-        // Sign up - includes migration of guest data
+        // Sign up - just create account, don't auto-login
         const { user } = await signUp(email, password);
         if (user) {
-          // Migrate guest data if exists BEFORE setting user
-          const currentGuestId = guestId || await getGuestId();
-          if (currentGuestId) {
-            try {
-              await migrateGuestData(currentGuestId);
-              console.log('Guest data migrated successfully');
-            } catch (migrationError) {
-              // Migration is optional - don't block signup
-              console.log('Guest migration completed (may have had no data)');
-            }
-          }
+          // Show success toast
+          setShowSuccessToast(true);
           
-          // Clear guest state completely
-          await clearGuestId();
-          setStoreGuestId(null);
-          
-          // Now set the authenticated user
-          setUser({ id: user.id, email: user.email! });
-          
-          // Wait a bit for auth state to propagate
-          await new Promise(resolve => setTimeout(resolve, 500));
-          
-          router.replace('/home');
+          // Switch to sign-in tab after a short delay
+          setTimeout(() => {
+            setIsLogin(true);
+            setError('');
+          }, 2000);
         }
       }
     } catch (err: any) {
@@ -98,6 +95,13 @@ export default function LoginScreen() {
   return (
     <>
       <Stack.Screen options={{ headerShown: false }} />
+      <Toast
+        message="✅ Account Created! Check your email to verify."
+        visible={showSuccessToast}
+        onHide={() => setShowSuccessToast(false)}
+        duration={2000}
+        icon="checkmark-circle"
+      />
       <KeyboardAvoidingView
         style={styles.container}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
