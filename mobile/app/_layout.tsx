@@ -6,6 +6,7 @@ import { useAppStore } from '../src/store/useAppStore';
 import { supabase } from '../src/services/supabase';
 import { initializePurchases, loginUser } from '../src/services/purchases';
 import { getOrCreateGuestId } from '../src/services/guestStorage';
+import { getCredits } from '../src/services/api';
 import { ErrorBoundary } from '../src/components/ErrorBoundary';
 
 export default function RootLayout() {
@@ -55,17 +56,26 @@ export default function RootLayout() {
     // Listen for auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        console.log('Auth state changed:', event);
+        
         if (session?.user) {
-          // User logged in
+          // User logged in or session refreshed
           setUser({
             id: session.user.id,
             email: session.user.email!,
           });
           setGuestId(null); // Clear guest state
+          
           try {
             await loginUser(session.user.id);
+            
+            // Refresh credits to get latest verification status
+            // This is especially important after email verification
+            const creditsData = await getCredits();
+            useAppStore.setState({ credits: creditsData });
+            console.log('Credits refreshed after auth change:', creditsData);
           } catch (error) {
-            console.error('RevenueCat login error:', error);
+            console.error('Error during auth state change:', error);
           }
         } else {
           // User logged out - restore guest mode

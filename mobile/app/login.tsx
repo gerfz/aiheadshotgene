@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -11,7 +11,7 @@ import {
   ActivityIndicator,
   Image,
 } from 'react-native';
-import { router, Stack } from 'expo-router';
+import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { signIn, signUp } from '../src/services/supabase';
 import { migrateGuestData } from '../src/services/api';
@@ -19,7 +19,8 @@ import { getGuestId, clearGuestId } from '../src/services/guestStorage';
 import { useAppStore } from '../src/store/useAppStore';
 
 export default function LoginScreen() {
-  const [isLogin, setIsLogin] = useState(true);
+  const params = useLocalSearchParams();
+  const [isLogin, setIsLogin] = useState(params.mode !== 'signup');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -126,7 +127,7 @@ export default function LoginScreen() {
               {!isLogin && (
                 <View style={styles.benefitBadge}>
                   <Ionicons name="gift-outline" size={16} color="#10B981" style={{ marginRight: 6 }} />
-                  <Text style={styles.benefitText}>Get 3 free generations!</Text>
+                  <Text style={styles.benefitText}>Get free credits!</Text>
                 </View>
               )}
 

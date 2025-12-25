@@ -81,7 +81,7 @@ export default function HomeScreen() {
 
   const handleSignUp = () => {
     setShowSignupModal(false);
-    router.push('/login');
+    router.push({ pathname: '/login', params: { mode: 'signup' } });
   };
 
   const completedGenerations = generations.filter(g => g.status === 'completed');
@@ -113,13 +113,27 @@ export default function HomeScreen() {
             )}
           </View>
 
+          {isGuest && credits && !credits.hasCredits && (
+            <TouchableOpacity 
+              style={styles.promoBanner} 
+              onPress={() => setShowSignupModal(true)}
+              activeOpacity={0.9}
+            >
+              <View style={styles.promoIconContainer}>
+                <Text style={styles.promoIcon}>🎁</Text>
+              </View>
+              <View style={styles.promoContent}>
+                <Text style={styles.promoTitle}>Get Free Credits!</Text>
+                <Text style={styles.promoText}>Sign up to unlock more generations</Text>
+              </View>
+              <View style={styles.promoArrow}>
+                <Text style={styles.promoArrowText}>→</Text>
+              </View>
+            </TouchableOpacity>
+          )}
+
           <View style={styles.creditsContainer}>
             <CreditsDisplay credits={credits} />
-            {isGuest && credits && !credits.hasCredits && (
-              <TouchableOpacity onPress={() => setShowSignupModal(true)} style={styles.getMoreCredits}>
-                <Text style={styles.getMoreCreditsText}>Sign up for more free credits!</Text>
-              </TouchableOpacity>
-            )}
           </View>
 
           <View style={styles.howItWorks}>
@@ -278,22 +292,63 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
   },
+  promoBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#1E293B', // Dark slate background
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 24,
+    borderWidth: 1,
+    borderColor: '#6366F1', // Primary color border
+    shadowColor: '#6366F1',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  promoIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(99, 102, 241, 0.15)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  promoIcon: {
+    fontSize: 20,
+  },
+  promoContent: {
+    flex: 1,
+  },
+  promoTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    marginBottom: 2,
+  },
+  promoText: {
+    fontSize: 13,
+    color: '#9CA3AF',
+  },
+  promoArrow: {
+    width: 24,
+    height: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#6366F1',
+    borderRadius: 12,
+  },
+  promoArrowText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: 'bold',
+    marginBottom: 2, // Optical adjustment
+  },
   creditsContainer: {
     alignItems: 'flex-start',
     marginBottom: 24,
-  },
-  getMoreCredits: {
-    marginTop: 8,
-    padding: 12,
-    backgroundColor: '#1E293B',
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#6366F1',
-  },
-  getMoreCreditsText: {
-    color: '#6366F1',
-    fontSize: 14,
-    fontWeight: '600',
   },
   historySection: {
     marginBottom: 32,

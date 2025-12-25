@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -6,14 +6,50 @@ import {
   ScrollView,
   TouchableOpacity,
   Alert,
+  RefreshControl,
 } from 'react-native';
-import { router, Stack } from 'expo-router';
+import { router, Stack, useFocusEffect } from 'expo-router';
 import { useAppStore } from '../src/store/useAppStore';
 import { signOut } from '../src/services/supabase';
 import { CreditsDisplay, BottomNav } from '../src/components';
+import { getCredits, getGenerations } from '../src/services/api';
 
 export default function ProfileScreen() {
   const { user, isGuest, credits, generations, setUser } = useAppStore();
+  const [refreshing, setRefreshing] = useState(false);
+
+  // Refresh credits and generations
+  const refreshData = async () => {
+    if (isGuest) return;
+    
+    setRefreshing(true);
+    try {
+      // Force refresh from backend
+      const [creditsData, generationsData] = await Promise.all([
+        getCredits(),
+        getGenerations()
+      ]);
+      
+      // Update store with fresh data
+      useAppStore.setState({ 
+        credits: creditsData,
+        generations: generationsData 
+      });
+      
+      console.log('Profile data refreshed:', creditsData);
+    } catch (error) {
+      console.error('Failed to refresh profile data:', error);
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
+  // Auto-refresh when screen comes into focus
+  useFocusEffect(
+    React.useCallback(() => {
+      refreshData();
+    }, [isGuest])
+  );
 
   const handleLogout = async () => {
     Alert.alert(
@@ -35,7 +71,7 @@ export default function ProfileScreen() {
   };
 
   const handleSignUp = () => {
-    router.push('/login');
+    router.push({ pathname: '/login', params: { mode: 'signup' } });
   };
 
   const handleSubscription = () => {
@@ -52,7 +88,17 @@ export default function ProfileScreen() {
         }} 
       />
       <View style={styles.container}>
-        <ScrollView contentContainerStyle={styles.content}>
+        <ScrollView 
+          contentContainerStyle={styles.content}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={refreshData}
+              tintColor="#6366F1"
+              colors={['#6366F1']}
+            />
+          }
+        >
           {/* User/Guest Info Card */}
           <View style={styles.card}>
             <View style={[styles.avatarContainer, isGuest && styles.avatarGuest]}>
