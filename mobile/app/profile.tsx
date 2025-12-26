@@ -26,14 +26,14 @@ export default function ProfileScreen() {
     const getDeviceId = async () => {
       try {
         const id = Application.getAndroidId();
-        setDeviceId(id || 'unknown');
+        setDeviceId(id || user?.id?.substring(0, 8) || 'unknown');
       } catch (error) {
         console.error('Failed to get device ID:', error);
-        setDeviceId('unknown');
+        setDeviceId(user?.id?.substring(0, 8) || 'unknown');
       }
     };
     getDeviceId();
-  }, []);
+  }, [user?.id]);
 
   const refreshData = async () => {
     setRefreshing(true);

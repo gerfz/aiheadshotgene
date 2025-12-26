@@ -299,12 +299,16 @@ export default function SubscriptionScreen() {
                 </>
               ) : (
                 /* Show all available packages (preview mode or custom setup) */
-                packages.map((pkg, index) => renderPackageCard(
-                  pkg,
-                  pkg.identifier === 'preview-package-id' ? 'Preview Plan' : pkg.identifier,
-                  index === 0 ? 'Test subscription' : 'Available plan',
-                  undefined,
-                  index === 0
+                packages.map((pkg, index) => (
+                  <React.Fragment key={pkg.identifier}>
+                    {renderPackageCard(
+                      pkg,
+                      pkg.identifier === 'preview-package-id' ? 'Preview Plan' : pkg.identifier,
+                      index === 0 ? 'Test subscription' : 'Available plan',
+                      undefined,
+                      index === 0
+                    )}
+                  </React.Fragment>
                 ))
               )}
 

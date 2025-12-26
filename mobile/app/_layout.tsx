@@ -5,48 +5,65 @@ import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import { useAppStore } from '../src/store/useAppStore';
 import { supabase } from '../src/services/supabase';
 import { initializePurchases, loginUser } from '../src/services/purchases';
-import { getOrCreateGuestId } from '../src/services/guestStorage';
+import { getHardwareDeviceId } from '../src/services/deviceId';
 import { getCredits } from '../src/services/api';
 import { ErrorBoundary } from '../src/components/ErrorBoundary';
 import { Toast } from '../src/components';
 
 export default function RootLayout() {
-  const { setUser, setGuestId, setIsLoading } = useAppStore();
+  const { setUser, setIsLoading } = useAppStore();
   const [initializing, setInitializing] = useState(true);
   const [showVerificationToast, setShowVerificationToast] = useState(false);
 
   useEffect(() => {
     const initApp = async () => {
       try {
-        // Initialize purchases
-        await initializePurchases();
+        // Get device ID
+        const deviceId = await getHardwareDeviceId();
+        console.log('📱 Device ID:', deviceId);
         
         // Check for existing auth session
         const { data: { session } } = await supabase.auth.getSession();
         
         if (session?.user) {
-          // User is authenticated
+          // User already has an anonymous session
+          console.log('✅ Existing anonymous user:', session.user.id);
           setUser({
             id: session.user.id,
-            email: session.user.email!,
+            email: session.user.email || `device-${deviceId}@anonymous.local`,
           });
-          setGuestId(null); // Clear guest state when authenticated
+          await initializePurchases(session.user.id);
           await loginUser(session.user.id);
         } else {
-          // No auth session - initialize as guest
-          const guestId = await getOrCreateGuestId();
-          setGuestId(guestId);
-          setUser(null);
+          // No session - create anonymous user
+          console.log('🔄 Creating anonymous user for device:', deviceId);
+          
+          const { data, error } = await supabase.auth.signInAnonymously({
+            options: {
+              data: {
+                device_id: deviceId,
+                is_anonymous: true,
+              }
+            }
+          });
+          
+          if (error) {
+            console.error('❌ Failed to create anonymous user:', error);
+            throw error;
+          }
+          
+          if (data.user) {
+            console.log('✅ Anonymous user created:', data.user.id);
+            setUser({
+              id: data.user.id,
+              email: `device-${deviceId}@anonymous.local`,
+            });
+            await initializePurchases(data.user.id);
+            await loginUser(data.user.id);
+          }
         }
       } catch (error) {
-        console.error('App initialization error:', error);
-        // Even on error, try to set up guest mode
-        try {
-          const guestId = await getOrCreateGuestId();
-          setGuestId(guestId);
-        } catch (guestError) {
-          console.error('Failed to initialize guest mode:', guestError);
-        }
+        console.error('❌ App initialization error:', error);
       } finally {
         setInitializing(false);
         setIsLoading(false);
@@ -58,44 +75,49 @@ export default function RootLayout() {
     // Listen for auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        console.log('Auth state changed:', event);
+        console.log('🔄 Auth state changed:', event);
         
         if (session?.user) {
-          // User logged in or session refreshed
+          // User session exists (anonymous or authenticated)
+          const deviceId = await getHardwareDeviceId();
           setUser({
             id: session.user.id,
-            email: session.user.email!,
+            email: session.user.email || `device-${deviceId}@anonymous.local`,
           });
-          setGuestId(null); // Clear guest state
           
           try {
             await loginUser(session.user.id);
             
-            // Get previous verification status
-            const previousCredits = useAppStore.getState().credits;
-            const wasVerified = previousCredits?.emailVerified || false;
-            
-            // Refresh credits to get latest verification status
-            // This is especially important after email verification
+            // Refresh credits
             const creditsData = await getCredits();
             useAppStore.setState({ credits: creditsData });
-            console.log('Credits refreshed after auth change:', creditsData);
-            
-            // Show toast if email was just verified
-            if (!wasVerified && creditsData.emailVerified) {
-              setShowVerificationToast(true);
-            }
+            console.log('✅ Credits refreshed:', creditsData);
           } catch (error) {
-            console.error('Error during auth state change:', error);
+            console.error('❌ Error during auth state change:', error);
           }
         } else {
-          // User logged out - restore guest mode
-          setUser(null);
+          // Session expired - recreate anonymous user
+          console.log('⚠️ Session expired, recreating anonymous user');
           try {
-            const guestId = await getOrCreateGuestId();
-            setGuestId(guestId);
+            const deviceId = await getHardwareDeviceId();
+            const { data, error } = await supabase.auth.signInAnonymously({
+              options: {
+                data: {
+                  device_id: deviceId,
+                  is_anonymous: true,
+                }
+              }
+            });
+            
+            if (data?.user) {
+              setUser({
+                id: data.user.id,
+                email: `device-${deviceId}@anonymous.local`,
+              });
+              await loginUser(data.user.id);
+            }
           } catch (error) {
-            console.error('Failed to restore guest mode:', error);
+            console.error('❌ Failed to recreate anonymous user:', error);
           }
         }
       }
