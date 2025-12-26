@@ -222,9 +222,8 @@ export default function GeneratingScreen() {
               <TouchableOpacity
                 style={styles.keepEditedButton}
                 onPress={() => {
-                  // Clear navigation stack and go to result with edited version
-                  router.dismissAll();
-                  router.replace({
+                  // Navigate to result with edited version, using push so back goes to home
+                  router.push({
                     pathname: '/result',
                     params: {
                       generatedUrl: editedResult.generatedImageUrl,
@@ -242,9 +241,8 @@ export default function GeneratingScreen() {
               <TouchableOpacity
                 style={styles.keepOriginalButton}
                 onPress={() => {
-                  // Clear navigation stack and go to result with original version
-                  router.dismissAll();
-                  router.replace({
+                  // Navigate to result with original version
+                  router.push({
                     pathname: '/result',
                     params: {
                       generatedUrl: params.originalGeneratedUrl!,

@@ -8,8 +8,10 @@ import {
   ScrollView,
   Alert,
   TouchableOpacity,
+  Dimensions,
 } from 'react-native';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import * as MediaLibrary from 'expo-media-library';
@@ -146,9 +148,8 @@ export default function ResultScreen() {
           title: 'Your Portrait',
           headerLeft: () => (
             <TouchableOpacity onPress={() => {
-              // Always go back to home, clearing the navigation stack
-              router.dismissAll();
-              router.replace('/home');
+              // Navigate to home - will work from any depth
+              router.push('/home');
             }} style={{ marginRight: 15 }}>
               <Text style={{ fontSize: 28, color: '#FFFFFF' }}>←</Text>
             </TouchableOpacity>
@@ -178,6 +179,47 @@ export default function ResultScreen() {
               style={styles.resultImage}
               resizeMode="cover"
             />
+            
+            {/* Icon Bar under image */}
+            <View style={styles.iconBar}>
+              <TouchableOpacity style={styles.iconButton} onPress={handleDownload}>
+                <View style={styles.iconCircle}>
+                  <Ionicons name="download-outline" size={24} color="#FFFFFF" />
+                </View>
+                <Text style={styles.iconLabel}>Save</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity style={styles.iconButton} onPress={handleShare}>
+                <View style={[styles.iconCircle, styles.secondaryIcon]}>
+                  <Ionicons name="share-outline" size={24} color="#FFFFFF" />
+                </View>
+                <Text style={styles.iconLabel}>Share</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity style={styles.iconButton} onPress={() => router.push({
+                pathname: '/edit-portrait',
+                params: {
+                  generatedUrl,
+                  originalUrl,
+                  styleKey,
+                  id: id || '',
+                }
+              })}>
+                <View style={[styles.iconCircle, styles.editIcon]}>
+                  <Ionicons name="color-wand-outline" size={24} color="#FFFFFF" />
+                </View>
+                <Text style={styles.iconLabel}>Edit</Text>
+              </TouchableOpacity>
+              
+              {id && (
+                <TouchableOpacity style={styles.iconButton} onPress={handleDelete}>
+                  <View style={[styles.iconCircle, styles.deleteIcon]}>
+                    <Ionicons name="trash-outline" size={24} color="#EF4444" />
+                  </View>
+                  <Text style={styles.iconLabel}>Delete</Text>
+                </TouchableOpacity>
+              )}
+            </View>
           </View>
 
           {originalUrl && (
@@ -190,7 +232,7 @@ export default function ResultScreen() {
                 <Text style={styles.compareLabel}>Original</Text>
               </View>
               <View style={styles.arrow}>
-                <Text style={styles.arrowText}>→</Text>
+                <Ionicons name="arrow-forward" size={20} color="#6366F1" />
               </View>
               <View style={styles.compareItem}>
                 <Image
@@ -202,41 +244,17 @@ export default function ResultScreen() {
             </View>
           )}
 
-          <View style={styles.actions}>
-            <TouchableOpacity style={styles.actionButton} onPress={handleDownload}>
-              <Text style={styles.actionButtonText}>📥  Download</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={[styles.actionButton, styles.secondaryButton]} onPress={handleShare}>
-              <Text style={styles.actionButtonText}>📤  Share</Text>
-            </TouchableOpacity>
-          </View>
-
-          <TouchableOpacity style={styles.editButton} onPress={() => router.push({
-            pathname: '/edit-portrait',
-            params: {
-              generatedUrl,
-              originalUrl,
-              styleKey,
-              id: id || '',
-            }
-          })}>
-            <Text style={styles.editButtonText}>✨  Edit Portrait</Text>
-          </TouchableOpacity>
-
           <TouchableOpacity style={styles.newButton} onPress={handleCreateNew}>
+            <Ionicons name="add-circle-outline" size={24} color="#FFFFFF" style={{ marginRight: 8 }} />
             <Text style={styles.newButtonText}>Create New Portrait</Text>
           </TouchableOpacity>
-
-          {id && (
-            <TouchableOpacity style={styles.deleteButton} onPress={handleDelete}>
-              <Text style={styles.deleteButtonText}>🗑️  Delete Portrait</Text>
-            </TouchableOpacity>
-          )}
         </ScrollView>
       </SafeAreaView>
     </>
   );
 }
+
+const { width, height } = Dimensions.get('window');
 
 const styles = StyleSheet.create({
   container: {
@@ -245,135 +263,150 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: 20,
+    paddingTop: 10,
+    minHeight: height - 100, // Ensure content fills screen
   },
   header: {
     alignItems: 'center',
-    marginBottom: 24,
+    marginBottom: 16,
   },
   styleName: {
-    fontSize: 18,
-    color: '#6366F1',
-    fontWeight: '600',
+    fontSize: 20,
+    color: '#FFFFFF',
+    fontWeight: '700',
+    textAlign: 'center',
   },
   customPromptContainer: {
     backgroundColor: '#1E293B',
     borderRadius: 16,
-    padding: 16,
-    marginBottom: 24,
+    padding: 12,
+    marginBottom: 16,
     borderWidth: 1,
     borderColor: '#334155',
   },
   customPromptHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 8,
     gap: 8,
   },
   customPromptIcon: {
-    fontSize: 20,
+    fontSize: 18,
   },
   customPromptTitle: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '600',
     color: '#FFFFFF',
   },
   customPromptText: {
-    fontSize: 14,
+    fontSize: 13,
     color: '#E2E8F0',
-    lineHeight: 20,
+    lineHeight: 18,
   },
   imageContainer: {
     alignItems: 'center',
     marginBottom: 24,
+    flex: 1, // Allow image container to take available space
   },
   resultImage: {
-    width: 300,
-    height: 400,
-    borderRadius: 20,
+    width: width - 60, // Slightly smaller width
+    height: (width - 60) * 1.2, // 4:5 aspect ratio
+    maxHeight: height * 0.45, // Cap height to ensure other elements fit
+    borderRadius: 24,
+    marginBottom: 20,
+    backgroundColor: '#1E293B',
+  },
+  iconBar: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    width: '100%',
+    paddingHorizontal: 0,
+    marginBottom: 8,
+  },
+  iconButton: {
+    alignItems: 'center',
+    gap: 6,
+  },
+  iconCircle: {
+    width: 48, // Slightly smaller icons
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#6366F1',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#6366F1',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  secondaryIcon: {
+    backgroundColor: '#334155',
+    shadowColor: '#000',
+  },
+  editIcon: {
+    backgroundColor: '#8B5CF6',
+    shadowColor: '#8B5CF6',
+  },
+  deleteIcon: {
+    backgroundColor: '#334155',
+    borderWidth: 1,
+    borderColor: '#EF4444',
+    shadowColor: '#EF4444',
+    shadowOpacity: 0.1,
+  },
+  iconLabel: {
+    color: '#94A3B8',
+    fontSize: 11,
+    fontWeight: '500',
   },
   comparison: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 32,
+    marginBottom: 20,
+    backgroundColor: '#1E293B',
+    padding: 12,
+    borderRadius: 16,
     gap: 12,
   },
   compareItem: {
     alignItems: 'center',
   },
   compareImage: {
-    width: 100,
-    height: 130,
-    borderRadius: 12,
-    marginBottom: 8,
+    width: 60, // Smaller comparison images
+    height: 75,
+    borderRadius: 8,
+    marginBottom: 4,
+    backgroundColor: '#334155',
   },
   compareLabel: {
-    fontSize: 12,
-    color: '#9CA3AF',
+    fontSize: 11,
+    color: '#94A3B8',
+    fontWeight: '500',
   },
   arrow: {
-    paddingHorizontal: 12,
-  },
-  arrowText: {
-    fontSize: 24,
-    color: '#6366F1',
-  },
-  actions: {
-    flexDirection: 'row',
-    gap: 12,
-    marginBottom: 16,
-  },
-  actionButton: {
-    flex: 1,
-    backgroundColor: '#6366F1',
-    paddingVertical: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-  },
-  secondaryButton: {
-    backgroundColor: '#1F2937',
-  },
-  actionButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  editButton: {
-    backgroundColor: '#8B5CF6',
-    paddingVertical: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-    marginTop: 16,
-  },
-  editButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
+    paddingHorizontal: 4,
   },
   newButton: {
-    borderWidth: 2,
-    borderColor: '#6366F1',
+    backgroundColor: '#6366F1',
     paddingVertical: 16,
-    borderRadius: 12,
+    borderRadius: 16,
     alignItems: 'center',
-    marginTop: 8,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    marginBottom: 20,
+    shadowColor: '#6366F1',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
+    width: '100%', // Full width button
   },
   newButtonText: {
-    color: '#6366F1',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  deleteButton: {
-    backgroundColor: '#EF4444',
-    paddingVertical: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-    marginTop: 16,
-  },
-  deleteButtonText: {
     color: '#FFFFFF',
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: 'bold',
   },
   errorIcon: {
     fontSize: 64,
