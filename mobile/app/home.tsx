@@ -7,7 +7,6 @@ import {
   TouchableOpacity,
   Image,
   RefreshControl,
-  Modal,
 } from 'react-native';
 import { router, Stack } from 'expo-router';
 import { useAppStore } from '../src/store/useAppStore';
@@ -32,9 +31,8 @@ const getStyleDisplayName = (styleKey: string): string => {
 };
 
 export default function HomeScreen() {
-  const { user, isGuest, credits, generations, setCredits, setGenerations, setUser, setGuestId } = useAppStore();
+  const { user, credits, generations, setCredits, setGenerations, setUser } = useAppStore();
   const [refreshing, setRefreshing] = useState(false);
-  const [showSignupModal, setShowSignupModal] = useState(false);
 
   const loadData = async () => {
     try {
@@ -72,12 +70,12 @@ export default function HomeScreen() {
     loadData();
   }, []);
 
-  // Reload data when user changes (e.g., after login/migration)
+  // Reload data when user changes
   useEffect(() => {
-    if (!isGuest && user) {
+    if (user) {
       loadData();
     }
-  }, [user?.id, isGuest]);
+  }, [user?.id]);
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -85,29 +83,13 @@ export default function HomeScreen() {
     setRefreshing(false);
   };
 
-  const handleLogout = async () => {
-    await signOut();
-    setUser(null);
-    // Guest ID will be restored in _layout.tsx auth state listener
-  };
-
   const handleStartGeneration = () => {
     if (!credits?.hasCredits) {
-      if (isGuest) {
-        // Show signup modal for guests
-        setShowSignupModal(true);
-      } else {
-        // Redirect to subscription for authenticated users
-        router.push('/subscription');
-      }
+      // Redirect to subscription when no credits
+      router.push('/subscription');
       return;
     }
     router.push('/upload');
-  };
-
-  const handleSignUp = () => {
-    setShowSignupModal(false);
-    router.push({ pathname: '/login', params: { mode: 'signup' } });
   };
 
   const completedGenerations = Array.isArray(generations) 
@@ -126,39 +108,11 @@ export default function HomeScreen() {
           }
         >
           <View style={styles.header}>
-            {isGuest ? (
-              <>
-                <Text style={styles.guestText}>Logged in as guest</Text>
-                <TouchableOpacity onPress={() => router.push('/login')} style={styles.loginButton}>
-                  <Text style={styles.loginButtonText}>Log In</Text>
-                </TouchableOpacity>
-              </>
-            ) : (
-              <View>
-                <Text style={styles.greeting}>Welcome back,</Text>
-                <Text style={styles.email}>{user?.email}</Text>
-              </View>
-            )}
+            <View>
+              <Text style={styles.greeting}>Welcome back,</Text>
+              <Text style={styles.email}>{user?.email || 'User'}</Text>
+            </View>
           </View>
-
-          {isGuest && credits && !credits.hasCredits && (
-            <TouchableOpacity 
-              style={styles.promoBanner} 
-              onPress={() => setShowSignupModal(true)}
-              activeOpacity={0.9}
-            >
-              <View style={styles.promoIconContainer}>
-                <Text style={styles.promoIcon}>🎁</Text>
-              </View>
-              <View style={styles.promoContent}>
-                <Text style={styles.promoTitle}>Get Free Credits!</Text>
-                <Text style={styles.promoText}>Sign up to unlock more generations</Text>
-              </View>
-              <View style={styles.promoArrow}>
-                <Text style={styles.promoArrowText}>→</Text>
-              </View>
-            </TouchableOpacity>
-          )}
 
           <View style={styles.creditsContainer}>
             <CreditsDisplay credits={credits} />
@@ -238,32 +192,6 @@ export default function HomeScreen() {
           )}
         </ScrollView>
         <BottomNav />
-
-        {/* Signup Modal for Guests */}
-        <Modal
-          visible={showSignupModal}
-          transparent
-          animationType="fade"
-          onRequestClose={() => setShowSignupModal(false)}
-        >
-          <View style={styles.modalOverlay}>
-            <View style={styles.modalContent}>
-              <Text style={styles.modalTitle}>You've Used Your Free Credits!</Text>
-              <Text style={styles.modalDescription}>
-                Sign up for a free account to get more portrait generations and save your work.
-              </Text>
-              <TouchableOpacity style={styles.modalPrimaryButton} onPress={handleSignUp}>
-                <Text style={styles.modalPrimaryButtonText}>Sign Up Free</Text>
-              </TouchableOpacity>
-              <TouchableOpacity 
-                style={styles.modalSecondaryButton} 
-                onPress={() => setShowSignupModal(false)}
-              >
-                <Text style={styles.modalSecondaryButtonText}>Maybe Later</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </Modal>
       </View>
     </>
   );
@@ -453,57 +381,5 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#9CA3AF',
     textAlign: 'center',
-  },
-  // Modal styles
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.8)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 24,
-  },
-  modalContent: {
-    backgroundColor: '#1E293B',
-    borderRadius: 24,
-    padding: 32,
-    width: '100%',
-    maxWidth: 400,
-    alignItems: 'center',
-  },
-  modalTitle: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-    textAlign: 'center',
-    marginBottom: 16,
-  },
-  modalDescription: {
-    fontSize: 16,
-    color: '#9CA3AF',
-    textAlign: 'center',
-    marginBottom: 24,
-    lineHeight: 24,
-  },
-  modalPrimaryButton: {
-    backgroundColor: '#6366F1',
-    paddingVertical: 16,
-    paddingHorizontal: 32,
-    borderRadius: 12,
-    width: '100%',
-    marginBottom: 12,
-  },
-  modalPrimaryButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
-    textAlign: 'center',
-  },
-  modalSecondaryButton: {
-    paddingVertical: 12,
-    paddingHorizontal: 32,
-  },
-  modalSecondaryButtonText: {
-    color: '#9CA3AF',
-    fontSize: 14,
   },
 });

@@ -16,7 +16,7 @@ import { signOut } from '../src/services/supabase';
 import { getCredits, getGenerations } from '../src/services/api';
 
 export default function ProfileScreen() {
-  const { user, setUser, credits, setCredits, isGuest, generations, setGenerations } = useAppStore();
+  const { user, setUser, credits, setCredits, generations, setGenerations } = useAppStore();
   const [refreshing, setRefreshing] = useState(false);
 
   const refreshData = async () => {
@@ -216,12 +216,6 @@ export default function ProfileScreen() {
             </TouchableOpacity>
           </View>
 
-          {/* Sign Up Button (if guest) */}
-          {isGuest && (
-            <TouchableOpacity style={styles.signUpButton} onPress={handleSignUp}>
-              <Text style={styles.signUpButtonText}>Create Free Account</Text>
-            </TouchableOpacity>
-          )}
 
           {/* Version */}
           <Text style={styles.version}>1.3.0 (81)</Text>

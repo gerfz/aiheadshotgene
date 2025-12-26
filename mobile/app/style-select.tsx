@@ -158,30 +158,17 @@ export default function StyleSelectScreen() {
           ))}
         </ScrollView>
 
-        {/* Bottom Navigation */}
-        <View style={styles.bottomNav}>
-          <TouchableOpacity style={styles.navButton}>
-            <Ionicons name="flash" size={24} color="#64748B" />
-            <Text style={styles.navButtonText}>Generate</Text>
-          </TouchableOpacity>
-          
-          <TouchableOpacity 
-            style={[styles.navButton, styles.navButtonActive]}
-            onPress={handleContinue}
-            disabled={!selectedStyle}
-          >
-            <Ionicons name="sparkles" size={24} color="#6366F1" />
-            <Text style={[styles.navButtonText, styles.navButtonTextActive]}>Realistic AI</Text>
-          </TouchableOpacity>
-          
-          <TouchableOpacity 
-            style={styles.navButton}
-            onPress={() => router.push('/gallery')}
-          >
-            <Ionicons name="images" size={24} color="#64748B" />
-            <Text style={styles.navButtonText}>Library</Text>
-          </TouchableOpacity>
-        </View>
+        {/* Continue Button - Only show when style is selected */}
+        {selectedStyle && (
+          <View style={styles.footer}>
+            <TouchableOpacity
+              style={styles.continueButton}
+              onPress={handleContinue}
+            >
+              <Text style={styles.continueButtonText}>Continue</Text>
+            </TouchableOpacity>
+          </View>
+        )}
       </SafeAreaView>
     </>
   );
@@ -307,35 +294,24 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   
-  // Bottom Navigation
-  bottomNav: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    flexDirection: 'row',
-    backgroundColor: '#1E293B',
-    paddingVertical: 12,
-    paddingHorizontal: 20,
+  // Footer
+  footer: {
+    padding: 20,
+    paddingBottom: 30,
+    backgroundColor: '#0F172A',
     borderTopWidth: 1,
-    borderTopColor: '#334155',
-    justifyContent: 'space-around',
+    borderTopColor: '#1E293B',
   },
-  navButton: {
+  continueButton: {
+    backgroundColor: '#6366F1',
+    paddingVertical: 16,
+    borderRadius: 12,
     alignItems: 'center',
-    gap: 4,
-    flex: 1,
   },
-  navButtonActive: {
-    // Active state styling
-  },
-  navButtonText: {
-    color: '#64748B',
-    fontSize: 12,
-    fontWeight: '500',
-  },
-  navButtonTextActive: {
-    color: '#6366F1',
+  continueButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });
 

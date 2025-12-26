@@ -80,6 +80,15 @@ export default function GeneratingScreen() {
       }
     } catch (err: any) {
       console.error('Generation error:', err);
+      
+      // Check if error is about no credits (403)
+      if (err.message && (err.message.includes('No credits remaining') || err.message.includes('403'))) {
+        // Redirect to subscription page
+        setIsGenerating(false);
+        router.replace('/subscription');
+        return;
+      }
+      
       setError(err.message || 'Failed to generate portrait');
     } finally {
       setIsGenerating(false);
