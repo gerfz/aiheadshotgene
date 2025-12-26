@@ -43,6 +43,24 @@ async function getHeaders(): Promise<Record<string, string>> {
 }
 
 // =============================================
+// PUBLIC ENDPOINTS
+// =============================================
+
+// Get most used styles (no auth required)
+export async function getMostUsedStyles(): Promise<{ mostUsedStyles: Array<{ style_key: string; usage_count: number }> }> {
+  const response = await fetch(`${API_URL}/api/generate/most-used-styles`, {
+    method: 'GET',
+  });
+  
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || 'Failed to get most used styles');
+  }
+  
+  return response.json();
+}
+
+// =============================================
 // AUTHENTICATED USER ENDPOINTS
 // =============================================
 

@@ -48,6 +48,32 @@ export async function checkAndAwardVerificationCredits(userId: string) {
   if (error) {
     console.error('Error awarding verification credits:', error);
   }
+}
+
+// Increment style usage count
+export async function incrementStyleUsage(styleKey: string) {
+  const { error } = await supabaseAdmin.rpc('increment_style_usage', {
+    p_style_key: styleKey
+  });
+  
+  if (error) {
+    console.error('Error incrementing style usage:', error);
+  }
+}
+
+// Get most used styles
+export async function getMostUsedStyles() {
+  const { data, error } = await supabaseAdmin
+    .from('most_used_styles')
+    .select('*');
+  
+  if (error) {
+    console.error('Error fetching most used styles:', error);
+    return [];
+  }
+  
+  return data || [];
+}
   
   return data;
 }

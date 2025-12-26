@@ -11,7 +11,9 @@ import {
   uploadImage,
   getOrCreateGuestProfile,
   decrementGuestCredits,
-  createGuestGeneration
+  createGuestGeneration,
+  incrementStyleUsage,
+  getMostUsedStyles
 } from '../services/supabase';
 
 const router = Router();
@@ -35,6 +37,17 @@ const upload = multer({
 router.get('/styles', (req, res) => {
   const styles = getAvailableStyles();
   res.json({ styles });
+});
+
+// Get most used styles
+router.get('/most-used-styles', async (req, res) => {
+  try {
+    const mostUsedStyles = await getMostUsedStyles();
+    res.json({ mostUsedStyles });
+  } catch (error: any) {
+    console.error('Error fetching most used styles:', error);
+    res.status(500).json({ error: error.message });
+  }
 });
 
 // Generate portrait (supports both authenticated users and guests)
@@ -163,6 +176,9 @@ router.post(
         } else if (!isSubscribed) {
           await decrementCredits(req.userId!);
         }
+
+        // Track style usage
+        await incrementStyleUsage(styleKey);
 
         res.json({
           success: true,

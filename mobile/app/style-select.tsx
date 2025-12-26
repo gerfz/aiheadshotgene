@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,51 +8,90 @@ import {
   TouchableOpacity,
   Image,
   Dimensions,
+  ActivityIndicator,
 } from 'react-native';
 import { router, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAppStore } from '../src/store/useAppStore';
 import { STYLE_PRESETS } from '../src/constants/styles';
+import { getMostUsedStyles } from '../src/services/api';
 
 const { width } = Dimensions.get('window');
 const cardWidth = (width - 60) / 2; // 2 columns with padding
 
-// Category definitions
-const CATEGORIES = [
+// Static category definitions (will be updated with dynamic most used)
+const STATIC_CATEGORIES = [
   {
-    id: 'most_used',
-    name: 'Most Used',
-    icon: '⚡',
-    styles: ['custom', 'business', 'professional_headshot', 'emotional_film'],
-  },
-  {
-    id: 'linkedin',
-    name: 'LinkedIn',
-    icon: '👔',
-    styles: ['business', 'professional_headshot'],
-  },
-  {
-    id: 'professional',
-    name: 'Professional',
+    id: 'business',
+    name: 'Business',
     icon: '💼',
     styles: ['business', 'professional_headshot', 'nineties_camera'],
   },
   {
-    id: 'female_only',
-    name: 'Female Only',
-    icon: '👩',
-    styles: ['victoria_secret', 'emotional_film'],
-  },
-  {
-    id: 'male_only',
-    name: 'Male Only',
-    icon: '👨',
-    styles: ['business', 'professional_headshot', 'nineties_camera'],
+    id: 'dating',
+    name: 'Dating',
+    icon: '💕',
+    styles: ['emotional_film', 'with_puppy', 'nineties_camera'],
   },
 ];
 
 export default function StyleSelectScreen() {
   const { selectedStyle, setSelectedStyle } = useAppStore();
+  const [categories, setCategories] = useState(STATIC_CATEGORIES);
+  const [loading, setLoading] = useState(true);
+
+  // Load most used styles on mount
+  useEffect(() => {
+    loadMostUsedStyles();
+  }, []);
+
+  const loadMostUsedStyles = async () => {
+    try {
+      const { mostUsedStyles } = await getMostUsedStyles();
+      
+      // Custom is always first, then top 4 most used
+      const mostUsedStyleKeys = ['custom'];
+      
+      // Add top 4 most used styles (excluding custom)
+      mostUsedStyles.slice(0, 4).forEach((item) => {
+        if (item.style_key !== 'custom' && STYLE_PRESETS[item.style_key]) {
+          mostUsedStyleKeys.push(item.style_key);
+        }
+      });
+      
+      // If we don't have 5 styles yet, fill with defaults
+      const defaultStyles = ['business', 'emotional_film', 'victoria_secret', 'professional_headshot'];
+      for (const styleKey of defaultStyles) {
+        if (mostUsedStyleKeys.length >= 5) break;
+        if (!mostUsedStyleKeys.includes(styleKey)) {
+          mostUsedStyleKeys.push(styleKey);
+        }
+      }
+      
+      // Create the Most Used category
+      const mostUsedCategory = {
+        id: 'most_used',
+        name: 'Most Used',
+        icon: '⚡',
+        styles: mostUsedStyleKeys,
+      };
+      
+      // Update categories with Most Used at the top
+      setCategories([mostUsedCategory, ...STATIC_CATEGORIES]);
+      setLoading(false);
+    } catch (error) {
+      console.error('Failed to load most used styles:', error);
+      // Fallback to default Most Used category
+      const defaultMostUsed = {
+        id: 'most_used',
+        name: 'Most Used',
+        icon: '⚡',
+        styles: ['custom', 'business', 'emotional_film', 'victoria_secret', 'professional_headshot'],
+      };
+      setCategories([defaultMostUsed, ...STATIC_CATEGORIES]);
+      setLoading(false);
+    }
+  };
 
   const handleStyleSelect = (styleKey: string) => {
     setSelectedStyle(styleKey);
@@ -75,31 +114,38 @@ export default function StyleSelectScreen() {
         }} 
       />
       <SafeAreaView style={styles.container}>
-        {/* Category Filter Tabs */}
-        <ScrollView 
-          horizontal 
-          showsHorizontalScrollIndicator={false}
-          style={styles.filterTabsScroll}
-          contentContainerStyle={styles.filterTabsContent}
-        >
-          {CATEGORIES.map((category) => (
-            <TouchableOpacity
-              key={category.id}
-              style={styles.filterTab}
+        {loading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#6366F1" />
+            <Text style={styles.loadingText}>Loading styles...</Text>
+          </View>
+        ) : (
+          <>
+            {/* Category Filter Tabs */}
+            <ScrollView 
+              horizontal 
+              showsHorizontalScrollIndicator={false}
+              style={styles.filterTabsScroll}
+              contentContainerStyle={styles.filterTabsContent}
             >
-              <Text style={styles.filterIcon}>{category.icon}</Text>
-              <Text style={styles.filterText}>{category.name}</Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
+              {categories.map((category) => (
+                <TouchableOpacity
+                  key={category.id}
+                  style={styles.filterTab}
+                >
+                  <Text style={styles.filterIcon}>{category.icon}</Text>
+                  <Text style={styles.filterText}>{category.name}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
 
-        {/* All Categories - Vertical Scroll */}
-        <ScrollView
-          style={styles.contentScroll}
-          contentContainerStyle={styles.contentContainer}
-          showsVerticalScrollIndicator={false}
-        >
-          {CATEGORIES.map((category) => (
+            {/* All Categories - Vertical Scroll */}
+            <ScrollView
+              style={styles.contentScroll}
+              contentContainerStyle={styles.contentContainer}
+              showsVerticalScrollIndicator={false}
+            >
+              {categories.map((category) => (
             <View key={category.id} style={styles.categorySection}>
               {/* Category Header */}
               <View style={styles.categoryHeader}>
@@ -155,19 +201,21 @@ export default function StyleSelectScreen() {
                 })}
               </ScrollView>
             </View>
-          ))}
-        </ScrollView>
+              ))}
+            </ScrollView>
 
-        {/* Continue Button - Only show when style is selected */}
-        {selectedStyle && (
-          <View style={styles.footer}>
-            <TouchableOpacity
-              style={styles.continueButton}
-              onPress={handleContinue}
-            >
-              <Text style={styles.continueButtonText}>Continue</Text>
-            </TouchableOpacity>
-          </View>
+            {/* Continue Button - Only show when style is selected */}
+            {selectedStyle && (
+              <View style={styles.footer}>
+                <TouchableOpacity
+                  style={styles.continueButton}
+                  onPress={handleContinue}
+                >
+                  <Text style={styles.continueButtonText}>Continue</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </>
         )}
       </SafeAreaView>
     </>
@@ -178,6 +226,18 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#0F172A',
+  },
+  
+  // Loading
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 16,
+  },
+  loadingText: {
+    color: '#9CA3AF',
+    fontSize: 16,
   },
   
   // Filter Tabs at Top
