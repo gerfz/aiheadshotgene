@@ -147,7 +147,7 @@ export default function HomeScreen() {
           {completedGenerations.length > 0 && (
             <View style={styles.historySection}>
               <View style={styles.sectionHeader}>
-                <Text style={styles.sectionTitle}>Your Portraits</Text>
+                <Text style={styles.sectionTitle}>Recent Portraits</Text>
                 <TouchableOpacity onPress={() => router.push('/gallery')}>
                   <Text style={styles.viewAllButton}>View All</Text>
                 </TouchableOpacity>

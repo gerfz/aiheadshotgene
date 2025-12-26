@@ -84,11 +84,15 @@ export default function ProfileScreen() {
   };
 
   const handleContactUs = () => {
-    Linking.openURL('mailto:support@aiportrait.app');
+    router.push('/contact-us');
   };
 
   const handlePrivacyPolicy = () => {
-    Linking.openURL('https://aiportraitapp.netlify.app/');
+    router.push('/privacy-policy');
+  };
+
+  const handleTermsOfUse = () => {
+    router.push('/terms-of-use');
   };
 
   const completedCount = Array.isArray(generations) 
@@ -191,10 +195,10 @@ export default function ProfileScreen() {
             
             <View style={styles.divider} />
             
-            <TouchableOpacity style={styles.settingRow}>
+            <TouchableOpacity style={styles.settingRow} onPress={handleTermsOfUse}>
               <View style={styles.settingLeft}>
                 <Ionicons name="document-text" size={24} color="#FFFFFF" />
-                <Text style={styles.settingText}>Terms of use</Text>
+                <Text style={styles.settingText}>Terms of Use</Text>
               </View>
               <Ionicons name="chevron-forward" size={20} color="#64748B" />
             </TouchableOpacity>
@@ -204,7 +208,7 @@ export default function ProfileScreen() {
             <View style={styles.settingRow}>
               <View style={styles.settingLeft}>
                 <Ionicons name="person" size={24} color="#FFFFFF" />
-                <Text style={styles.settingText}>Account Id</Text>
+                <Text style={styles.settingText}>User ID</Text>
               </View>
               <View style={styles.userIdContainer}>
                 <Text style={styles.userIdText}>{userId}</Text>
