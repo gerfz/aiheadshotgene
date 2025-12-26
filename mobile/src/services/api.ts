@@ -300,3 +300,60 @@ export async function deleteGeneration(generationId: string): Promise<{ success:
   
   return response.json();
 }
+
+// Edit portrait - refine an existing generated portrait
+export async function editPortrait(
+  imageUrl: string,
+  editPrompt: string
+): Promise<{ success: boolean; generation: GenerationResult }> {
+  const headers = await getHeaders();
+  
+  // Download the image from URL to get it as a file
+  const localUri = FileSystem.documentDirectory + `edit_${Date.now()}.jpg`;
+  await FileSystem.downloadAsync(imageUrl, localUri);
+  
+  // Create form data
+  const formData = new FormData();
+  
+  // Append the downloaded image
+  formData.append('image', {
+    uri: localUri,
+    name: 'edit_photo.jpg',
+    type: 'image/jpeg',
+  } as any);
+  
+  // Use 'edit' as a special style key
+  formData.append('styleKey', 'edit');
+  
+  // Add the edit prompt
+  formData.append('editPrompt', editPrompt);
+  
+  const response = await fetch(`${API_URL}/api/generate`, {
+    method: 'POST',
+    headers: {
+      ...headers,
+      'Content-Type': 'multipart/form-data',
+    },
+    body: formData,
+  });
+  
+  // Clean up the temporary file
+  try {
+    await FileSystem.deleteAsync(localUri, { idempotent: true });
+  } catch (e) {
+    console.warn('Failed to delete temp file:', e);
+  }
+  
+  if (!response.ok) {
+    const text = await response.text();
+    console.error(`API Error (${response.status}):`, text);
+    try {
+      const error = JSON.parse(text);
+      throw new Error(error.message || 'Edit failed');
+    } catch (e: any) {
+       throw new Error(`Server Error (${response.status}): ${text.substring(0, 100)}`);
+    }
+  }
+  
+  return response.json();
+}

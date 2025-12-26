@@ -202,6 +202,18 @@ export default function ResultScreen() {
             </TouchableOpacity>
           </View>
 
+          <TouchableOpacity style={styles.editButton} onPress={() => router.push({
+            pathname: '/edit-portrait',
+            params: {
+              generatedUrl,
+              originalUrl,
+              styleKey,
+              id: id || '',
+            }
+          })}>
+            <Text style={styles.editButtonText}>✨  Edit Portrait</Text>
+          </TouchableOpacity>
+
           <TouchableOpacity style={styles.newButton} onPress={handleCreateNew}>
             <Text style={styles.newButtonText}>Create New Portrait</Text>
           </TouchableOpacity>
@@ -313,6 +325,18 @@ const styles = StyleSheet.create({
     backgroundColor: '#1F2937',
   },
   actionButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  editButton: {
+    backgroundColor: '#8B5CF6',
+    paddingVertical: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginTop: 16,
+  },
+  editButtonText: {
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',

@@ -6,10 +6,13 @@ import {
   SafeAreaView,
   ActivityIndicator,
   Animated,
+  TouchableOpacity,
+  Alert,
+  Image,
 } from 'react-native';
-import { router, Stack } from 'expo-router';
+import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useAppStore } from '../src/store/useAppStore';
-import { generatePortrait } from '../src/services/api';
+import { generatePortrait, editPortrait } from '../src/services/api';
 import { STYLE_PRESETS } from '../src/constants/styles';
 
 const LOADING_MESSAGES = [
@@ -22,10 +25,24 @@ const LOADING_MESSAGES = [
 ];
 
 export default function GeneratingScreen() {
+  const params = useLocalSearchParams<{
+    imageUrl?: string;
+    editPrompt?: string;
+    isEdit?: string;
+    originalGeneratedUrl?: string;
+    originalUrl?: string;
+    styleKey?: string;
+    originalId?: string;
+  }>();
+
   const { selectedImage, selectedStyle, customPrompt, setIsGenerating } = useAppStore();
   const [messageIndex, setMessageIndex] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const [editedResult, setEditedResult] = useState<any>(null);
+  const [showComparison, setShowComparison] = useState(false);
   const fadeAnim = useState(new Animated.Value(1))[0];
+
+  const isEditMode = params.isEdit === 'true';
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -53,6 +70,17 @@ export default function GeneratingScreen() {
   }, []);
 
   const startGeneration = async () => {
+    // Handle edit mode
+    if (isEditMode) {
+      if (!params.imageUrl || !params.editPrompt) {
+        router.back();
+        return;
+      }
+      await startEdit();
+      return;
+    }
+
+    // Handle normal generation
     if (!selectedImage || !selectedStyle) {
       router.back();
       return;
@@ -115,7 +143,128 @@ export default function GeneratingScreen() {
     }
   };
 
+  const startEdit = async () => {
+    console.log('Starting edit with:', { imageUrl: params.imageUrl, editPrompt: params.editPrompt });
+
+    setIsGenerating(true);
+    setError(null);
+
+    try {
+      console.log('📤 Calling editPortrait API...');
+      
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Request timed out after 120 seconds')), 120000)
+      );
+      
+      const result = await Promise.race([
+        editPortrait(params.imageUrl!, params.editPrompt!),
+        timeoutPromise
+      ]) as any;
+      console.log('📥 Edit API response received:', result);
+      
+      if (result.success) {
+        console.log('✅ Edit successful, showing comparison...');
+        setEditedResult(result.generation);
+        setShowComparison(true);
+      } else {
+        console.error('❌ Edit not successful');
+        throw new Error('Edit failed');
+      }
+    } catch (err: any) {
+      console.error('❌ Edit error:', err);
+      
+      if (err.message && (err.message.includes('No credits remaining') || err.message.includes('403'))) {
+        setIsGenerating(false);
+        router.replace('/subscription');
+        return;
+      }
+      
+      setError(err.message || 'Failed to edit portrait. Please try again.');
+    } finally {
+      console.log('🏁 Edit process finished');
+      setIsGenerating(false);
+    }
+  };
+
   const styleName = selectedStyle ? STYLE_PRESETS[selectedStyle]?.name : '';
+
+  // Show comparison screen after edit is complete
+  if (showComparison && editedResult) {
+    return (
+      <>
+        <Stack.Screen options={{ headerShown: false }} />
+        <SafeAreaView style={styles.container}>
+          <View style={styles.comparisonContent}>
+            <Text style={styles.comparisonTitle}>✨ Your Edited Portrait</Text>
+            <Text style={styles.comparisonSubtitle}>Choose which version you prefer</Text>
+
+            <View style={styles.comparisonImages}>
+              <View style={styles.comparisonItem}>
+                <Text style={styles.comparisonLabel}>Original</Text>
+                <Image
+                  source={{ uri: params.originalGeneratedUrl }}
+                  style={styles.comparisonImage}
+                  resizeMode="cover"
+                />
+              </View>
+
+              <View style={styles.comparisonItem}>
+                <Text style={styles.comparisonLabel}>Edited</Text>
+                <Image
+                  source={{ uri: editedResult.generatedImageUrl }}
+                  style={styles.comparisonImage}
+                  resizeMode="cover"
+                />
+              </View>
+            </View>
+
+            <View style={styles.comparisonActions}>
+              <TouchableOpacity
+                style={styles.keepEditedButton}
+                onPress={() => {
+                  router.replace({
+                    pathname: '/result',
+                    params: {
+                      generatedUrl: editedResult.generatedImageUrl,
+                      originalUrl: params.originalUrl!,
+                      styleKey: params.styleKey!,
+                      id: editedResult.id,
+                    },
+                  });
+                }}
+              >
+                <Text style={styles.keepEditedButtonText}>✓ Keep Edited</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.keepOriginalButton}
+                onPress={() => {
+                  router.replace({
+                    pathname: '/result',
+                    params: {
+                      generatedUrl: params.originalGeneratedUrl!,
+                      originalUrl: params.originalUrl!,
+                      styleKey: params.styleKey!,
+                      id: params.originalId!,
+                    },
+                  });
+                }}
+              >
+                <Text style={styles.keepOriginalButtonText}>Keep Original</Text>
+              </TouchableOpacity>
+            </View>
+
+            <TouchableOpacity
+              style={styles.tryAgainButton}
+              onPress={() => router.back()}
+            >
+              <Text style={styles.tryAgainButtonText}>← Try Different Edits</Text>
+            </TouchableOpacity>
+          </View>
+        </SafeAreaView>
+      </>
+    );
+  }
 
   if (error) {
     return (
@@ -124,7 +273,7 @@ export default function GeneratingScreen() {
         <SafeAreaView style={styles.container}>
           <View style={styles.content}>
             <Text style={styles.errorIcon}>😔</Text>
-            <Text style={styles.errorTitle}>Generation Failed</Text>
+            <Text style={styles.errorTitle}>{isEditMode ? 'Edit Failed' : 'Generation Failed'}</Text>
             <Text style={styles.errorMessage}>{error}</Text>
             <Text
               style={styles.retryButton}
@@ -148,8 +297,8 @@ export default function GeneratingScreen() {
             <View style={styles.pulseRing} />
           </View>
 
-          <Text style={styles.title}>Creating Your Portrait</Text>
-          <Text style={styles.styleName}>{styleName} Style</Text>
+          <Text style={styles.title}>{isEditMode ? 'Editing Your Portrait' : 'Creating Your Portrait'}</Text>
+          {!isEditMode && <Text style={styles.styleName}>{styleName} Style</Text>}
 
           <Animated.Text style={[styles.message, { opacity: fadeAnim }]}>
             {LOADING_MESSAGES[messageIndex]}
@@ -257,6 +406,84 @@ const styles = StyleSheet.create({
   retryButton: {
     fontSize: 16,
     color: '#6366F1',
+    fontWeight: '600',
+  },
+  comparisonContent: {
+    flex: 1,
+    padding: 20,
+  },
+  comparisonTitle: {
+    fontSize: 26,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+    textAlign: 'center',
+    marginTop: 20,
+    marginBottom: 8,
+  },
+  comparisonSubtitle: {
+    fontSize: 16,
+    color: '#94A3B8',
+    textAlign: 'center',
+    marginBottom: 32,
+  },
+  comparisonImages: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginBottom: 40,
+    gap: 16,
+  },
+  comparisonItem: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  comparisonLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#94A3B8',
+    marginBottom: 12,
+  },
+  comparisonImage: {
+    width: '100%',
+    aspectRatio: 3 / 4,
+    borderRadius: 16,
+    borderWidth: 2,
+    borderColor: '#334155',
+  },
+  comparisonActions: {
+    gap: 12,
+    marginBottom: 16,
+  },
+  keepEditedButton: {
+    backgroundColor: '#6366F1',
+    paddingVertical: 18,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  keepEditedButtonText: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  keepOriginalButton: {
+    backgroundColor: '#1E293B',
+    paddingVertical: 18,
+    borderRadius: 12,
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#334155',
+  },
+  keepOriginalButtonText: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  tryAgainButton: {
+    paddingVertical: 16,
+    alignItems: 'center',
+  },
+  tryAgainButtonText: {
+    color: '#6366F1',
+    fontSize: 16,
     fontWeight: '600',
   },
 });

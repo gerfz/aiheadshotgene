@@ -57,11 +57,11 @@ router.post(
   upload.single('image'),
   async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const { styleKey, customPrompt } = req.body;
+      const { styleKey, customPrompt, editPrompt } = req.body;
       const file = req.file;
       const isGuest = req.isGuest;
 
-      console.log('Generate request - styleKey:', styleKey, 'customPrompt:', customPrompt);
+      console.log('Generate request - styleKey:', styleKey, 'customPrompt:', customPrompt, 'editPrompt:', editPrompt);
 
       if (!file) {
         return res.status(400).json({ error: 'No image uploaded' });
@@ -76,6 +76,14 @@ router.post(
         return res.status(400).json({ 
           error: 'Custom prompt is required',
           message: 'Please provide a description for your custom style'
+        });
+      }
+
+      // Validate edit style requires edit prompt
+      if (styleKey === 'edit' && (!editPrompt || editPrompt.trim().length === 0)) {
+        return res.status(400).json({ 
+          error: 'Edit prompt is required',
+          message: 'Please describe what you want to change'
         });
       }
 
@@ -151,7 +159,8 @@ router.post(
           imageBase64,
           styleKey,
           file.mimetype,
-          customPrompt
+          customPrompt,
+          editPrompt
         );
 
         // Upload generated image
