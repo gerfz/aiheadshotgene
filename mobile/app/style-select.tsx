@@ -9,6 +9,9 @@ import {
   Image,
   Dimensions,
   ActivityIndicator,
+  TextInput,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { router, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -36,9 +39,10 @@ const STATIC_CATEGORIES = [
 ];
 
 export default function StyleSelectScreen() {
-  const { selectedStyle, setSelectedStyle } = useAppStore();
+  const { selectedStyle, setSelectedStyle, customPrompt, setCustomPrompt } = useAppStore();
   const [categories, setCategories] = useState(STATIC_CATEGORIES);
   const [loading, setLoading] = useState(true);
+  const [showCustomPrompt, setShowCustomPrompt] = useState(false);
 
   // Load most used styles on mount
   useEffect(() => {
@@ -95,6 +99,15 @@ export default function StyleSelectScreen() {
 
   const handleStyleSelect = (styleKey: string) => {
     setSelectedStyle(styleKey);
+    
+    // Show custom prompt input if custom style is selected
+    if (styleKey === 'custom') {
+      setShowCustomPrompt(true);
+    } else {
+      setShowCustomPrompt(false);
+      // Clear custom prompt when selecting a non-custom style
+      setCustomPrompt(null);
+    }
   };
 
   const handleContinue = () => {
@@ -204,12 +217,39 @@ export default function StyleSelectScreen() {
               ))}
             </ScrollView>
 
+            {/* Custom Prompt Input - Show when custom style is selected */}
+            {showCustomPrompt && selectedStyle === 'custom' && (
+              <View style={styles.customPromptContainer}>
+                <View style={styles.customPromptHeader}>
+                  <Ionicons name="create-outline" size={24} color="#6366F1" />
+                  <Text style={styles.customPromptTitle}>Describe Your Portrait</Text>
+                </View>
+                <TextInput
+                  style={styles.customPromptInput}
+                  placeholder="E.g., Professional headshot in a modern office, wearing a navy suit..."
+                  placeholderTextColor="#64748B"
+                  multiline
+                  numberOfLines={4}
+                  value={customPrompt || ''}
+                  onChangeText={setCustomPrompt}
+                  textAlignVertical="top"
+                />
+                <Text style={styles.customPromptHint}>
+                  💡 Tip: Be specific about clothing, background, lighting, and mood
+                </Text>
+              </View>
+            )}
+
             {/* Continue Button - Only show when style is selected */}
             {selectedStyle && (
               <View style={styles.footer}>
                 <TouchableOpacity
-                  style={styles.continueButton}
+                  style={[
+                    styles.continueButton,
+                    selectedStyle === 'custom' && (!customPrompt || customPrompt.trim().length === 0) && styles.continueButtonDisabled
+                  ]}
                   onPress={handleContinue}
+                  disabled={selectedStyle === 'custom' && (!customPrompt || customPrompt.trim().length === 0)}
                 >
                   <Text style={styles.continueButtonText}>Continue</Text>
                 </TouchableOpacity>
@@ -354,6 +394,43 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   
+  // Custom Prompt
+  customPromptContainer: {
+    margin: 20,
+    padding: 20,
+    backgroundColor: '#1E293B',
+    borderRadius: 16,
+    borderWidth: 2,
+    borderColor: '#6366F1',
+  },
+  customPromptHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+    gap: 8,
+  },
+  customPromptTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  customPromptInput: {
+    backgroundColor: '#0F172A',
+    borderRadius: 12,
+    padding: 16,
+    color: '#FFFFFF',
+    fontSize: 15,
+    minHeight: 120,
+    borderWidth: 1,
+    borderColor: '#334155',
+  },
+  customPromptHint: {
+    color: '#94A3B8',
+    fontSize: 13,
+    marginTop: 12,
+    lineHeight: 18,
+  },
+  
   // Footer
   footer: {
     padding: 20,
@@ -367,6 +444,10 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     borderRadius: 12,
     alignItems: 'center',
+  },
+  continueButtonDisabled: {
+    backgroundColor: '#334155',
+    opacity: 0.5,
   },
   continueButtonText: {
     color: '#FFFFFF',

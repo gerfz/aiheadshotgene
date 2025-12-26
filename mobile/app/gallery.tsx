@@ -85,6 +85,7 @@ export default function GalleryScreen() {
                         generatedUrl: gen.generated_image_url || '',
                         originalUrl: gen.original_image_url || '',
                         styleKey: gen.style_key,
+                        customPrompt: gen.custom_prompt || '',
                       },
                     })
                   }

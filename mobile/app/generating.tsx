@@ -58,13 +58,16 @@ export default function GeneratingScreen() {
       return;
     }
 
-    console.log('Starting generation with:', { selectedStyle, customPrompt });
+    // Only send customPrompt if the style is 'custom'
+    const promptToSend = selectedStyle === 'custom' ? customPrompt : null;
+    
+    console.log('Starting generation with:', { selectedStyle, customPrompt: promptToSend });
 
     setIsGenerating(true);
     setError(null);
 
     try {
-      const result = await generatePortrait(selectedImage, selectedStyle, customPrompt);
+      const result = await generatePortrait(selectedImage, selectedStyle, promptToSend);
       
       if (result.success) {
         router.replace({ 
@@ -73,6 +76,7 @@ export default function GeneratingScreen() {
             generatedUrl: result.generation.generatedImageUrl,
             originalUrl: result.generation.originalImageUrl,
             styleKey: result.generation.styleKey,
+            customPrompt: promptToSend || '',
           } 
         });
       } else {

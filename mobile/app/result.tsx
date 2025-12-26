@@ -24,9 +24,10 @@ export default function ResultScreen() {
     generatedUrl: string;
     originalUrl: string;
     styleKey: string;
+    customPrompt?: string;
   }>();
 
-  const { id, generatedUrl, originalUrl, styleKey } = params;
+  const { id, generatedUrl, originalUrl, styleKey, customPrompt } = params;
 
   if (!generatedUrl) {
     return (
@@ -151,6 +152,17 @@ export default function ResultScreen() {
             <Text style={styles.styleName}>{styleName}</Text>
           </View>
 
+          {/* Show custom prompt if it's a custom style */}
+          {styleKey === 'custom' && customPrompt && (
+            <View style={styles.customPromptContainer}>
+              <View style={styles.customPromptHeader}>
+                <Text style={styles.customPromptIcon}>✨</Text>
+                <Text style={styles.customPromptTitle}>Your Prompt</Text>
+              </View>
+              <Text style={styles.customPromptText}>{customPrompt}</Text>
+            </View>
+          )}
+
           <View style={styles.imageContainer}>
             <Image
               source={{ uri: generatedUrl }}
@@ -221,6 +233,33 @@ const styles = StyleSheet.create({
     fontSize: 18,
     color: '#6366F1',
     fontWeight: '600',
+  },
+  customPromptContainer: {
+    backgroundColor: '#1E293B',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 24,
+    borderWidth: 1,
+    borderColor: '#334155',
+  },
+  customPromptHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+    gap: 8,
+  },
+  customPromptIcon: {
+    fontSize: 20,
+  },
+  customPromptTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  customPromptText: {
+    fontSize: 14,
+    color: '#E2E8F0',
+    lineHeight: 20,
   },
   imageContainer: {
     alignItems: 'center',

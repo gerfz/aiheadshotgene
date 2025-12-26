@@ -167,7 +167,8 @@ export default function HomeScreen() {
                         id: gen.id,
                         generatedUrl: gen.generated_image_url || '',
                         originalUrl: gen.original_image_url || '',
-                        styleKey: gen.style_key
+                        styleKey: gen.style_key,
+                        customPrompt: gen.custom_prompt || ''
                       } 
                     })}
                   >
