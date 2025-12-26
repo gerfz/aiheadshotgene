@@ -25,9 +25,10 @@ export default function ResultScreen() {
     originalUrl: string;
     styleKey: string;
     customPrompt?: string;
+    isEdited?: string;
   }>();
 
-  const { id, generatedUrl, originalUrl, styleKey, customPrompt } = params;
+  const { id, generatedUrl, originalUrl, styleKey, customPrompt, isEdited } = params;
 
   if (!generatedUrl) {
     return (
@@ -49,7 +50,11 @@ export default function ResultScreen() {
     );
   }
 
-  const styleName = STYLE_PRESETS[styleKey || '']?.name || styleKey;
+  // Get the style name and add (Edited) suffix if it was edited
+  let styleName = STYLE_PRESETS[styleKey || '']?.name || styleKey;
+  if (isEdited === 'true') {
+    styleName = `${styleName} (Edited)`;
+  }
 
   const handleDownload = async () => {
     try {
@@ -140,7 +145,11 @@ export default function ResultScreen() {
         options={{ 
           title: 'Your Portrait',
           headerLeft: () => (
-            <TouchableOpacity onPress={() => router.back()} style={{ marginRight: 15 }}>
+            <TouchableOpacity onPress={() => {
+              // Always go back to home, clearing the navigation stack
+              router.dismissAll();
+              router.replace('/home');
+            }} style={{ marginRight: 15 }}>
               <Text style={{ fontSize: 28, color: '#FFFFFF' }}>←</Text>
             </TouchableOpacity>
           ),

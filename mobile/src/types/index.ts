@@ -20,6 +20,7 @@ export interface Generation {
   generated_image_url: string | null;
   status: 'pending' | 'processing' | 'completed' | 'failed';
   created_at: string;
+  is_edited?: boolean;
 }
 
 export interface StylePreset {

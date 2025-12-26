@@ -15,19 +15,32 @@ import { signOut } from '../src/services/supabase';
 import { CreditsDisplay, BottomNav } from '../src/components';
 
 // Helper to convert style keys to professional display names
-const getStyleDisplayName = (styleKey: string): string => {
+const getStyleDisplayName = (styleKey: string, isEdited?: boolean): string => {
   const styleNames: Record<string, string> = {
+    'business': 'Business Photo',
     'business_photo': 'Business Photo',
     'emotional_film': 'Emotional Film',
     'victoria_secret': "Victoria's Secret",
+    'nineties_camera': '90s Camera',
+    'professional_headshot': 'Professional',
+    'with_puppy': 'With Puppy',
+    'custom': 'Custom Style',
     // Legacy style names
     'corporate': 'Corporate',
     'creative': 'Creative',
     'friendly': 'Friendly',
   };
-  return styleNames[styleKey] || styleKey.split('_').map(word => 
+  
+  let displayName = styleNames[styleKey] || styleKey.split('_').map(word => 
     word.charAt(0).toUpperCase() + word.slice(1)
   ).join(' ');
+  
+  // Add (Edited) suffix if it's an edited portrait
+  if (isEdited) {
+    displayName += ' (Edited)';
+  }
+  
+  return displayName;
 };
 
 export default function HomeScreen() {
@@ -177,7 +190,7 @@ export default function HomeScreen() {
                       style={styles.historyImage}
                     />
                     <Text style={styles.historyStyle}>
-                      {getStyleDisplayName(gen.style_key)}
+                      {getStyleDisplayName(gen.style_key, gen.is_edited)}
                     </Text>
                   </TouchableOpacity>
                 ))}

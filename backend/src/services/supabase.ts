@@ -88,13 +88,15 @@ export async function createGeneration(
   userId: string,
   styleKey: string,
   originalImageUrl: string,
-  customPrompt?: string
+  customPrompt?: string,
+  isEdited: boolean = false
 ) {
   const insertData: any = {
     user_id: userId,
     style_key: styleKey,
     original_image_url: originalImageUrl,
-    status: 'pending'
+    status: 'pending',
+    is_edited: isEdited
   };
 
   if (customPrompt) {

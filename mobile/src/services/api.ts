@@ -304,7 +304,8 @@ export async function deleteGeneration(generationId: string): Promise<{ success:
 // Edit portrait - refine an existing generated portrait
 export async function editPortrait(
   imageUrl: string,
-  editPrompt: string
+  editPrompt: string,
+  originalStyleKey?: string
 ): Promise<{ success: boolean; generation: GenerationResult }> {
   const headers = await getHeaders();
   
@@ -327,6 +328,11 @@ export async function editPortrait(
   
   // Add the edit prompt
   formData.append('editPrompt', editPrompt);
+  
+  // Add original style key so backend can save it correctly
+  if (originalStyleKey) {
+    formData.append('originalStyleKey', originalStyleKey);
+  }
   
   const response = await fetch(`${API_URL}/api/generate`, {
     method: 'POST',

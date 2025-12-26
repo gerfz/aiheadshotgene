@@ -157,7 +157,7 @@ export default function GeneratingScreen() {
       );
       
       const result = await Promise.race([
-        editPortrait(params.imageUrl!, params.editPrompt!),
+        editPortrait(params.imageUrl!, params.editPrompt!, params.styleKey),
         timeoutPromise
       ]) as any;
       console.log('📥 Edit API response received:', result);
@@ -222,6 +222,8 @@ export default function GeneratingScreen() {
               <TouchableOpacity
                 style={styles.keepEditedButton}
                 onPress={() => {
+                  // Clear navigation stack and go to result with edited version
+                  router.dismissAll();
                   router.replace({
                     pathname: '/result',
                     params: {
@@ -229,6 +231,7 @@ export default function GeneratingScreen() {
                       originalUrl: params.originalUrl!,
                       styleKey: params.styleKey!,
                       id: editedResult.id,
+                      isEdited: 'true',
                     },
                   });
                 }}
@@ -239,6 +242,8 @@ export default function GeneratingScreen() {
               <TouchableOpacity
                 style={styles.keepOriginalButton}
                 onPress={() => {
+                  // Clear navigation stack and go to result with original version
+                  router.dismissAll();
                   router.replace({
                     pathname: '/result',
                     params: {
@@ -246,6 +251,7 @@ export default function GeneratingScreen() {
                       originalUrl: params.originalUrl!,
                       styleKey: params.styleKey!,
                       id: params.originalId!,
+                      isEdited: 'false',
                     },
                   });
                 }}
@@ -256,7 +262,10 @@ export default function GeneratingScreen() {
 
             <TouchableOpacity
               style={styles.tryAgainButton}
-              onPress={() => router.back()}
+              onPress={() => {
+                // Go back to edit screen to try different changes
+                router.back();
+              }}
             >
               <Text style={styles.tryAgainButtonText}>← Try Different Edits</Text>
             </TouchableOpacity>

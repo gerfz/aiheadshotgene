@@ -145,8 +145,15 @@ router.post(
           file.mimetype
         );
         
+        // For edit mode, keep the original styleKey, not 'edit'
+        const actualStyleKey = styleKey === 'edit' && req.body.originalStyleKey 
+          ? req.body.originalStyleKey 
+          : styleKey;
+        
+        const isEdited = styleKey === 'edit';
+        
         // Create generation record
-        generation = await createGeneration(userId, styleKey, originalImageUrl, customPrompt);
+        generation = await createGeneration(userId, actualStyleKey, originalImageUrl, customPrompt, isEdited);
       }
 
       // Generate portrait using Nano Banana
