@@ -74,9 +74,6 @@ export async function getMostUsedStyles() {
   
   return data || [];
 }
-  
-  return data;
-}
 
 export async function decrementCredits(userId: string) {
   const { data, error } = await supabaseAdmin.rpc('decrement_credits', {
