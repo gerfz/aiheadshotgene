@@ -67,9 +67,21 @@ export default function GeneratingScreen() {
     setError(null);
 
     try {
-      const result = await generatePortrait(selectedImage, selectedStyle, promptToSend);
+      console.log('📤 Calling generatePortrait API...');
+      
+      // Add timeout to prevent infinite hanging
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Request timed out after 120 seconds')), 120000)
+      );
+      
+      const result = await Promise.race([
+        generatePortrait(selectedImage, selectedStyle, promptToSend),
+        timeoutPromise
+      ]) as any;
+      console.log('📥 API response received:', result);
       
       if (result.success) {
+        console.log('✅ Generation successful, navigating to result...');
         router.replace({ 
           pathname: '/result', 
           params: { 
@@ -80,21 +92,25 @@ export default function GeneratingScreen() {
           } 
         });
       } else {
+        console.error('❌ Generation not successful');
         throw new Error('Generation failed');
       }
     } catch (err: any) {
-      console.error('Generation error:', err);
+      console.error('❌ Generation error:', err);
+      console.error('Error details:', JSON.stringify(err, null, 2));
       
       // Check if error is about no credits (403)
       if (err.message && (err.message.includes('No credits remaining') || err.message.includes('403'))) {
         // Redirect to subscription page
+        console.log('⚠️ No credits, redirecting to subscription...');
         setIsGenerating(false);
         router.replace('/subscription');
         return;
       }
       
-      setError(err.message || 'Failed to generate portrait');
+      setError(err.message || 'Failed to generate portrait. Please try again.');
     } finally {
+      console.log('🏁 Generation process finished');
       setIsGenerating(false);
     }
   };
