@@ -16,6 +16,8 @@ export default function RootLayout() {
   const [showVerificationToast, setShowVerificationToast] = useState(false);
 
   useEffect(() => {
+    let isInitializing = true; // Flag to prevent duplicate user creation
+    
     const initApp = async () => {
       try {
         // Get device ID
@@ -65,6 +67,7 @@ export default function RootLayout() {
       } catch (error) {
         console.error('❌ App initialization error:', error);
       } finally {
+        isInitializing = false;
         setInitializing(false);
         setIsLoading(false);
       }
@@ -76,6 +79,12 @@ export default function RootLayout() {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         console.log('🔄 Auth state changed:', event);
+        
+        // Skip INITIAL_SESSION event during app initialization
+        if (event === 'INITIAL_SESSION' && isInitializing) {
+          console.log('⏭️ Skipping INITIAL_SESSION during initialization');
+          return;
+        }
         
         if (session?.user) {
           // User session exists (anonymous or authenticated)
@@ -95,8 +104,8 @@ export default function RootLayout() {
           } catch (error) {
             console.error('❌ Error during auth state change:', error);
           }
-        } else {
-          // Session expired - recreate anonymous user
+        } else if (!isInitializing) {
+          // Session expired - recreate anonymous user (only if not initializing)
           console.log('⚠️ Session expired, recreating anonymous user');
           try {
             const deviceId = await getHardwareDeviceId();
