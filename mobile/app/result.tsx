@@ -106,7 +106,8 @@ export default function ResultScreen() {
   const handleCreateNew = () => {
     setSelectedImage(null);
     setSelectedStyle(null);
-    router.replace('/home');
+    // Navigate directly to photo upload screen
+    router.push('/upload');
   };
 
   const handleDelete = async () => {

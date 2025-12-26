@@ -8,6 +8,7 @@ import {
   RefreshControl,
   Alert,
   Linking,
+  Share,
 } from 'react-native';
 import { router, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -95,6 +96,42 @@ export default function ProfileScreen() {
     router.push('/terms-of-use');
   };
 
+  const handleRateUs = async () => {
+    try {
+      const packageName = Application.applicationId || 'com.aiportrait.app';
+      const playStoreUrl = `market://details?id=${packageName}`;
+      const webUrl = `https://play.google.com/store/apps/details?id=${packageName}`;
+      
+      // Try to open Play Store app first
+      const canOpen = await Linking.canOpenURL(playStoreUrl);
+      if (canOpen) {
+        await Linking.openURL(playStoreUrl);
+      } else {
+        // Fallback to web browser
+        await Linking.openURL(webUrl);
+      }
+    } catch (error) {
+      console.error('Failed to open Play Store:', error);
+      Alert.alert('Error', 'Could not open Play Store');
+    }
+  };
+
+  const handleShareApp = async () => {
+    try {
+      const packageName = Application.applicationId || 'com.aiportrait.app';
+      const shareUrl = `https://play.google.com/store/apps/details?id=${packageName}`;
+      const message = `Check out AI Portrait Studio! Create stunning professional portraits with AI.\n\n${shareUrl}`;
+      
+      // Use the Share API
+      await Share.share({
+        message: message,
+        title: 'AI Portrait Studio',
+      });
+    } catch (error) {
+      console.error('Failed to share app:', error);
+    }
+  };
+
   const completedCount = Array.isArray(generations) 
     ? generations.filter(g => g.status === 'completed').length 
     : 0;
@@ -156,14 +193,14 @@ export default function ProfileScreen() {
 
           {/* Action Buttons */}
           <View style={styles.actionsRow}>
-            <TouchableOpacity style={styles.actionCard}>
+            <TouchableOpacity style={styles.actionCard} onPress={handleRateUs}>
               <View style={styles.actionIconContainer}>
                 <Ionicons name="star" size={24} color="#6366F1" />
               </View>
               <Text style={styles.actionCardText}>Rate Us</Text>
             </TouchableOpacity>
             
-            <TouchableOpacity style={styles.actionCard}>
+            <TouchableOpacity style={styles.actionCard} onPress={handleShareApp}>
               <View style={styles.actionIconContainer}>
                 <Ionicons name="share-social" size={24} color="#6366F1" />
               </View>
