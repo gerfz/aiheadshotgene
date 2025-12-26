@@ -24,9 +24,10 @@ export default function GalleryScreen() {
   const loadGenerations = async () => {
     try {
       const generationsData = await getGenerations();
-      setGenerations(generationsData.generations);
+      setGenerations(Array.isArray(generationsData.generations) ? generationsData.generations : []);
     } catch (error) {
       console.error('Failed to load generations:', error);
+      setGenerations([]); // Set empty array on error
     }
   };
 
@@ -40,7 +41,9 @@ export default function GalleryScreen() {
     setRefreshing(false);
   };
 
-  const completedGenerations = generations.filter(g => g.status === 'completed');
+  const completedGenerations = Array.isArray(generations) 
+    ? generations.filter(g => g.status === 'completed')
+    : [];
 
   return (
     <>

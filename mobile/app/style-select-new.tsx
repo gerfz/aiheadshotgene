@@ -23,7 +23,7 @@ const CATEGORIES = [
     id: 'most_used',
     name: 'Most Used',
     icon: '⚡',
-    styles: ['custom', 'business', 'professional_headshot', 'emotional_film'],
+    styles: ['business', 'professional_headshot', 'emotional_film'],
   },
   {
     id: 'linkedin',
@@ -38,21 +38,16 @@ const CATEGORIES = [
     styles: ['business', 'professional_headshot', 'nineties_camera'],
   },
   {
-    id: 'female_only',
-    name: 'Female Only',
-    icon: '👩',
-    styles: ['victoria_secret', 'emotional_film'],
-  },
-  {
-    id: 'male_only',
-    name: 'Male Only',
-    icon: '👨',
-    styles: ['business', 'professional_headshot', 'nineties_camera'],
+    id: 'creative',
+    name: 'Creative',
+    icon: '🎨',
+    styles: ['emotional_film', 'victoria_secret', 'with_puppy'],
   },
 ];
 
 export default function StyleSelectScreen() {
   const { selectedStyle, setSelectedStyle } = useAppStore();
+  const [activeCategory, setActiveCategory] = useState('most_used');
 
   const handleStyleSelect = (styleKey: string) => {
     setSelectedStyle(styleKey);
@@ -64,6 +59,9 @@ export default function StyleSelectScreen() {
     }
   };
 
+  const currentCategory = CATEGORIES.find(cat => cat.id === activeCategory);
+  const stylesToShow = currentCategory?.styles.map(key => STYLE_PRESETS[key]) || [];
+
   return (
     <>
       <Stack.Screen 
@@ -72,90 +70,91 @@ export default function StyleSelectScreen() {
           headerStyle: { backgroundColor: '#0F172A' },
           headerTintColor: '#FFFFFF',
           headerTitleStyle: { fontWeight: '600', fontSize: 20 },
+          headerRight: () => (
+            <TouchableOpacity style={styles.headerButton}>
+              <Ionicons name="settings-outline" size={24} color="#FFFFFF" />
+            </TouchableOpacity>
+          ),
         }} 
       />
       <SafeAreaView style={styles.container}>
-        {/* Category Filter Tabs */}
+        {/* Category Tabs */}
         <ScrollView 
           horizontal 
           showsHorizontalScrollIndicator={false}
-          style={styles.filterTabsScroll}
-          contentContainerStyle={styles.filterTabsContent}
+          style={styles.categoriesScroll}
+          contentContainerStyle={styles.categoriesContent}
         >
           {CATEGORIES.map((category) => (
             <TouchableOpacity
               key={category.id}
-              style={styles.filterTab}
+              style={[
+                styles.categoryTab,
+                activeCategory === category.id && styles.categoryTabActive
+              ]}
+              onPress={() => setActiveCategory(category.id)}
             >
-              <Text style={styles.filterIcon}>{category.icon}</Text>
-              <Text style={styles.filterText}>{category.name}</Text>
+              <Text style={styles.categoryIcon}>{category.icon}</Text>
+              <Text style={[
+                styles.categoryText,
+                activeCategory === category.id && styles.categoryTextActive
+              ]}>
+                {category.name}
+              </Text>
             </TouchableOpacity>
           ))}
         </ScrollView>
 
-        {/* All Categories - Vertical Scroll */}
+        {/* Styles Grid */}
         <ScrollView
           style={styles.contentScroll}
           contentContainerStyle={styles.contentContainer}
           showsVerticalScrollIndicator={false}
         >
-          {CATEGORIES.map((category) => (
-            <View key={category.id} style={styles.categorySection}>
-              {/* Category Header */}
-              <View style={styles.categoryHeader}>
-                <Text style={styles.categoryTitle}>
-                  {category.icon} {category.name}
-                </Text>
-              </View>
+          {/* Category Title */}
+          <View style={styles.categoryHeader}>
+            <Text style={styles.categoryTitle}>{currentCategory?.icon} {currentCategory?.name}</Text>
+          </View>
 
-              {/* Horizontal Scroll of Styles */}
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.horizontalScroll}
+          {/* Grid of Styles */}
+          <View style={styles.grid}>
+            {stylesToShow.map((style) => (
+              <TouchableOpacity
+                key={style.key}
+                style={styles.styleCard}
+                onPress={() => handleStyleSelect(style.key)}
+                activeOpacity={0.9}
               >
-                {category.styles.map((styleKey) => {
-                  const style = STYLE_PRESETS[styleKey];
-                  return (
-                    <TouchableOpacity
-                      key={style.key}
-                      style={styles.styleCard}
-                      onPress={() => handleStyleSelect(style.key)}
-                      activeOpacity={0.9}
-                    >
-                      <View style={styles.imageContainer}>
-                        <Image 
-                          source={style.thumbnail} 
-                          style={styles.styleImage}
-                          resizeMode="cover"
-                        />
-                        {/* Selection Indicator */}
-                        <View style={styles.selectionIndicator}>
-                          {selectedStyle === style.key ? (
-                            <Ionicons name="checkmark-circle" size={24} color="#6366F1" />
-                          ) : (
-                            <View style={styles.unselectedCircle} />
-                          )}
-                        </View>
-                        
-                        {/* Badge */}
-                        {style.badge && (
-                          <View style={[
-                            styles.badge,
-                            style.badge.type === 'female' && styles.badgeFemale,
-                            style.badge.type === 'info' && styles.badgeInfo,
-                          ]}>
-                            <Text style={styles.badgeText}>{style.badge.label}</Text>
-                          </View>
-                        )}
-                      </View>
-                      <Text style={styles.styleName}>{style.name}</Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </ScrollView>
-            </View>
-          ))}
+                <View style={styles.imageContainer}>
+                  <Image 
+                    source={style.thumbnail} 
+                    style={styles.styleImage}
+                    resizeMode="cover"
+                  />
+                  {/* Selection Indicator */}
+                  <View style={styles.selectionIndicator}>
+                    {selectedStyle === style.key ? (
+                      <Ionicons name="checkmark-circle" size={24} color="#6366F1" />
+                    ) : (
+                      <View style={styles.unselectedCircle} />
+                    )}
+                  </View>
+                  
+                  {/* Badge */}
+                  {style.badge && (
+                    <View style={[
+                      styles.badge,
+                      style.badge.type === 'female' && styles.badgeFemale,
+                      style.badge.type === 'info' && styles.badgeInfo,
+                    ]}>
+                      <Text style={styles.badgeText}>{style.badge.label}</Text>
+                    </View>
+                  )}
+                </View>
+                <Text style={styles.styleName}>{style.name}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
         </ScrollView>
 
         {/* Bottom Navigation */}
@@ -192,19 +191,23 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#0F172A',
   },
+  headerButton: {
+    padding: 8,
+    marginRight: 8,
+  },
   
-  // Filter Tabs at Top
-  filterTabsScroll: {
+  // Categories
+  categoriesScroll: {
     maxHeight: 60,
     borderBottomWidth: 1,
     borderBottomColor: '#1E293B',
   },
-  filterTabsContent: {
+  categoriesContent: {
     paddingHorizontal: 16,
     paddingVertical: 12,
     gap: 8,
   },
-  filterTab: {
+  categoryTab: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 16,
@@ -214,13 +217,19 @@ const styles = StyleSheet.create({
     gap: 6,
     marginRight: 8,
   },
-  filterIcon: {
+  categoryTabActive: {
+    backgroundColor: '#6366F1',
+  },
+  categoryIcon: {
     fontSize: 16,
   },
-  filterText: {
-    color: '#FFFFFF',
+  categoryText: {
+    color: '#9CA3AF',
     fontSize: 14,
     fontWeight: '500',
+  },
+  categoryTextActive: {
+    color: '#FFFFFF',
   },
   
   // Content
@@ -228,15 +237,10 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   contentContainer: {
+    padding: 20,
     paddingBottom: 100,
   },
-  
-  // Category Section
-  categorySection: {
-    marginBottom: 24,
-  },
   categoryHeader: {
-    paddingHorizontal: 20,
     marginBottom: 16,
   },
   categoryTitle: {
@@ -245,14 +249,15 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
   
-  // Horizontal Scroll
-  horizontalScroll: {
-    paddingLeft: 20,
-    paddingRight: 20,
+  // Grid
+  grid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 16,
   },
   styleCard: {
     width: cardWidth,
+    marginBottom: 8,
   },
   imageContainer: {
     width: '100%',

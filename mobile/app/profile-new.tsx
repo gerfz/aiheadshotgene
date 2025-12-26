@@ -134,19 +134,23 @@ export default function ProfileScreen() {
           )}
 
           {/* Action Buttons */}
-          <View style={styles.actionsRow}>
-            <TouchableOpacity style={styles.actionCard}>
+          <View style={styles.actionsCard}>
+            <TouchableOpacity style={styles.actionButton}>
               <View style={styles.actionIconContainer}>
                 <Ionicons name="star" size={24} color="#6366F1" />
               </View>
-              <Text style={styles.actionCardText}>Rate Us</Text>
+              <Text style={styles.actionButtonText}>Rate Us</Text>
+              <Ionicons name="chevron-forward" size={20} color="#64748B" />
             </TouchableOpacity>
             
-            <TouchableOpacity style={styles.actionCard}>
+            <View style={styles.divider} />
+            
+            <TouchableOpacity style={styles.actionButton}>
               <View style={styles.actionIconContainer}>
                 <Ionicons name="share-social" size={24} color="#6366F1" />
               </View>
-              <Text style={styles.actionCardText}>Share App</Text>
+              <Text style={styles.actionButtonText}>Share App</Text>
+              <Ionicons name="chevron-forward" size={20} color="#64748B" />
             </TouchableOpacity>
           </View>
 
@@ -187,7 +191,7 @@ export default function ProfileScreen() {
             <View style={styles.settingRow}>
               <View style={styles.settingLeft}>
                 <Ionicons name="person" size={24} color="#FFFFFF" />
-                <Text style={styles.settingText}>Account Id</Text>
+                <Text style={styles.settingText}>User Id</Text>
               </View>
               <View style={styles.userIdContainer}>
                 <Text style={styles.userIdText}>{userId}</Text>
@@ -209,12 +213,29 @@ export default function ProfileScreen() {
             
             <TouchableOpacity style={styles.settingRow}>
               <View style={styles.settingLeft}>
+                <Ionicons name="refresh" size={24} color="#FFFFFF" />
+                <Text style={styles.settingText}>Format App</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color="#64748B" />
+            </TouchableOpacity>
+            
+            <View style={styles.divider} />
+            
+            <TouchableOpacity style={styles.settingRow}>
+              <View style={styles.settingLeft}>
                 <Ionicons name="reload" size={24} color="#FFFFFF" />
                 <Text style={styles.settingText}>Restore Subscriptions</Text>
               </View>
               <Ionicons name="chevron-forward" size={20} color="#64748B" />
             </TouchableOpacity>
           </View>
+
+          {/* Logout Button (if not guest) */}
+          {!isGuest && (
+            <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+              <Text style={styles.logoutButtonText}>Logout</Text>
+            </TouchableOpacity>
+          )}
 
           {/* Sign Up Button (if guest) */}
           {isGuest && (
@@ -278,18 +299,17 @@ const styles = StyleSheet.create({
   },
   
   // Action Buttons
-  actionsRow: {
-    flexDirection: 'row',
-    gap: 12,
-    marginBottom: 20,
-  },
-  actionCard: {
-    flex: 1,
+  actionsCard: {
     backgroundColor: '#1E293B',
     borderRadius: 16,
-    padding: 16,
+    padding: 4,
+    marginBottom: 20,
+  },
+  actionButton: {
+    flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    padding: 16,
+    gap: 12,
   },
   actionIconContainer: {
     width: 40,
@@ -299,9 +319,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  actionCardText: {
+  actionButtonText: {
+    flex: 1,
     color: '#FFFFFF',
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: '500',
   },
   
@@ -354,6 +375,18 @@ const styles = StyleSheet.create({
   },
   
   // Buttons
+  logoutButton: {
+    backgroundColor: '#EF4444',
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: 'center',
+    marginTop: 10,
+  },
+  logoutButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
   signUpButton: {
     backgroundColor: '#6366F1',
     borderRadius: 12,
