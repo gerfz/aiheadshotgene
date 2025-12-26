@@ -107,13 +107,6 @@ export default function HomeScreen() {
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#6366F1" />
           }
         >
-          <View style={styles.header}>
-            <View>
-              <Text style={styles.greeting}>Welcome back,</Text>
-              <Text style={styles.email}>{user?.email || 'User'}</Text>
-            </View>
-          </View>
-
           <View style={styles.creditsContainer}>
             <CreditsDisplay credits={credits} />
           </View>
@@ -206,21 +199,6 @@ const styles = StyleSheet.create({
     padding: 20,
     paddingTop: 60,
     paddingBottom: 120,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 24,
-  },
-  greeting: {
-    fontSize: 14,
-    color: '#9CA3AF',
-  },
-  email: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#FFFFFF',
   },
   guestText: {
     fontSize: 16,

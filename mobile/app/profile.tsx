@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { router, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import * as Application from 'expo-application';
 import { useAppStore } from '../src/store/useAppStore';
 import { signOut } from '../src/services/supabase';
 import { getCredits, getGenerations } from '../src/services/api';
@@ -18,6 +19,21 @@ import { getCredits, getGenerations } from '../src/services/api';
 export default function ProfileScreen() {
   const { user, setUser, credits, setCredits, generations, setGenerations } = useAppStore();
   const [refreshing, setRefreshing] = useState(false);
+  const [deviceId, setDeviceId] = useState<string>('');
+
+  useEffect(() => {
+    // Get device ID on mount
+    const getDeviceId = async () => {
+      try {
+        const id = Application.getAndroidId();
+        setDeviceId(id || 'unknown');
+      } catch (error) {
+        console.error('Failed to get device ID:', error);
+        setDeviceId('unknown');
+      }
+    };
+    getDeviceId();
+  }, []);
 
   const refreshData = async () => {
     setRefreshing(true);
@@ -79,7 +95,8 @@ export default function ProfileScreen() {
     ? generations.filter(g => g.status === 'completed').length 
     : 0;
 
-  const userId = user?.id?.slice(0, 13) || 'guest';
+  // Use device ID as the account ID (first 13 characters for display)
+  const userId = deviceId.slice(0, 13) || user?.id?.slice(0, 13) || 'loading...';
 
   return (
     <>
