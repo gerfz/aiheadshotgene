@@ -63,13 +63,6 @@ export default function ProfileScreen() {
   const refreshData = async () => {
     setRefreshing(true);
     try {
-      const [creditsData, generationsData] = await Promise.all([
-        getCredits(),
-        getGenerations(),
-      ]);
-      
-      setCredits(creditsData);
-      setGenerations(Array.isArray(generationsData.generations) ? generationsData.generations : []);
       await loadUserEmail();
     } catch (error) {
       console.error('Failed to refresh profile data:', error);
@@ -79,7 +72,7 @@ export default function ProfileScreen() {
   };
 
   useEffect(() => {
-    refreshData();
+    loadUserEmail();
   }, []);
 
   const handleSubscription = () => {
@@ -358,6 +351,20 @@ export default function ProfileScreen() {
             
             <View style={styles.divider} />
             
+            <View style={styles.settingRow}>
+              <View style={styles.settingLeft}>
+                <Ionicons name="star" size={24} color="#FFFFFF" />
+                <Text style={styles.settingText}>Tier</Text>
+              </View>
+              <View style={styles.tierContainer}>
+                <Text style={[styles.tierText, credits?.isSubscribed && styles.tierTextPro]}>
+                  {credits?.isSubscribed ? 'Pro' : 'Free'}
+                </Text>
+              </View>
+            </View>
+            
+            <View style={styles.divider} />
+            
             <TouchableOpacity style={styles.settingRow} onPress={handleSubscription}>
               <View style={styles.settingLeft}>
                 <Ionicons name="card" size={24} color="#FFFFFF" />
@@ -568,6 +575,19 @@ const styles = StyleSheet.create({
     fontSize: 14,
     flex: 1,
     textAlign: 'right',
+  },
+  tierContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+  },
+  tierText: {
+    color: '#64748B',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  tierTextPro: {
+    color: '#6366F1',
   },
   divider: {
     height: 1,

@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
-import { Stack } from 'expo-router';
+import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
+import * as SecureStore from 'expo-secure-store';
 import { useAppStore } from '../src/store/useAppStore';
 import { supabase } from '../src/services/supabase';
 import { initializePurchases, loginUser } from '../src/services/purchases';
@@ -9,6 +10,8 @@ import { getHardwareDeviceId } from '../src/services/deviceId';
 import { getCredits } from '../src/services/api';
 import { ErrorBoundary } from '../src/components/ErrorBoundary';
 import { Toast } from '../src/components';
+
+const FIRST_TIME_KEY = 'has_seen_welcome';
 
 export default function RootLayout() {
   const { setUser, setIsLoading } = useAppStore();

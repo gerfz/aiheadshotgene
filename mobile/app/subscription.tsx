@@ -174,7 +174,7 @@ export default function SubscriptionScreen() {
     }
   }, [packages]); // Run when packages load
 
-  const renderPackage = (pkg: any, label: string, subLabel?: string, badge?: string) => {
+  const renderPackage = (pkg: any, label: string, subLabel?: string, badge?: string, hasIntroOffer?: boolean) => {
     if (!pkg) return null;
     const isSelected = selectedPackage === pkg.identifier;
     
@@ -203,6 +203,36 @@ export default function SubscriptionScreen() {
         </View>
       </TouchableOpacity>
     );
+  };
+
+  // Helper to get renewal text based on selected package
+  const getRenewalText = () => {
+    if (!selectedPackage) return '';
+    
+    const isWeekly = selectedPackage.includes('weekly');
+    const isMonthly = selectedPackage.includes('monthly');
+    const isYearly = selectedPackage.includes('annual') || selectedPackage.includes('yearly');
+    
+    // Check if weekly has intro offer (50% off)
+    const weeklyHasIntro = isWeekly; // Assuming weekly always has intro offer
+    
+    if (isWeekly && weeklyHasIntro) {
+      // For weekly with intro offer
+      const introPrice = '$3.90'; // 50% of $7.79
+      const regularPrice = weeklyPkg?.product?.priceString || '$7.79';
+      return `Start 1-week trial for ${introPrice}, then ${regularPrice}/week`;
+    } else if (isWeekly) {
+      const price = weeklyPkg?.product?.priceString || '$7.79';
+      return `Renews automatically at ${price}/week`;
+    } else if (isMonthly) {
+      const price = monthlyPkg?.product?.priceString || '$14.79';
+      return `Renews automatically at ${price}/month`;
+    } else if (isYearly) {
+      const price = yearlyPkg?.product?.priceString || '$79.79';
+      return `Renews automatically at ${price}/year`;
+    }
+    
+    return '';
   };
 
   return (
@@ -309,9 +339,7 @@ export default function SubscriptionScreen() {
               )}
             </TouchableOpacity>
 
-            <TouchableOpacity onPress={handleRestore} style={styles.restoreButton}>
-              <Text style={styles.restoreText}>Restore Purchases</Text>
-            </TouchableOpacity>
+            <Text style={styles.renewalText}>{getRenewalText()}</Text>
           </View>
 
         </View>
@@ -349,7 +377,6 @@ const styles = StyleSheet.create({
   contentContainer: {
     flex: 1,
     paddingHorizontal: 20,
-    justifyContent: 'space-between', // Distribute space evenly
     paddingBottom: Platform.OS === 'android' ? 20 : 10,
     paddingTop: Platform.OS === 'android' ? 40 : 10,
   },
@@ -383,7 +410,8 @@ const styles = StyleSheet.create({
   // Features (Infographics)
   featuresContainer: {
     gap: 10,
-    marginBottom: 10,
+    marginBottom: 20,
+    flex: 1, // Take up available space
   },
   featureBox: {
     backgroundColor: 'rgba(30, 41, 59, 0.7)',
@@ -420,7 +448,7 @@ const styles = StyleSheet.create({
   // Plans
   plansContainer: {
     gap: 8,
-    marginBottom: 10,
+    marginBottom: 16,
   },
   planCard: {
     backgroundColor: 'rgba(30, 41, 59, 0.6)',
@@ -529,12 +557,10 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
   },
-  restoreButton: {
-    paddingVertical: 4,
-  },
-  restoreText: {
-    color: '#64748B',
-    fontSize: 13,
-    fontWeight: '500',
+  renewalText: {
+    color: '#94A3B8',
+    fontSize: 12,
+    textAlign: 'center',
+    marginTop: 4,
   },
 });
