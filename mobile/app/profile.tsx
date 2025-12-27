@@ -9,18 +9,25 @@ import {
   Alert,
   Linking,
   Share,
+  TextInput,
+  Modal,
 } from 'react-native';
+import * as Clipboard from 'expo-clipboard';
 import { router, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as Application from 'expo-application';
 import { useAppStore } from '../src/store/useAppStore';
-import { signOut } from '../src/services/supabase';
+import { signOut, supabase } from '../src/services/supabase';
 import { getCredits, getGenerations } from '../src/services/api';
+import Constants from 'expo-constants';
 
 export default function ProfileScreen() {
   const { user, setUser, credits, setCredits, generations, setGenerations } = useAppStore();
   const [refreshing, setRefreshing] = useState(false);
   const [deviceId, setDeviceId] = useState<string>('');
+  const [userEmail, setUserEmail] = useState<string>('');
+  const [showEmailModal, setShowEmailModal] = useState(false);
+  const [emailInput, setEmailInput] = useState<string>('');
 
   useEffect(() => {
     // Get device ID on mount
@@ -36,6 +43,23 @@ export default function ProfileScreen() {
     getDeviceId();
   }, [user?.id]);
 
+  const loadUserEmail = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('email')
+        .eq('id', user?.id)
+        .single();
+      
+      if (data && data.email && !data.email.includes('@anonymous.local')) {
+        setUserEmail(data.email);
+        setEmailInput(data.email);
+      }
+    } catch (error) {
+      console.error('Failed to load user email:', error);
+    }
+  };
+
   const refreshData = async () => {
     setRefreshing(true);
     try {
@@ -46,6 +70,7 @@ export default function ProfileScreen() {
       
       setCredits(creditsData);
       setGenerations(Array.isArray(generationsData.generations) ? generationsData.generations : []);
+      await loadUserEmail();
     } catch (error) {
       console.error('Failed to refresh profile data:', error);
     } finally {
@@ -132,12 +157,73 @@ export default function ProfileScreen() {
     }
   };
 
+  const handleCopyUserId = async () => {
+    try {
+      await Clipboard.setStringAsync(userId);
+      Alert.alert('Copied!', 'User ID copied to clipboard');
+    } catch (error) {
+      console.error('Failed to copy:', error);
+      Alert.alert('Error', 'Failed to copy User ID');
+    }
+  };
+
+  const handleEmailPress = () => {
+    setShowEmailModal(true);
+  };
+
+  const handleSaveEmail = async () => {
+    if (!emailInput.trim()) {
+      Alert.alert('Error', 'Please enter an email address');
+      return;
+    }
+
+    // Basic email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(emailInput)) {
+      Alert.alert('Error', 'Please enter a valid email address');
+      return;
+    }
+
+    try {
+      console.log('Updating email for user:', user?.id);
+      console.log('New email:', emailInput.trim());
+      
+      const { data, error } = await supabase
+        .from('profiles')
+        .update({ email: emailInput.trim() })
+        .eq('id', user?.id)
+        .select();
+
+      if (error) {
+        console.error('Supabase error:', error);
+        throw error;
+      }
+
+      console.log('Update successful:', data);
+      setUserEmail(emailInput.trim());
+      setShowEmailModal(false);
+      Alert.alert('Success', 'Email updated successfully');
+    } catch (error: any) {
+      console.error('Failed to update email:', error);
+      const errorMessage = error?.message || 'Failed to update email. Please try again.';
+      Alert.alert('Error', errorMessage);
+    }
+  };
+
   const completedCount = Array.isArray(generations) 
     ? generations.filter(g => g.status === 'completed').length 
     : 0;
 
-  // Use device ID as the account ID (first 13 characters for display)
-  const userId = deviceId.slice(0, 13) || user?.id?.slice(0, 13) || 'loading...';
+  // Use the full Supabase UID for identification
+  const userId = user?.id || 'loading...';
+  const userIdPreview = userId.length > 8 ? userId.substring(0, 8) + '...' : userId;
+
+  // Get version info from app.json via expo-constants
+  const appVersion = Constants.expoConfig?.version || '1.0.0';
+  const buildNumber = Constants.expoConfig?.android?.versionCode || 
+                      Constants.expoConfig?.ios?.buildNumber || 
+                      '1';
+  const versionString = `${appVersion} (${buildNumber})`;
 
   return (
     <>
@@ -242,16 +328,33 @@ export default function ProfileScreen() {
             
             <View style={styles.divider} />
             
-            <View style={styles.settingRow}>
+            <TouchableOpacity style={styles.settingRow} onPress={handleCopyUserId}>
               <View style={styles.settingLeft}>
                 <Ionicons name="person" size={24} color="#FFFFFF" />
                 <Text style={styles.settingText}>User ID</Text>
               </View>
               <View style={styles.userIdContainer}>
-                <Text style={styles.userIdText}>{userId}</Text>
+                <Text style={styles.userIdText}>
+                  {userIdPreview}
+                </Text>
                 <Ionicons name="copy" size={16} color="#64748B" />
               </View>
-            </View>
+            </TouchableOpacity>
+            
+            <View style={styles.divider} />
+            
+            <TouchableOpacity style={styles.settingRow} onPress={handleEmailPress}>
+              <View style={styles.settingLeft}>
+                <Ionicons name="mail-outline" size={24} color="#FFFFFF" />
+                <Text style={styles.settingText}>Email</Text>
+              </View>
+              <View style={styles.emailContainer}>
+                <Text style={styles.emailText}>
+                  {userEmail || 'Not set'}
+                </Text>
+                <Ionicons name="create-outline" size={16} color="#64748B" />
+              </View>
+            </TouchableOpacity>
             
             <View style={styles.divider} />
             
@@ -276,8 +379,55 @@ export default function ProfileScreen() {
 
 
           {/* Version */}
-          <Text style={styles.version}>1.3.0 (81)</Text>
+          <Text style={styles.version}>{versionString}</Text>
         </ScrollView>
+
+        {/* Email Modal */}
+        <Modal
+          visible={showEmailModal}
+          transparent={true}
+          animationType="fade"
+          onRequestClose={() => setShowEmailModal(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <Text style={styles.modalTitle}>Set Email Address</Text>
+              <Text style={styles.modalSubtitle}>
+                This email will be used for contact purposes
+              </Text>
+              
+              <TextInput
+                style={styles.emailInput}
+                placeholder="Enter your email"
+                placeholderTextColor="#64748B"
+                value={emailInput}
+                onChangeText={setEmailInput}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                autoCorrect={false}
+              />
+
+              <View style={styles.modalButtons}>
+                <TouchableOpacity
+                  style={[styles.modalButton, styles.modalButtonCancel]}
+                  onPress={() => {
+                    setEmailInput(userEmail);
+                    setShowEmailModal(false);
+                  }}
+                >
+                  <Text style={styles.modalButtonTextCancel}>Cancel</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.modalButton, styles.modalButtonSave]}
+                  onPress={handleSaveEmail}
+                >
+                  <Text style={styles.modalButtonText}>Save</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
       </View>
     </>
   );
@@ -394,10 +544,30 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+    flex: 1,
+    justifyContent: 'flex-end',
+    maxWidth: '60%',
   },
   userIdText: {
     color: '#64748B',
+    fontSize: 12,
+    fontFamily: 'monospace',
+    flex: 1,
+    textAlign: 'right',
+  },
+  emailContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flex: 1,
+    justifyContent: 'flex-end',
+    maxWidth: '60%',
+  },
+  emailText: {
+    color: '#64748B',
     fontSize: 14,
+    flex: 1,
+    textAlign: 'right',
   },
   divider: {
     height: 1,
@@ -425,6 +595,69 @@ const styles = StyleSheet.create({
     fontSize: 14,
     textAlign: 'center',
     marginTop: 20,
+  },
+
+  // Email Modal
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContent: {
+    backgroundColor: '#1E293B',
+    borderRadius: 20,
+    padding: 24,
+    width: '100%',
+    maxWidth: 400,
+  },
+  modalTitle: {
+    color: '#FFFFFF',
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginBottom: 8,
+  },
+  modalSubtitle: {
+    color: '#94A3B8',
+    fontSize: 14,
+    marginBottom: 20,
+  },
+  emailInput: {
+    backgroundColor: '#0F172A',
+    borderRadius: 12,
+    padding: 16,
+    color: '#FFFFFF',
+    fontSize: 16,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: '#334155',
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  modalButton: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  modalButtonCancel: {
+    backgroundColor: '#334155',
+  },
+  modalButtonSave: {
+    backgroundColor: '#6366F1',
+  },
+  modalButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  modalButtonTextCancel: {
+    color: '#94A3B8',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });
 

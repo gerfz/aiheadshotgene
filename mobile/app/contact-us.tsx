@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -12,11 +12,37 @@ import {
 } from 'react-native';
 import { Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useAppStore } from '../src/store/useAppStore';
+import { supabase } from '../src/services/supabase';
 
 export default function ContactUsScreen() {
+  const { user } = useAppStore();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [message, setMessage] = useState('');
+
+  // Load user email on mount
+  useEffect(() => {
+    const loadUserEmail = async () => {
+      if (!user?.id) return;
+      
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('email')
+          .eq('id', user.id)
+          .single();
+        
+        if (data && data.email && !data.email.includes('@anonymous.local')) {
+          setEmail(data.email);
+        }
+      } catch (error) {
+        console.error('Failed to load user email:', error);
+      }
+    };
+
+    loadUserEmail();
+  }, [user?.id]);
 
   const handleSubmit = () => {
     if (!name || !email || !message) {

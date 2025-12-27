@@ -12,9 +12,9 @@ const REVENUECAT_APP_USER_ID = 'app34a2bf623c'; // Your RevenueCat app ID
 
 // Product identifiers (must match Google Play Console)
 export const PRODUCT_IDS = {
+  WEEKLY: 'weekly_pro',
   MONTHLY: 'monthly_pro',
   YEARLY: 'yearly_pro',
-  LIFETIME: 'lifetime_pro',
 };
 
 // Entitlement identifier (must match RevenueCat dashboard)
@@ -22,9 +22,9 @@ export const ENTITLEMENT_ID = 'pro';
 
 // Package identifiers (must match RevenueCat offering)
 export const PACKAGE_IDS = {
+  WEEKLY: '$rc_weekly',
   MONTHLY: '$rc_monthly',
   ANNUAL: '$rc_annual',
-  LIFETIME: '$rc_lifetime',
 };
 
 /**

@@ -60,26 +60,55 @@ export default function ResultScreen() {
 
   const handleDownload = async () => {
     try {
-      // Use sharing instead of direct save for Expo Go compatibility
-      const filename = `portrait_${Date.now()}.jpg`;
+      // Request media library permissions
+      const { status } = await MediaLibrary.requestPermissionsAsync();
+      
+      if (status !== 'granted') {
+        Alert.alert(
+          'Permission Required',
+          'Please grant permission to save photos to your gallery.',
+          [{ text: 'OK' }]
+        );
+        return;
+      }
+
+      // Download the image to a temporary location
+      const filename = `AI_Portrait_${Date.now()}.jpg`;
       const fileUri = FileSystem.documentDirectory + filename;
 
       await FileSystem.downloadAsync(generatedUrl, fileUri);
       
-      // Share the file - user can save from share menu
-      const isAvailable = await Sharing.isAvailableAsync();
-      if (isAvailable) {
-        await Sharing.shareAsync(fileUri, {
-          mimeType: 'image/jpeg',
-          dialogTitle: 'Save your portrait',
-          UTI: 'image/jpeg'
-        });
-      } else {
-        Alert.alert('Success', 'Portrait downloaded to app storage');
+      // Save to gallery
+      const asset = await MediaLibrary.createAssetAsync(fileUri);
+      
+      // Optionally create an album and add the photo to it
+      try {
+        const album = await MediaLibrary.getAlbumAsync('AI Portrait Studio');
+        if (album == null) {
+          await MediaLibrary.createAlbumAsync('AI Portrait Studio', asset, false);
+        } else {
+          await MediaLibrary.addAssetsToAlbumAsync([asset], album, false);
+        }
+      } catch (albumError) {
+        console.log('Album creation skipped:', albumError);
+        // Continue even if album creation fails
       }
+      
+      // Clean up temporary file
+      try {
+        await FileSystem.deleteAsync(fileUri, { idempotent: true });
+      } catch (cleanupError) {
+        console.log('Cleanup skipped:', cleanupError);
+      }
+      
+      Alert.alert(
+        'Success! 🎉',
+        'Portrait saved to your gallery',
+        [{ text: 'OK' }]
+      );
     } catch (error) {
       console.error('Download error:', error);
-      Alert.alert('Error', 'Failed to save image');
+      Alert.alert('Error', 'Failed to save image. Please try again.');
     }
   };
 

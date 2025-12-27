@@ -2,11 +2,9 @@ import { StylePreset } from '../types';
 
 // Business photos
 const BUSINESS_PHOTO_1 = require('../../assets/business/518559229-793ad242-7867-4709-bdc6-55021f5eb78f.png');
-const BUSINESS_PHOTO_2 = require('../../assets/business/640.webp');
 
 // Emotional Film photos
 const FILM_PHOTO_1 = require('../../assets/emotionalfilm/518559958-243d1b11-9ef0-4d4f-b308-97d67b5d3bc3.png');
-const FILM_PHOTO_2 = require('../../assets/emotionalfilm/640.webp');
 
 // Victoria's Secret photos
 const VS_PHOTO_1 = require('../../assets/victoriasecret/G6TSEqzWYAIvaf9.jpg');
@@ -43,7 +41,7 @@ export const STYLE_PRESETS: Record<string, StylePreset> = {
     name: 'Business Photo',
     description: 'Professional corporate headshot - perfect for LinkedIn and company profiles',
     thumbnail: BUSINESS_PHOTO_1,
-    thumbnails: [BUSINESS_PHOTO_1, BUSINESS_PHOTO_2],
+    thumbnails: [BUSINESS_PHOTO_1],
     prompt: `Keep the facial features of the person in the uploaded image exactly consistent. Dress them in a professional navy blue business suit with a white shirt, similar to the reference image. Background: Place the subject against a clean, solid dark gray studio photography backdrop. The background should have a subtle gradient, slightly lighter behind the subject and darker towards the edges (vignette effect). There should be no other objects. Photography Style: Shot on a Sony A7III with an 85mm f/1.4 lens, creating a flattering portrait compression. Lighting: Use a classic three-point lighting setup. The main key light should create soft, defining shadows on the face. A subtle rim light should separate the subject's shoulders and hair from the dark background. Crucial Details: Render natural skin texture with visible pores, not an airbrushed look. Add natural catchlights to the eyes. The fabric of the suit should show a subtle wool texture. Final image should be an ultra-realistic, 8k professional headshot.`
   },
   emotional_film: {
@@ -51,7 +49,7 @@ export const STYLE_PRESETS: Record<string, StylePreset> = {
     name: 'Emotional Film Photography',
     description: 'Cinematic film look with rich colors and emotional depth',
     thumbnail: FILM_PHOTO_1,
-    thumbnails: [FILM_PHOTO_1, FILM_PHOTO_2],
+    thumbnails: [FILM_PHOTO_1],
     prompt: `Keep the facial features of the person in the uploaded image exactly consistent. Style: A cinematic, emotional portrait shot on Kodak Portra 400 film. Setting: An urban street coffee shop window at Golden Hour (sunset). Warm, nostalgic lighting hitting the side of the face. Atmosphere: Apply a subtle film grain and soft focus to create a dreamy, storytelling vibe. Action: The subject is looking slightly away from the camera, holding a coffee cup, with a relaxed, candid expression. Details: High quality, depth of field, bokeh background of city lights.`
   },
   victoria_secret: {
