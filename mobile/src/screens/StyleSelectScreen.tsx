@@ -16,6 +16,7 @@ import { STYLE_PRESETS } from '../constants/styles';
 
 const { width } = Dimensions.get('window');
 const cardWidth = (width - 60) / 2; // 2 columns with padding
+const cardHeight = cardWidth * 1.2; // Reduced from 1.4 to 1.2 for smaller cards
 
 // Category definitions
 const CATEGORIES = [
@@ -36,6 +37,18 @@ const CATEGORIES = [
     name: 'Dating',
     icon: '💕',
     styles: ['emotional_film', 'with_puppy', 'nineties_camera'],
+  },
+  {
+    id: 'social_lifestyle',
+    name: 'Social / Lifestyle',
+    icon: '📸',
+    styles: ['nineties_camera', 'with_puppy', 'emotional_film'],
+  },
+  {
+    id: 'creative',
+    name: 'Creative',
+    icon: '🎭',
+    styles: ['victoria_secret', 'custom', 'emotional_film'],
   },
 ];
 
@@ -207,11 +220,11 @@ const styles = StyleSheet.create({
   
   // Category Section
   categorySection: {
-    marginBottom: 24,
+    marginBottom: 16, // Reduced from 24 to 16
   },
   categoryHeader: {
     paddingHorizontal: 20,
-    marginBottom: 16,
+    marginBottom: 12, // Reduced from 16 to 12
   },
   categoryTitle: {
     fontSize: 20,
@@ -223,14 +236,14 @@ const styles = StyleSheet.create({
   horizontalScroll: {
     paddingLeft: 20,
     paddingRight: 20,
-    gap: 16,
+    gap: 12, // Reduced from 16 to 12
   },
   styleCard: {
     width: cardWidth,
   },
   imageContainer: {
     width: '100%',
-    height: cardWidth * 1.4,
+    height: cardHeight, // Using the new smaller height
     borderRadius: 16,
     overflow: 'hidden',
     backgroundColor: '#1E293B',
@@ -275,9 +288,9 @@ const styles = StyleSheet.create({
   },
   styleName: {
     color: '#FFFFFF',
-    fontSize: 14,
+    fontSize: 13, // Reduced from 14 to 13
     fontWeight: '500',
-    marginTop: 8,
+    marginTop: 6, // Reduced from 8 to 6
     textAlign: 'center',
   },
   

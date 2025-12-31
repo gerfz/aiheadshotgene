@@ -133,7 +133,7 @@ export default function HomeScreen() {
                 </View>
                 <Text style={styles.stepTitle}>Click the + Button</Text>
                 <Text style={styles.stepDescription}>
-                  Tap the green + button below to get started
+                  Tap the + button below to get started
                 </Text>
               </View>
               <View style={styles.step}>

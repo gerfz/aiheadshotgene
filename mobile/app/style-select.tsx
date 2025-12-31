@@ -36,6 +36,18 @@ const STATIC_CATEGORIES = [
     icon: '💕',
     styles: ['emotional_film', 'with_puppy', 'nineties_camera'],
   },
+  {
+    id: 'social_lifestyle',
+    name: 'Social / Lifestyle',
+    icon: '📸',
+    styles: ['nineties_camera', 'with_puppy', 'emotional_film'],
+  },
+  {
+    id: 'creative',
+    name: 'Creative',
+    icon: '🎭',
+    styles: ['victoria_secret', 'custom', 'emotional_film'],
+  },
 ];
 
 export default function StyleSelectScreen() {

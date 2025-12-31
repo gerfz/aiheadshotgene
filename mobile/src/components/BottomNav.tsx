@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
 import { router, usePathname } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 
 export const BottomNav = () => {
   const pathname = usePathname();
@@ -26,18 +27,23 @@ export const BottomNav = () => {
           style={styles.navButton}
           onPress={() => handleNavigation('/home')}
         >
-          <Text style={[styles.icon, isActive('/home') && styles.iconActive]}>🏠</Text>
+          <Ionicons 
+            name={isActive('/home') ? "home" : "home-outline"} 
+            size={24} 
+            color={isActive('/home') ? "#FFFFFF" : "#9CA3AF"} 
+          />
           <Text style={[styles.label, isActive('/home') && styles.labelActive]}>Home</Text>
         </TouchableOpacity>
 
-        {/* Create Portrait Button (Center - Emphasized) */}
+        {/* Create / Plus Button */}
         <TouchableOpacity
-          style={styles.centerButton}
+          style={styles.centerButtonContainer}
           onPress={() => handleNavigation('/upload')}
         >
-          <View style={styles.centerIconContainer}>
-            <Text style={styles.centerIcon}>+</Text>
+          <View style={styles.plusButtonMain}>
+            <Ionicons name="add" size={22} color="#000000" style={styles.plusIcon} />
           </View>
+          <Text style={[styles.label, styles.labelCreate]}>Create</Text>
         </TouchableOpacity>
 
         {/* Profile Button */}
@@ -45,7 +51,11 @@ export const BottomNav = () => {
           style={styles.navButton}
           onPress={() => handleNavigation('/profile')}
         >
-          <Text style={[styles.icon, isActive('/profile') && styles.iconActive]}>👤</Text>
+          <Ionicons 
+            name={isActive('/profile') ? "person" : "person-outline"} 
+            size={24} 
+            color={isActive('/profile') ? "#FFFFFF" : "#9CA3AF"} 
+          />
           <Text style={[styles.label, isActive('/profile') && styles.labelActive]}>Profile</Text>
         </TouchableOpacity>
       </View>
@@ -59,65 +69,54 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: '#1E293B',
+    backgroundColor: '#000000', // Pitch black like TikTok
     borderTopWidth: 1,
-    borderTopColor: '#334155',
+    borderTopColor: '#1F2937',
     paddingBottom: Platform.OS === 'ios' ? 20 : 0,
   },
   navBar: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-around',
-    paddingVertical: 8,
-    paddingHorizontal: 16,
+    paddingVertical: 10,
+    paddingHorizontal: 8,
   },
   navButton: {
-    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 8,
-  },
-  icon: {
-    fontSize: 24,
-    marginBottom: 4,
-    opacity: 0.6,
-  },
-  iconActive: {
-    opacity: 1,
+    gap: 4,
+    minWidth: 60,
   },
   label: {
     fontSize: 10,
-    color: '#94A3B8',
+    color: '#9CA3AF',
     fontWeight: '500',
   },
   labelActive: {
     color: '#FFFFFF',
     fontWeight: '600',
   },
-  centerButton: {
+  
+  // Custom Plus Button Styles
+  centerButtonContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: -30,
+    gap: 4,
   },
-  centerIconContainer: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: '#A3E635',
+  plusButtonMain: {
+    width: 45,
+    height: 32,
+    backgroundColor: '#FFFFFF', // White
+    borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
-    borderWidth: 4,
-    borderColor: '#1E293B',
   },
-  centerIcon: {
-    fontSize: 32,
+  plusIcon: {
     fontWeight: 'bold',
-    color: '#000000',
   },
+  labelCreate: {
+    color: '#FFFFFF', // Always white for emphasis
+    fontWeight: '600',
+  }
 });
 

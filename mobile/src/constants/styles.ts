@@ -28,7 +28,7 @@ export const STYLE_PRESETS: Record<string, StylePreset> = {
     key: 'custom',
     name: 'Custom Style',
     description: 'Create your own unique portrait with a custom prompt',
-    thumbnail: require('../../assets/icon.png'), // Using app icon as placeholder
+    thumbnail: { uri: 'https://images.unsplash.com/photo-1579546929518-9e396f3cc809?q=80&w=1000&auto=format&fit=crop' }, // Abstract colorful gradient
     prompt: '', // Will be filled with user's custom prompt
     isCustom: true,
     badge: {
