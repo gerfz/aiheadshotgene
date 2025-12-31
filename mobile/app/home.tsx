@@ -203,15 +203,22 @@ export default function HomeScreen() {
           <View style={styles.updatesSection}>
             <View style={styles.updateCard}>
               <View style={styles.updateTopRow}>
-                <View style={styles.updateBadge}>
-                  <Text style={styles.updateBadgeText}>NEXT UPDATE: JAN 15</Text>
+                <View style={styles.latestUpdateBadge}>
+                  <Text style={styles.latestUpdateBadgeText}>LATEST UPDATE</Text>
                 </View>
               </View>
               
               <Text style={styles.updateHeadline}>3 New Styles Added</Text>
               <Text style={styles.updateDescription}>
-                Social, Lifestyle, and Creative categories are now live with improved generation quality.
+                Social, Lifestyle & Creative categories now available
               </Text>
+              
+              <View style={styles.updateDivider} />
+              
+              <View style={styles.nextUpdateRow}>
+                <Text style={styles.nextUpdateLabel}>Next Update:</Text>
+                <Text style={styles.nextUpdateDate}>Jan 15, 2025</Text>
+              </View>
             </View>
           </View>
         </ScrollView>
@@ -394,41 +401,61 @@ const styles = StyleSheet.create({
   
   // Updates Section
   updatesSection: {
-    marginBottom: 40,
+    marginBottom: 20,
     paddingHorizontal: 4,
   },
   updateCard: {
     backgroundColor: '#1E293B',
-    borderRadius: 20,
-    padding: 24,
+    borderRadius: 16,
+    padding: 16,
   },
   updateTopRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 10,
   },
-  updateBadge: {
-    backgroundColor: 'rgba(99, 102, 241, 0.2)',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 6,
+  latestUpdateBadge: {
+    backgroundColor: 'rgba(74, 222, 128, 0.15)',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 5,
   },
-  updateBadgeText: {
-    color: '#818CF8',
-    fontSize: 11,
+  latestUpdateBadgeText: {
+    color: '#4ADE80',
+    fontSize: 10,
     fontWeight: '700',
     letterSpacing: 0.5,
   },
   updateHeadline: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '700',
     color: '#FFFFFF',
-    marginBottom: 6,
     letterSpacing: -0.3,
+    marginBottom: 4,
   },
   updateDescription: {
-    fontSize: 14,
+    fontSize: 13,
     color: '#94A3B8',
-    lineHeight: 20,
+    lineHeight: 18,
+  },
+  updateDivider: {
+    height: 1,
+    backgroundColor: '#334155',
+    marginVertical: 10,
+  },
+  nextUpdateRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  nextUpdateLabel: {
+    fontSize: 12,
+    color: '#64748B',
+    fontWeight: '500',
+  },
+  nextUpdateDate: {
+    fontSize: 12,
+    color: '#94A3B8',
+    fontWeight: '600',
   },
 });
