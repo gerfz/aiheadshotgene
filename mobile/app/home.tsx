@@ -9,6 +9,7 @@ import {
   RefreshControl,
 } from 'react-native';
 import { router, Stack } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { useAppStore } from '../src/store/useAppStore';
 import { getCredits, getGenerations } from '../src/services/api';
 import { signOut } from '../src/services/supabase';
@@ -197,6 +198,22 @@ export default function HomeScreen() {
               </ScrollView>
             </View>
           )}
+
+          {/* Updates Section */}
+          <View style={styles.updatesSection}>
+            <View style={styles.updateCard}>
+              <View style={styles.updateTopRow}>
+                <View style={styles.updateBadge}>
+                  <Text style={styles.updateBadgeText}>NEXT UPDATE: JAN 15</Text>
+                </View>
+              </View>
+              
+              <Text style={styles.updateHeadline}>3 New Styles Added</Text>
+              <Text style={styles.updateDescription}>
+                Social, Lifestyle, and Creative categories are now live with improved generation quality.
+              </Text>
+            </View>
+          </View>
         </ScrollView>
         <BottomNav />
       </View>
@@ -373,5 +390,45 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#9CA3AF',
     textAlign: 'center',
+  },
+  
+  // Updates Section
+  updatesSection: {
+    marginBottom: 40,
+    paddingHorizontal: 4,
+  },
+  updateCard: {
+    backgroundColor: '#1E293B',
+    borderRadius: 20,
+    padding: 24,
+  },
+  updateTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  updateBadge: {
+    backgroundColor: 'rgba(99, 102, 241, 0.2)',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  updateBadgeText: {
+    color: '#818CF8',
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+  },
+  updateHeadline: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    marginBottom: 6,
+    letterSpacing: -0.3,
+  },
+  updateDescription: {
+    fontSize: 14,
+    color: '#94A3B8',
+    lineHeight: 20,
   },
 });
