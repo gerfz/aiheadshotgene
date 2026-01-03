@@ -29,16 +29,16 @@ import { API_URL } from '../src/constants/config';
 
 const { width, height } = Dimensions.get('window');
 
-// Sample images from your style folders
+// Sample images from your style folders - Now hosted on Supabase
 const SAMPLE_IMAGES = [
-  require('../assets/business/518559229-793ad242-7867-4709-bdc6-55021f5eb78f.png'),
-  require('../assets/emotionalfilm/518559958-243d1b11-9ef0-4d4f-b308-97d67b5d3bc3.png'),
-  require('../assets/victoriasecret/G6TSEqzWYAIvaf9.jpg'),
-  require('../assets/victoriasecret/G6TSEscXQAAm3Lo.jpg'),
-  require('../assets/victoriasecret/G6TSEuEWEAAaR7N.jpg'),
-  require('../assets/professionalheadshot/example1.png'),
-  require('../assets/1990s camera style/example1.png'),
-  require('../assets/withpuppy/example1.png'),
+  { uri: 'https://pyziuothzjdijkvdryht.supabase.co/storage/v1/object/public/style-previews/business/518559229-793ad242-7867-4709-bdc6-55021f5eb78f.png' },
+  { uri: 'https://pyziuothzjdijkvdryht.supabase.co/storage/v1/object/public/style-previews/emotionalfilm/518559958-243d1b11-9ef0-4d4f-b308-97d67b5d3bc3.png' },
+  { uri: 'https://pyziuothzjdijkvdryht.supabase.co/storage/v1/object/public/style-previews/victoriasecret/G6TSEqzWYAIvaf9.jpg' },
+  { uri: 'https://pyziuothzjdijkvdryht.supabase.co/storage/v1/object/public/style-previews/victoriasecret/G6TSEscXQAAm3Lo.jpg' },
+  { uri: 'https://pyziuothzjdijkvdryht.supabase.co/storage/v1/object/public/style-previews/victoriasecret/G6TSEuEWEAAaR7N.jpg' },
+  { uri: 'https://pyziuothzjdijkvdryht.supabase.co/storage/v1/object/public/style-previews/professionalheadshot/example1.png' },
+  { uri: 'https://pyziuothzjdijkvdryht.supabase.co/storage/v1/object/public/style-previews/1990s%20camera%20style/example1.png' },
+  { uri: 'https://pyziuothzjdijkvdryht.supabase.co/storage/v1/object/public/style-previews/withpuppy/example1.png' },
 ];
 
 export default function SubscriptionScreen() {

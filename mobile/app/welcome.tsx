@@ -15,10 +15,10 @@ const { width, height } = Dimensions.get('window');
 const FIRST_TIME_KEY = 'has_seen_welcome';
 
 const onboardingImages = [
-  require('../assets/onboarding/onboarding_1.png'),
-  require('../assets/onboarding/onboarding_2.png'),
-  require('../assets/onboarding/onboarding_3.png'),
-  require('../assets/onboarding/onboarding_4.png'),
+  { uri: 'https://pyziuothzjdijkvdryht.supabase.co/storage/v1/object/public/style-previews/onboarding/onboarding_1.png' },
+  { uri: 'https://pyziuothzjdijkvdryht.supabase.co/storage/v1/object/public/style-previews/onboarding/onboarding_2.png' },
+  { uri: 'https://pyziuothzjdijkvdryht.supabase.co/storage/v1/object/public/style-previews/onboarding/onboarding_3.png' },
+  { uri: 'https://pyziuothzjdijkvdryht.supabase.co/storage/v1/object/public/style-previews/onboarding/onboarding_4.png' },
 ];
 
 export default function WelcomeScreen() {

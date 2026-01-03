@@ -101,12 +101,7 @@ export default function HomeScreen() {
   };
 
   useEffect(() => {
-    loadData();
-  }, []);
-
-  // Reload data when user changes
-  useEffect(() => {
-    if (user) {
+    if (user?.id) {
       loadData();
     }
   }, [user?.id]);

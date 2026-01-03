@@ -1,5 +1,7 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { router } from 'expo-router';
 import { CreditsInfo } from '../types';
 
 interface CreditsDisplayProps {
@@ -14,6 +16,20 @@ export function CreditsDisplay({ credits }: CreditsDisplayProps) {
       <View style={[styles.container, styles.subscribed]}>
         <Text style={styles.text}>Pro Member</Text>
       </View>
+    );
+  }
+
+  // Show "Upgrade Now" banner when credits are 0
+  if (credits.freeCredits === 0) {
+    return (
+      <TouchableOpacity 
+        style={[styles.container, styles.upgradeContainer]}
+        onPress={() => router.push('/subscription')}
+        activeOpacity={0.8}
+      >
+        <Text style={styles.upgradeText}>Upgrade Now</Text>
+        <Ionicons name="arrow-forward" size={18} color="#FFFFFF" />
+      </TouchableOpacity>
     );
   }
 
@@ -40,6 +56,11 @@ const styles = StyleSheet.create({
   subscribed: {
     backgroundColor: '#4F46E5',
   },
+  upgradeContainer: {
+    backgroundColor: '#6366F1',
+    justifyContent: 'center',
+    paddingVertical: 12,
+  },
   icon: {
     fontSize: 16,
   },
@@ -47,6 +68,11 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 14,
     fontWeight: '500',
+  },
+  upgradeText: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '600',
   },
 });
 

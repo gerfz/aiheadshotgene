@@ -20,6 +20,7 @@ export default function RootLayout() {
 
   useEffect(() => {
     let isInitializing = true; // Flag to prevent duplicate user creation
+    let initTimeout: NodeJS.Timeout;
     
     const initApp = async () => {
       try {
@@ -37,8 +38,22 @@ export default function RootLayout() {
             id: session.user.id,
             email: session.user.email || `device-${deviceId}@anonymous.local`,
           });
-          await initializePurchases(session.user.id);
-          await loginUser(session.user.id);
+          
+          // Initialize purchases and login with timeout
+          try {
+            await Promise.race([
+              Promise.all([
+                initializePurchases(session.user.id),
+                loginUser(session.user.id)
+              ]),
+              new Promise((_, reject) => 
+                setTimeout(() => reject(new Error('Initialization timeout')), 8000)
+              )
+            ]);
+          } catch (timeoutError) {
+            console.warn('⚠️ Initialization timeout, continuing anyway:', timeoutError);
+            // Continue even if backend is slow/sleeping
+          }
         } else {
           // No session - create anonymous user
           console.log('🔄 Creating anonymous user for device:', deviceId);
@@ -63,18 +78,41 @@ export default function RootLayout() {
               id: data.user.id,
               email: `device-${deviceId}@anonymous.local`,
             });
-            await initializePurchases(data.user.id);
-            await loginUser(data.user.id);
+            
+            // Initialize purchases and login with timeout
+            try {
+              await Promise.race([
+                Promise.all([
+                  initializePurchases(data.user.id),
+                  loginUser(data.user.id)
+                ]),
+                new Promise((_, reject) => 
+                  setTimeout(() => reject(new Error('Initialization timeout')), 8000)
+                )
+              ]);
+            } catch (timeoutError) {
+              console.warn('⚠️ Initialization timeout, continuing anyway:', timeoutError);
+              // Continue even if backend is slow/sleeping
+            }
           }
         }
       } catch (error) {
         console.error('❌ App initialization error:', error);
       } finally {
         isInitializing = false;
+        clearTimeout(initTimeout);
         setInitializing(false);
         setIsLoading(false);
       }
     };
+
+    // Set a maximum timeout for the entire initialization
+    initTimeout = setTimeout(() => {
+      console.warn('⚠️ Maximum initialization time exceeded, forcing continue');
+      isInitializing = false;
+      setInitializing(false);
+      setIsLoading(false);
+    }, 10000); // 10 second max
 
     initApp();
 
@@ -137,6 +175,7 @@ export default function RootLayout() {
 
     return () => {
       subscription.unsubscribe();
+      if (initTimeout) clearTimeout(initTimeout);
     };
   }, []);
 

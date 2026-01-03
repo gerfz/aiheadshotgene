@@ -250,7 +250,7 @@ export default function ProfileScreen() {
               activeOpacity={0.95}
             >
               <ImageBackground
-                source={require('../assets/victoriasecret/G6TSEqzWYAIvaf9.jpg')}
+                source={{ uri: 'https://pyziuothzjdijkvdryht.supabase.co/storage/v1/object/public/style-previews/victoriasecret/G6TSEqzWYAIvaf9.jpg' }}
                 style={styles.premiumBackground}
                 imageStyle={{ borderRadius: 24, opacity: 0.6 }}
               >
