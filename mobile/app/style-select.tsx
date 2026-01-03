@@ -1,11 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Image,
   Dimensions,
   ActivityIndicator,
   TextInput,
@@ -13,6 +12,7 @@ import {
   Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Image } from 'expo-image';
 import { router, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAppStore } from '../src/store/useAppStore';
@@ -21,6 +21,56 @@ import { getMostUsedStyles } from '../src/services/api';
 
 const { width } = Dimensions.get('window');
 const cardWidth = (width - 60) / 2; // 2 columns with padding
+const cardHeight = cardWidth * 1.2;
+
+// Memoized Style Card Component
+const StyleCard = React.memo(({ 
+  style, 
+  selectedStyle, 
+  onSelect, 
+  isGrid = false 
+}: { 
+  style: any; 
+  selectedStyle: string | null; 
+  onSelect: (key: string) => void;
+  isGrid?: boolean;
+}) => {
+  return (
+    <TouchableOpacity
+      style={isGrid ? styles.gridCard : styles.styleCard}
+      onPress={() => onSelect(style.key)}
+      activeOpacity={0.9}
+    >
+      <View style={styles.imageContainer}>
+        <Image 
+          source={style.thumbnail} 
+          style={styles.styleImage}
+          contentFit="cover"
+          cachePolicy="memory-disk"
+          transition={200}
+        />
+        <View style={styles.selectionIndicator}>
+          {selectedStyle === style.key ? (
+            <Ionicons name="checkmark-circle" size={24} color="#6366F1" />
+          ) : (
+            <View style={styles.unselectedCircle} />
+          )}
+        </View>
+        
+        {style.badge && (
+          <View style={[
+            styles.badge,
+            style.badge.type === 'female' && styles.badgeFemale,
+            style.badge.type === 'info' && styles.badgeInfo,
+          ]}>
+            <Text style={styles.badgeText}>{style.badge.label}</Text>
+          </View>
+        )}
+      </View>
+      <Text style={styles.styleName}>{style.name}</Text>
+    </TouchableOpacity>
+  );
+});
 
 // Static category definitions (will be updated with dynamic most used)
 const STATIC_CATEGORIES = [
@@ -134,7 +184,7 @@ export default function StyleSelectScreen() {
     }
   };
 
-  const handleStyleSelect = (styleKey: string) => {
+  const handleStyleSelect = useCallback((styleKey: string) => {
     setSelectedStyle(styleKey);
     
     // Show custom prompt input if custom style is selected
@@ -145,22 +195,26 @@ export default function StyleSelectScreen() {
       // Clear custom prompt when selecting a non-custom style
       setCustomPrompt(null);
     }
-  };
+  }, [setSelectedStyle, setCustomPrompt]);
 
-  const handleContinue = () => {
+  const handleContinue = useCallback(() => {
     if (selectedStyle) {
       router.push('/generating');
     }
-  };
+  }, [selectedStyle]);
 
-  const handleCategoryPress = (categoryId: string) => {
+  const handleCategoryPress = useCallback((categoryId: string) => {
     // Toggle: if clicking the active category, deselect it
-    if (activeCategory === categoryId) {
-      setActiveCategory(null);
-    } else {
-      setActiveCategory(categoryId);
+    setActiveCategory(prev => prev === categoryId ? null : categoryId);
+  }, []);
+
+  // Memoize filtered categories
+  const displayedCategories = useMemo(() => {
+    if (activeCategory) {
+      return categories.filter(cat => cat.id === activeCategory);
     }
-  };
+    return categories;
+  }, [activeCategory, categories]);
 
   return (
     <>
@@ -210,6 +264,12 @@ export default function StyleSelectScreen() {
               style={styles.contentScroll}
               contentContainerStyle={activeCategory ? styles.contentContainerGrid : styles.contentContainer}
               showsVerticalScrollIndicator={false}
+              // Performance optimizations
+              removeClippedSubviews={true}
+              maxToRenderPerBatch={10}
+              updateCellsBatchingPeriod={50}
+              initialNumToRender={8}
+              windowSize={5}
             >
               {activeCategory ? (
                 // Filtered: Show selected category in grid layout
@@ -217,46 +277,19 @@ export default function StyleSelectScreen() {
                   {categories.find(cat => cat.id === activeCategory)?.styles.map((styleKey) => {
                     const style = STYLE_PRESETS[styleKey];
                     return (
-                      <TouchableOpacity
+                      <StyleCard
                         key={style.key}
-                        style={styles.gridCard}
-                        onPress={() => handleStyleSelect(style.key)}
-                        activeOpacity={0.9}
-                      >
-                        <View style={styles.imageContainer}>
-                          <Image 
-                            source={style.thumbnail} 
-                            style={styles.styleImage}
-                            resizeMode="cover"
-                          />
-                          {/* Selection Indicator */}
-                          <View style={styles.selectionIndicator}>
-                            {selectedStyle === style.key ? (
-                              <Ionicons name="checkmark-circle" size={24} color="#6366F1" />
-                            ) : (
-                              <View style={styles.unselectedCircle} />
-                            )}
-                          </View>
-                          
-                          {/* Badge */}
-                          {style.badge && (
-                            <View style={[
-                              styles.badge,
-                              style.badge.type === 'female' && styles.badgeFemale,
-                              style.badge.type === 'info' && styles.badgeInfo,
-                            ]}>
-                              <Text style={styles.badgeText}>{style.badge.label}</Text>
-                            </View>
-                          )}
-                        </View>
-                        <Text style={styles.styleName}>{style.name}</Text>
-                      </TouchableOpacity>
+                        style={style}
+                        selectedStyle={selectedStyle}
+                        onSelect={handleStyleSelect}
+                        isGrid={true}
+                      />
                     );
                   })}
                 </View>
               ) : (
                 // No filter: Show all categories with horizontal scrolling
-                categories.map((category) => (
+                displayedCategories.map((category) => (
             <View key={category.id} style={styles.categorySection}>
               {/* Category Header */}
               <View style={styles.categoryHeader}>
@@ -270,44 +303,23 @@ export default function StyleSelectScreen() {
                 horizontal
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={styles.horizontalScroll}
+                // Performance optimizations for horizontal scrolling
+                removeClippedSubviews={true}
+                maxToRenderPerBatch={5}
+                updateCellsBatchingPeriod={50}
+                initialNumToRender={4}
+                windowSize={3}
               >
                 {category.styles.map((styleKey) => {
                   const style = STYLE_PRESETS[styleKey];
                   return (
-                    <TouchableOpacity
+                    <StyleCard
                       key={style.key}
-                      style={styles.styleCard}
-                      onPress={() => handleStyleSelect(style.key)}
-                      activeOpacity={0.9}
-                    >
-                      <View style={styles.imageContainer}>
-                        <Image 
-                          source={style.thumbnail} 
-                          style={styles.styleImage}
-                          resizeMode="cover"
-                        />
-                        {/* Selection Indicator */}
-                        <View style={styles.selectionIndicator}>
-                          {selectedStyle === style.key ? (
-                            <Ionicons name="checkmark-circle" size={24} color="#6366F1" />
-                          ) : (
-                            <View style={styles.unselectedCircle} />
-                          )}
-                        </View>
-                        
-                        {/* Badge */}
-                        {style.badge && (
-                          <View style={[
-                            styles.badge,
-                            style.badge.type === 'female' && styles.badgeFemale,
-                            style.badge.type === 'info' && styles.badgeInfo,
-                          ]}>
-                            <Text style={styles.badgeText}>{style.badge.label}</Text>
-                          </View>
-                        )}
-                      </View>
-                      <Text style={styles.styleName}>{style.name}</Text>
-                    </TouchableOpacity>
+                      style={style}
+                      selectedStyle={selectedStyle}
+                      onSelect={handleStyleSelect}
+                      isGrid={false}
+                    />
                   );
                 })}
               </ScrollView>
@@ -577,4 +589,3 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
 });
-

@@ -53,30 +53,50 @@ export default function HomeScreen() {
       // Small delay to ensure auth state is updated after signup
       await new Promise(resolve => setTimeout(resolve, 100));
       
-      const [creditsData, generationsData] = await Promise.all([
-        getCredits(),
-        getGenerations(),
-      ]);
+      // Add timeout to API calls to prevent infinite loading
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('API timeout')), 10000) // 10 second timeout
+      );
+      
+      const [creditsData, generationsData] = await Promise.race([
+        Promise.all([
+          getCredits(),
+          getGenerations(),
+        ]),
+        timeoutPromise
+      ]) as [any, any];
+      
       setCredits(creditsData);
       setGenerations(generationsData?.generations || []);
     } catch (error) {
       console.error('Failed to load data:', error);
-      // Set empty array on error to prevent undefined
+      
+      // Set default values on error to prevent loading forever
+      setCredits({ credits: 0, generations_count: 0, last_refill_at: null });
       setGenerations([]);
       
-      // Retry once after a short delay (in case of auth state sync issue)
+      // Retry once after a short delay (in case backend is waking up)
       setTimeout(async () => {
         try {
-          const [creditsData, generationsData] = await Promise.all([
-            getCredits(),
-            getGenerations(),
-          ]);
+          const timeoutPromise = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('API timeout on retry')), 15000) // 15 second timeout for retry
+          );
+          
+          const [creditsData, generationsData] = await Promise.race([
+            Promise.all([
+              getCredits(),
+              getGenerations(),
+            ]),
+            timeoutPromise
+          ]) as [any, any];
+          
           setCredits(creditsData);
           setGenerations(generationsData?.generations || []);
         } catch (retryError) {
           console.error('Retry failed:', retryError);
+          // Keep default values if retry also fails
         }
-      }, 1000);
+      }, 2000);
     }
   };
 

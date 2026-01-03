@@ -155,8 +155,8 @@ export async function generatePortrait(
   } else {
     // Use predefined style prompt
     prompt = STYLE_PROMPTS[styleKey];
-    if (!prompt) {
-      throw new Error(`Unknown style: ${styleKey}`);
+  if (!prompt) {
+    throw new Error(`Unknown style: ${styleKey}`);
     }
   }
 
@@ -224,9 +224,9 @@ export async function generatePortrait(
     if (output && typeof output === 'object' && 'output' in output) {
       console.log('Handling object output...');
       const resultUrl = (output as any).output;
-      const response = await fetch(resultUrl);
-      const arrayBuffer = await response.arrayBuffer();
-      const base64 = Buffer.from(arrayBuffer).toString('base64');
+    const response = await fetch(resultUrl);
+    const arrayBuffer = await response.arrayBuffer();
+    const base64 = Buffer.from(arrayBuffer).toString('base64');
       return base64;
     }
 

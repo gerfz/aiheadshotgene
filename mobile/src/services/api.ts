@@ -5,6 +5,29 @@ import { getGuestId } from './guestStorage';
 import { CreditsInfo, Generation, GenerationResult } from '../types';
 
 /**
+ * Helper to add timeout to fetch requests
+ */
+async function fetchWithTimeout(url: string, options: RequestInit, timeoutMs: number = 10000): Promise<Response> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  
+  try {
+    const response = await fetch(url, {
+      ...options,
+      signal: controller.signal,
+    });
+    clearTimeout(timeoutId);
+    return response;
+  } catch (error) {
+    clearTimeout(timeoutId);
+    if (error instanceof Error && error.name === 'AbortError') {
+      throw new Error('Request timeout - backend might be waking up. Please try again.');
+    }
+    throw error;
+  }
+}
+
+/**
  * Get headers for authenticated requests
  */
 async function getAuthHeaders(): Promise<Record<string, string>> {
@@ -68,10 +91,10 @@ export async function getMostUsedStyles(): Promise<{ mostUsedStyles: Array<{ sty
 export async function getUserCredits(): Promise<CreditsInfo> {
   const headers = await getAuthHeaders();
   
-  const response = await fetch(`${API_URL}/api/user/credits`, {
+  const response = await fetchWithTimeout(`${API_URL}/api/user/credits`, {
     method: 'GET',
     headers,
-  });
+  }, 10000); // 10 second timeout
   
   if (!response.ok) {
     const error = await response.json();
@@ -85,10 +108,10 @@ export async function getUserCredits(): Promise<CreditsInfo> {
 export async function getUserGenerations(): Promise<{ generations: Generation[] }> {
   const headers = await getAuthHeaders();
   
-  const response = await fetch(`${API_URL}/api/user/generations`, {
+  const response = await fetchWithTimeout(`${API_URL}/api/user/generations`, {
     method: 'GET',
     headers,
-  });
+  }, 10000); // 10 second timeout
   
   if (!response.ok) {
     const error = await response.json();
@@ -127,10 +150,10 @@ export async function migrateGuestData(guestDeviceId: string): Promise<{ success
 export async function getGuestCredits(): Promise<CreditsInfo & { isGuest: boolean }> {
   const headers = await getGuestHeaders();
   
-  const response = await fetch(`${API_URL}/api/user/guest/credits`, {
+  const response = await fetchWithTimeout(`${API_URL}/api/user/guest/credits`, {
     method: 'GET',
     headers,
-  });
+  }, 10000); // 10 second timeout
   
   if (!response.ok) {
     const error = await response.json();
@@ -144,10 +167,10 @@ export async function getGuestCredits(): Promise<CreditsInfo & { isGuest: boolea
 export async function getGuestGenerations(): Promise<{ generations: Generation[] }> {
   const headers = await getGuestHeaders();
   
-  const response = await fetch(`${API_URL}/api/user/guest/generations`, {
+  const response = await fetchWithTimeout(`${API_URL}/api/user/guest/generations`, {
     method: 'GET',
     headers,
-  });
+  }, 10000); // 10 second timeout
   
   if (!response.ok) {
     const error = await response.json();

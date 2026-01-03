@@ -1,51 +1,51 @@
 import { StylePreset } from '../types';
 
-// Business photos
-const BUSINESS_PHOTO_1 = require('../../assets/business/518559229-793ad242-7867-4709-bdc6-55021f5eb78f.png');
-const TIGHT_PORTRAIT_PHOTO_1 = require('../../assets/business/tightportraitfromuppertorso.jpg');
-const LUXURY_FASHION_PHOTO_1 = require('../../assets/business/luxuryfashion.jpg');
+// Business photos - Now hosted on Supabase Storage
+const BUSINESS_PHOTO_1 = { uri: 'https://pyziuothzjdijkvdryht.supabase.co/storage/v1/object/public/style-previews/business/518559229-793ad242-7867-4709-bdc6-55021f5eb78f.png' };
+const TIGHT_PORTRAIT_PHOTO_1 = { uri: 'https://pyziuothzjdijkvdryht.supabase.co/storage/v1/object/public/style-previews/business/tightportraitfromuppertorso.jpg' };
+const LUXURY_FASHION_PHOTO_1 = { uri: 'https://pyziuothzjdijkvdryht.supabase.co/storage/v1/object/public/style-previews/business/luxuryfashion.jpg' };
 
 // Emotional Film photos
-const FILM_PHOTO_1 = require('../../assets/emotionalfilm/518559958-243d1b11-9ef0-4d4f-b308-97d67b5d3bc3.png');
+const FILM_PHOTO_1 = { uri: 'https://pyziuothzjdijkvdryht.supabase.co/storage/v1/object/public/style-previews/emotionalfilm/518559958-243d1b11-9ef0-4d4f-b308-97d67b5d3bc3.png' };
 
 // Victoria's Secret photos
-const VS_PHOTO_1 = require('../../assets/victoriasecret/G6TSEqzWYAIvaf9.jpg');
-const VS_PHOTO_2 = require('../../assets/victoriasecret/G6TSEscXQAAm3Lo.jpg');
-const VS_PHOTO_3 = require('../../assets/victoriasecret/G6TSEuEWEAAaR7N.jpg');
+const VS_PHOTO_1 = { uri: 'https://pyziuothzjdijkvdryht.supabase.co/storage/v1/object/public/style-previews/victoriasecret/G6TSEqzWYAIvaf9.jpg' };
+const VS_PHOTO_2 = { uri: 'https://pyziuothzjdijkvdryht.supabase.co/storage/v1/object/public/style-previews/victoriasecret/G6TSEscXQAAm3Lo.jpg' };
+const VS_PHOTO_3 = { uri: 'https://pyziuothzjdijkvdryht.supabase.co/storage/v1/object/public/style-previews/victoriasecret/G6TSEuEWEAAaR7N.jpg' };
 
 // 1990s Camera Style photos
-const NINETIES_PHOTO_1 = require('../../assets/1990s camera style/example1.png');
+const NINETIES_PHOTO_1 = { uri: 'https://pyziuothzjdijkvdryht.supabase.co/storage/v1/object/public/style-previews/1990s%20camera%20style/example1.png' };
 
 // Professional Headshot photos
-const PROFESSIONAL_HEADSHOT_1 = require('../../assets/professionalheadshot/example1.png');
+const PROFESSIONAL_HEADSHOT_1 = { uri: 'https://pyziuothzjdijkvdryht.supabase.co/storage/v1/object/public/style-previews/professionalheadshot/example1.png' };
 
 // With Puppy photos
-const PUPPY_PHOTO_1 = require('../../assets/withpuppy/example1.png');
+const PUPPY_PHOTO_1 = { uri: 'https://pyziuothzjdijkvdryht.supabase.co/storage/v1/object/public/style-previews/withpuppy/example1.png' };
 
 // Childhood Character photos
-const PIKACHU_PHOTO_1 = require('../../assets/Childhood/pika.jpg');
-const TOM_AND_JERRY_PHOTO_1 = require('../../assets/Childhood/tomnjerry.jpg');
-const BEN_TEN_PHOTO_1 = require('../../assets/Childhood/benten.jpg');
-const PINK_PANTHER_PHOTO_1 = require('../../assets/Childhood/pinkpanther.jpg');
+const PIKACHU_PHOTO_1 = { uri: 'https://pyziuothzjdijkvdryht.supabase.co/storage/v1/object/public/style-previews/Childhood/pika.jpg' };
+const TOM_AND_JERRY_PHOTO_1 = { uri: 'https://pyziuothzjdijkvdryht.supabase.co/storage/v1/object/public/style-previews/Childhood/tomnjerry.jpg' };
+const BEN_TEN_PHOTO_1 = { uri: 'https://pyziuothzjdijkvdryht.supabase.co/storage/v1/object/public/style-previews/Childhood/benten.jpg' };
+const PINK_PANTHER_PHOTO_1 = { uri: 'https://pyziuothzjdijkvdryht.supabase.co/storage/v1/object/public/style-previews/Childhood/pinkpanther.jpg' };
 
 // Pokémon Character photos
-const BULBASAUR_PHOTO_1 = require('../../assets/pokemons/bulbasaur.png');
-const CHARMANDER_PHOTO_1 = require('../../assets/pokemons/Charmander.png');
-const SQUIRTLE_PHOTO_1 = require('../../assets/pokemons/Squirtle.png');
-const JIGGLYPUFF_PHOTO_1 = require('../../assets/pokemons/Jigglypuff.png');
+const BULBASAUR_PHOTO_1 = { uri: 'https://pyziuothzjdijkvdryht.supabase.co/storage/v1/object/public/style-previews/pokemons/bulbasaur.png' };
+const CHARMANDER_PHOTO_1 = { uri: 'https://pyziuothzjdijkvdryht.supabase.co/storage/v1/object/public/style-previews/pokemons/Charmander.png' };
+const SQUIRTLE_PHOTO_1 = { uri: 'https://pyziuothzjdijkvdryht.supabase.co/storage/v1/object/public/style-previews/pokemons/Squirtle.png' };
+const JIGGLYPUFF_PHOTO_1 = { uri: 'https://pyziuothzjdijkvdryht.supabase.co/storage/v1/object/public/style-previews/pokemons/Jigglypuff.png' };
 
 // Zootopia Character photos
-const ZOOTOPIA_CABLE_CAR_PHOTO_1 = require('../../assets/slyfoxdumbbunny/example.jpg');
+const ZOOTOPIA_CABLE_CAR_PHOTO_1 = { uri: 'https://pyziuothzjdijkvdryht.supabase.co/storage/v1/object/public/style-previews/slyfoxdumbbunny/example.jpg' };
 
 // Creative photos
-const MAGAZINE_COVER_PHOTO_1 = require('../../assets/creative/magazincover.jpg');
+const MAGAZINE_COVER_PHOTO_1 = { uri: 'https://pyziuothzjdijkvdryht.supabase.co/storage/v1/object/public/style-previews/creative/magazincover.jpg' };
 
 // Jobs photos
-const CHEF_PHOTO_1 = require('../../assets/jobs/chef.png');
-const PILOT_PHOTO_1 = require('../../assets/jobs/pilot.png');
-const SURGEON_PHOTO_1 = require('../../assets/jobs/surgeon.png');
-const ARTIST_PHOTO_1 = require('../../assets/jobs/artist.png');
-const FIREFIGHTER_PHOTO_1 = require('../../assets/jobs/firefighter.png');
+const CHEF_PHOTO_1 = { uri: 'https://pyziuothzjdijkvdryht.supabase.co/storage/v1/object/public/style-previews/jobs/chef.png' };
+const PILOT_PHOTO_1 = { uri: 'https://pyziuothzjdijkvdryht.supabase.co/storage/v1/object/public/style-previews/jobs/pilot.png' };
+const SURGEON_PHOTO_1 = { uri: 'https://pyziuothzjdijkvdryht.supabase.co/storage/v1/object/public/style-previews/jobs/surgeon.png' };
+const ARTIST_PHOTO_1 = { uri: 'https://pyziuothzjdijkvdryht.supabase.co/storage/v1/object/public/style-previews/jobs/artist.png' };
+const FIREFIGHTER_PHOTO_1 = { uri: 'https://pyziuothzjdijkvdryht.supabase.co/storage/v1/object/public/style-previews/jobs/firefighter.png' };
 
 // Winter photos (placeholders)
 const WINTER_COZY_PHOTO_1 = { uri: 'https://images.unsplash.com/photo-1483728642387-6c3bdd6c93e5?q=80&w=1000&auto=format&fit=crop' };
