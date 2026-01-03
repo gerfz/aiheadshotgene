@@ -76,12 +76,35 @@ export async function getMostUsedStyles() {
 }
 
 export async function decrementCredits(userId: string) {
-  const { data, error } = await supabaseAdmin.rpc('decrement_credits', {
-    user_id: userId
-  });
+  // Get the user's profile to find their device_id
+  const { data: profile } = await supabaseAdmin
+    .from('profiles')
+    .select('device_id, free_credits')
+    .eq('id', userId)
+    .single();
+  
+  const newCredits = Math.max(0, (profile?.free_credits || 0) - 1);
+  
+  // Update this user's credits
+  const { error } = await supabaseAdmin
+    .from('profiles')
+    .update({ free_credits: newCredits })
+    .eq('id', userId);
   
   if (error) throw error;
-  return data;
+  
+  // If user has a device_id, sync credits to all other profiles with same device_id
+  if (profile?.device_id) {
+    await supabaseAdmin
+      .from('profiles')
+      .update({ free_credits: newCredits })
+      .eq('device_id', profile.device_id)
+      .neq('id', userId);
+    
+    console.log(`✅ Synced ${newCredits} credits to all profiles with device_id: ${profile.device_id}`);
+  }
+  
+  return { free_credits: newCredits };
 }
 
 export async function createGeneration(

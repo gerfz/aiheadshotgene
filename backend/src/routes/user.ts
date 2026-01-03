@@ -75,17 +75,22 @@ router.get(
           
           // Check if this device has already been used
           let freeCredits = 3; // Default for new devices
+          let isSubscribed = false;
+          
           if (deviceId) {
             const { data: existingProfile } = await supabaseAdmin
               .from('profiles')
-              .select('id')
+              .select('id, free_credits, is_subscribed')
               .eq('device_id', deviceId)
+              .order('created_at', { ascending: true })
+              .limit(1)
               .single();
             
-            // If device was already used, give 0 credits
+            // If device was already used, copy credits from original account
             if (existingProfile) {
-              freeCredits = 0;
-              console.log(`⚠️ Device ${deviceId} already used, giving 0 credits`);
+              freeCredits = existingProfile.free_credits;
+              isSubscribed = existingProfile.is_subscribed;
+              console.log(`⚠️ Device ${deviceId} already used, copying ${freeCredits} credits from existing account`);
             }
           }
           
@@ -95,7 +100,7 @@ router.get(
               id: req.userId,
               email: req.userEmail,
               free_credits: freeCredits,
-              is_subscribed: false,
+              is_subscribed: isSubscribed,
               email_verified: true,
               credits_awarded: true,
               device_id: deviceId || null
