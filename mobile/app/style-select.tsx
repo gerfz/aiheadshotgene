@@ -46,7 +46,31 @@ const STATIC_CATEGORIES = [
     id: 'creative',
     name: 'Creative',
     icon: '🎭',
-    styles: ['pikachu', 'bulbasaur', 'charmander', 'squirtle', 'jigglypuff', 'zootopia_cable_car', 'tom_and_jerry', 'ben_ten', 'pink_panther', 'victoria_secret', 'custom'],
+    styles: ['magazine_cover', 'pikachu', 'bulbasaur', 'charmander', 'squirtle', 'jigglypuff', 'zootopia_cable_car', 'tom_and_jerry', 'ben_ten', 'pink_panther', 'victoria_secret', 'custom'],
+  },
+  {
+    id: 'adventure',
+    name: 'Adventure',
+    icon: '🏔️',
+    styles: ['custom'],
+  },
+  {
+    id: 'classy',
+    name: 'Classy',
+    icon: '👔',
+    styles: ['custom'],
+  },
+  {
+    id: 'winter',
+    name: 'Winter',
+    icon: '❄️',
+    styles: ['custom'],
+  },
+  {
+    id: 'jobs',
+    name: 'Jobs',
+    icon: '💼',
+    styles: ['executive_chef', 'airline_pilot', 'surgeon', 'creative_artist', 'firefighter_hero', 'custom'],
   },
 ];
 
