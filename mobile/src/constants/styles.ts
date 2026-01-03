@@ -2,6 +2,8 @@ import { StylePreset } from '../types';
 
 // Business photos
 const BUSINESS_PHOTO_1 = require('../../assets/business/518559229-793ad242-7867-4709-bdc6-55021f5eb78f.png');
+const TIGHT_PORTRAIT_PHOTO_1 = require('../../assets/business/tightportraitfromuppertorso.jpg');
+const LUXURY_FASHION_PHOTO_1 = require('../../assets/business/luxuryfashion.jpg');
 
 // Emotional Film photos
 const FILM_PHOTO_1 = require('../../assets/emotionalfilm/518559958-243d1b11-9ef0-4d4f-b308-97d67b5d3bc3.png');
@@ -26,6 +28,15 @@ const TOM_AND_JERRY_PHOTO_1 = require('../../assets/Childhood/tomnjerry.jpg');
 const BEN_TEN_PHOTO_1 = require('../../assets/Childhood/benten.jpg');
 const PINK_PANTHER_PHOTO_1 = require('../../assets/Childhood/pinkpanther.jpg');
 
+// Pokémon Character photos
+const BULBASAUR_PHOTO_1 = require('../../assets/pokemons/bulbasaur.png');
+const CHARMANDER_PHOTO_1 = require('../../assets/pokemons/Charmander.png');
+const SQUIRTLE_PHOTO_1 = require('../../assets/pokemons/Squirtle.png');
+const JIGGLYPUFF_PHOTO_1 = require('../../assets/pokemons/Jigglypuff.png');
+
+// Zootopia Character photos
+const ZOOTOPIA_CABLE_CAR_PHOTO_1 = require('../../assets/slyfoxdumbbunny/example.jpg');
+
 // Face consistency prefix that will be added to all custom prompts
 export const FACE_CONSISTENCY_PREFIX = `Keep the facial features of the person in the uploaded image exactly consistent. Maintain 100% accuracy of the face from the reference image. Important: do not change the face. `;
 
@@ -49,6 +60,22 @@ export const STYLE_PRESETS: Record<string, StylePreset> = {
     thumbnail: BUSINESS_PHOTO_1,
     thumbnails: [BUSINESS_PHOTO_1],
     prompt: `Keep the facial features of the person in the uploaded image exactly consistent. Dress them in a professional navy blue business suit with a white shirt, similar to the reference image. Background: Place the subject against a clean, solid dark gray studio photography backdrop. The background should have a subtle gradient, slightly lighter behind the subject and darker towards the edges (vignette effect). There should be no other objects. Photography Style: Shot on a Sony A7III with an 85mm f/1.4 lens, creating a flattering portrait compression. Lighting: Use a classic three-point lighting setup. The main key light should create soft, defining shadows on the face. A subtle rim light should separate the subject's shoulders and hair from the dark background. Crucial Details: Render natural skin texture with visible pores, not an airbrushed look. Add natural catchlights to the eyes. The fabric of the suit should show a subtle wool texture. Final image should be an ultra-realistic, 8k professional headshot.`
+  },
+  tight_portrait: {
+    key: 'tight_portrait',
+    name: 'Cinematic Portrait',
+    description: 'Dramatic tight portrait with cinematic lighting and editorial style',
+    thumbnail: TIGHT_PORTRAIT_PHOTO_1,
+    thumbnails: [TIGHT_PORTRAIT_PHOTO_1],
+    prompt: `Keep the facial features of the person in the uploaded image exactly consistent. Preserve 100% accuracy of the face from the reference image. Important: do not change the face. Create a tight portrait crop from upper torso to head in vertical orientation. Composition: Subject placed slightly right of center with shoulders angled and head turned toward camera at eye-level. Shallow depth of field with smooth background falloff. Soft negative space on left side created by gradient background. Subject: Three-quarter profile with subtle head tilt. Serious, confident, introspective expression with gaze directed slightly past the camera. Sharp jawline, defined cheekbones, light stubble. Short, dark, neatly styled hair with slight texture. High-detail skin with visible pores and natural highlights. Wardrobe: Black or very dark charcoal knit zip-up sweater with heavy ribbed knit fabric texture. Slim fit with high collar partially zipped. Minimalist, modern, masculine style. Lighting: Strong directional light from front-left with minimal fill allowing deep shadows. Subtle rim light for edge separation along jaw and shoulder. High contrast with dramatic shadow sculpting. Soft but directional, cinematic light quality with controlled specular highlights on skin. Color Palette: Deep red, burgundy, and black dominant colors. Warm, slightly desaturated skin tones. Moody and cinematic overall tone with warm shadows and subtle red cast color grading. Background: Dark red gradient studio backdrop with smooth texture and soft light diffusion. Clear subject-background separation via lighting and contrast. Technical: Short telephoto portrait lens look (85mm equivalent). Wide aperture style (f/1.8–f/2.8). High facial sharpness with smooth background blur. Minimal noise, clean studio image with controlled highlights and rich shadows. Artistic Style: Fashion portrait / cinematic editorial genre. Intense, refined, dramatic mood. Luxury, high-fashion, modern masculinity aesthetic with cinematic lighting influences. Post-Processing: Subtle skin retouching preserving texture. Enhanced midtone contrast. Warm red-toned grade with muted saturation. Very subtle edge darkening vignette.`
+  },
+  luxury_fashion: {
+    key: 'luxury_fashion',
+    name: 'Luxury Fashion Editorial',
+    description: 'Dark cinematic mafia romance aesthetic with luxury fashion lighting',
+    thumbnail: LUXURY_FASHION_PHOTO_1,
+    thumbnails: [LUXURY_FASHION_PHOTO_1],
+    prompt: `Keep the facial features of the person in the uploaded image exactly consistent. Preserve 100% accuracy of the face from the reference image. Important: do not change the face. Design a dark, cinematic portrait featuring a powerful, refined alpha male with luxury fashion editorial lighting and a moody, romantic tone. Subject: Handsome alpha male with dominant, controlled, mysterious presence. Facial features: Smoldering, intense, restrained expression. Gaze looking downward, partially obscured by shadow. Clean, smooth skin with no tattoos. High-detail facial structure. Pose: Adjusting the cufflink on one sleeve of white dress shirt. Body language: Confident, composed, quietly powerful. Wardrobe: Sharp tailored black suit, crisp white dress shirt, dark tie. Luxury, classic, high-status mafia aesthetic. Scene and Background: Pure black background. Minimalist studio setup. Dark, moody, seductive, elite atmosphere. Lighting: Cinematic soft directional lighting angled to sculpt the face and suit. Very subtle fill to preserve shadow depth. Face partially in shadow with smooth tonal transitions. Continuous tonal gradients across the face. Intense, luxurious, emotionally charged mood. Composition: Medium portrait framing from torso to head. Centered composition with strong vertical symmetry. Subject perfectly centered in frame. Ample dark space around subject. Photography Style: Luxury fashion editorial / cinematic portrait. Dark mafia romance aesthetic. High-end studio photography. Color and Grading: Deep blacks, charcoal shadows, soft neutral skin tones, clean white highlights. Low-key cinematic grading with controlled highlights and deep blacks. Detail: High-detail suit texture and fabric folds. Photorealistic, film-quality realism. Polished, premium quality finish.`
   },
   emotional_film: {
     key: 'emotional_film',
@@ -125,6 +152,46 @@ export const STYLE_PRESETS: Record<string, StylePreset> = {
     thumbnail: PINK_PANTHER_PHOTO_1,
     thumbnails: [PINK_PANTHER_PHOTO_1],
     prompt: `Keep the facial features of the person in the uploaded image exactly consistent. Preserve 100% accuracy of the face from the reference image. Important: do not change the face. Create a hyper-realistic, professional fashion photoshoot. The person is wearing a pastel pink knitted sweater, white high-waisted jeans, and white sneakers with pink accents. The person is posing fashionably beside a tall giant 3D photorealistic Pink Panther character. The Pink Panther should be rendered in ultra-realistic 3D with accurate iconic features - bright pink fur, elongated body, distinctive snout, and characteristic cool, suave posture striking a stylish pose with one paw raised. The person has an elegant, stylish expression. Environment: light pastel pink backdrop with soft, flattering professional studio lighting. The lighting creates a dreamy, fashionable atmosphere. Camera: Shot on a high-end fashion camera with shallow depth of field and perfect focus. The composition captures a sophisticated, fashion-forward moment with the legendary cool character in a modern editorial style.`
+  },
+  bulbasaur: {
+    key: 'bulbasaur',
+    name: 'With Bulbasaur',
+    description: 'Playful mint-green themed portrait with adorable Bulbasaur',
+    thumbnail: BULBASAUR_PHOTO_1,
+    thumbnails: [BULBASAUR_PHOTO_1],
+    prompt: `Keep the facial features of the person in the uploaded image exactly consistent. Preserve 100% accuracy of the face from the reference image. Important: do not change the face. Create a hyper-realistic, premium studio fashion shoot with designer-toy finish. The person is wearing a mint-green knitted sweater, off-white high-waisted jeans, and white high-top sneakers with subtle green accents. The person is standing with one hand naturally resting near the bud area on a giant 3D photorealistic Bulbasaur (not covering faces), the other hand lightly on the waist. The person has a playful, lively, mischievous smile. Bulbasaur should be rendered as a giant 3D photorealistic character with a cute yet realistic, premium vinyl-toy look - clean skin micro-texture, refined bud material detail, clear glossy eyes, and crisp silhouette. Bulbasaur tilts its head up slightly toward the person with a gentle, friendly photo-op vibe. Environment: clean mint gradient studio backdrop, minimal. Lighting: soft key light plus subtle rim light, porcelain-fair clean skin rendering, crisp shadows. Composition: full-body or 3/4 fashion-ad framing with generous negative space, premium street-editorial vibe.`
+  },
+  charmander: {
+    key: 'charmander',
+    name: 'With Charmander',
+    description: 'Energetic orange-red portrait with confident Charmander',
+    thumbnail: CHARMANDER_PHOTO_1,
+    thumbnails: [CHARMANDER_PHOTO_1],
+    prompt: `Keep the facial features of the person in the uploaded image exactly consistent. Preserve 100% accuracy of the face from the reference image. Important: do not change the face. Create a hyper-realistic, premium studio fashion shoot with designer-toy finish. The person is wearing a vibrant orange-red knitted sweater, deep black high-waisted jeans, and white high-top sneakers with subtle orange accents. The person is standing with their arm casually leaning on a giant 3D photorealistic Charmander's shoulder or back area, body slightly angled for a stronger silhouette. The person has an energetic, confident, cheeky smile. Charmander should be rendered as a giant 3D photorealistic character with controlled warm glow accents - refined skin detail, tail flame realistic but not overpowering, clear glossy eyes. Charmander wears a proud expression, and the tail flame adds a subtle warm rim-light reflection on the person. Environment: high-saturation orange-red gradient backdrop, minimal fashion studio. Lighting: studio key light plus subtle warm rim from tail flame, clean premium finish. Composition: 3/4 body framing with bold color-block impact, commercial fashion vibe.`
+  },
+  squirtle: {
+    key: 'squirtle',
+    name: 'With Squirtle',
+    description: 'Fresh sea-blue portrait with cool Squirtle companion',
+    thumbnail: SQUIRTLE_PHOTO_1,
+    thumbnails: [SQUIRTLE_PHOTO_1],
+    prompt: `Keep the facial features of the person in the uploaded image exactly consistent. Preserve 100% accuracy of the face from the reference image. Important: do not change the face. Create a hyper-realistic, premium studio fashion shoot with designer-toy finish. The person is wearing a sea-salt blue knitted sweater, light grey high-waisted jeans, and white high-top sneakers with subtle blue accents. The person is standing with one hand lightly resting on the edge of a giant 3D photorealistic Squirtle's shell, the other hand relaxed. The person has a fresh, cute, slightly cool expression. Squirtle should be rendered as a giant 3D photorealistic character with a glossy-toy yet realistic finish - premium semi-gloss shell material, clean skin micro-detail, clear glossy eyes. Squirtle holds a relaxed signature smile pose, creating a crisp monochrome duo aesthetic. Environment: clean light-blue gradient studio backdrop, minimal. Lighting: soft key light plus delicate rim, porcelain-fair clean skin rendering. Composition: full-body or 3/4 framing with airy negative space, refined clean look.`
+  },
+  jigglypuff: {
+    key: 'jigglypuff',
+    name: 'With Jigglypuff',
+    description: 'Soft pastel portrait with sweet Jigglypuff charm',
+    thumbnail: JIGGLYPUFF_PHOTO_1,
+    thumbnails: [JIGGLYPUFF_PHOTO_1],
+    prompt: `Keep the facial features of the person in the uploaded image exactly consistent. Preserve 100% accuracy of the face from the reference image. Important: do not change the face. Create a hyper-realistic, soft pastel editorial, premium studio fashion shoot. The person is wearing a pastel lavender-pink knitted sweater, creamy off-white high-waisted jeans, and white/pink high-top sneakers. The person is in a stylish standing pose, gently leaning beside a giant 3D photorealistic Jigglypuff. Jigglypuff does a cute photo gesture with a small wave or hands-on-cheeks. The person has a soft, sweet, elegant expression. Jigglypuff should be rendered as a giant 3D photorealistic character with a premium plush-toy vibe - subtle fuzzy surface, clean noise-free finish, clear glossy eyes, high-end designer-toy look. Jigglypuff smiles and waves slightly, creating a cute-yet-premium duo mood. Environment: light pastel lavender-pink gradient backdrop with extremely subtle paper-like texture. Lighting: diffused soft light, clean translucent skin rendering, airy mood. Composition: magazine-cover style framing with generous negative space, refined sweetness.`
+  },
+  zootopia_cable_car: {
+    key: 'zootopia_cable_car',
+    name: 'Zootopia Cable Car',
+    description: 'Cozy Swiss Alps cable car scene with Nick Wilde and Judy Hopps',
+    thumbnail: ZOOTOPIA_CABLE_CAR_PHOTO_1,
+    thumbnails: [ZOOTOPIA_CABLE_CAR_PHOTO_1],
+    prompt: `Keep the facial features of the person in the uploaded image exactly consistent. Preserve 100% accuracy of the face from the reference image. Important: do not change the face. Create a cozy, cinematic winter scene inside a glass cable car in the Swiss Alps. The person is wearing a red knit sweater and blue jeans, sitting on a wooden bench, smiling softly at the camera with long dark hair and a warm, natural look. On the person's left, Nick Wilde from Zootopia, the sly red fox character, leans in relaxed wearing his green shirt and striped tie with a confident smirk. On the person's right, Judy Hopps from Zootopia, the cheerful gray rabbit police officer in her blue uniform, sits close with an energetic, friendly expression. The person has their arms around both characters, creating a wholesome, affectionate moment. Nick Wilde and Judy Hopps should be rendered as high-quality photorealistic 3D animated characters that blend seamlessly with the real person. Outside the cable car window, snow-covered mountains stretch into the distance under a clear blue sky, with a red alpine train crossing a stone bridge in the background. Environment: bright natural daylight, crisp winter atmosphere, ultra-detailed glass cable car interior with wooden benches. Lighting: soft natural light from windows, gentle shadows. Composition: cozy travel aesthetic with sharp focus, 4:5 aspect ratio, high resolution. The scene should feel warm and wholesome despite the cold winter setting outside.`
   }
 };
 
