@@ -66,18 +66,39 @@ router.get(
         emailVerified: isEmailVerified || profile.email_verified || false
       });
     } catch (error: any) {
-      // If profile doesn't exist, create it
+      // If profile doesn't exist, create it with device tracking
       if (error.code === 'PGRST116') {
         try {
+          // Get device_id from auth metadata
+          const { data: authUser } = await supabaseAdmin.auth.admin.getUserById(req.userId!);
+          const deviceId = authUser?.user?.user_metadata?.device_id;
+          
+          // Check if this device has already been used
+          let freeCredits = 3; // Default for new devices
+          if (deviceId) {
+            const { data: existingProfile } = await supabaseAdmin
+              .from('profiles')
+              .select('id')
+              .eq('device_id', deviceId)
+              .single();
+            
+            // If device was already used, give 0 credits
+            if (existingProfile) {
+              freeCredits = 0;
+              console.log(`⚠️ Device ${deviceId} already used, giving 0 credits`);
+            }
+          }
+          
           const { data, error: insertError } = await supabaseAdmin
             .from('profiles')
             .insert({
               id: req.userId,
               email: req.userEmail,
-              free_credits: 3,
+              free_credits: freeCredits,
               is_subscribed: false,
               email_verified: true,
-              credits_awarded: true
+              credits_awarded: true,
+              device_id: deviceId || null
             })
             .select()
             .single();
@@ -87,7 +108,7 @@ router.get(
           return res.json({
             freeCredits: data.free_credits,
             isSubscribed: data.is_subscribed,
-            hasCredits: true,
+            hasCredits: data.free_credits > 0 || data.is_subscribed,
             emailVerified: data.email_verified || false
           });
         } catch (insertErr: any) {

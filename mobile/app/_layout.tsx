@@ -29,11 +29,77 @@ export default function RootLayout() {
         console.log('📱 Device ID:', deviceId);
         
         // Check for existing auth session
-        const { data: { session } } = await supabase.auth.getSession();
+        let session = null;
+        try {
+          const { data: { session: existingSession }, error } = await supabase.auth.getSession();
+          
+          // If there's an error getting session (e.g., invalid refresh token), clear it
+          if (error) {
+            console.warn('⚠️ Error getting session, clearing:', error.message);
+            await supabase.auth.signOut();
+            session = null;
+          } else {
+            session = existingSession;
+          }
+        } catch (sessionError) {
+          console.warn('⚠️ Session error, clearing:', sessionError);
+          await supabase.auth.signOut();
+          session = null;
+        }
         
         if (session?.user) {
           // User already has an anonymous session
           console.log('✅ Existing anonymous user:', session.user.id);
+          
+          // Verify the session is still valid by trying to get user
+          try {
+            const { data: { user }, error } = await supabase.auth.getUser();
+            
+            if (error || !user) {
+              // Session is invalid, sign out and create new anonymous user
+              console.warn('⚠️ Invalid session detected, creating new anonymous user');
+              await supabase.auth.signOut();
+              
+              // Create new anonymous user
+              const { data: newData, error: newError } = await supabase.auth.signInAnonymously({
+                options: {
+                  data: {
+                    device_id: deviceId,
+                    is_anonymous: true,
+                  }
+                }
+              });
+              
+              if (newError || !newData.user) {
+                throw new Error('Failed to create new anonymous user');
+              }
+              
+              setUser({
+                id: newData.user.id,
+                email: `device-${deviceId}@anonymous.local`,
+              });
+              
+              // Initialize with new user
+              try {
+                await Promise.race([
+                  Promise.all([
+                    initializePurchases(newData.user.id),
+                    loginUser(newData.user.id)
+                  ]),
+                  new Promise((_, reject) => 
+                    setTimeout(() => reject(new Error('Initialization timeout')), 8000)
+                  )
+                ]);
+              } catch (timeoutError) {
+                console.warn('⚠️ Initialization timeout, continuing anyway:', timeoutError);
+              }
+              
+              return; // Exit early
+            }
+          } catch (verifyError) {
+            console.error('❌ Error verifying session:', verifyError);
+          }
+          
           setUser({
             id: session.user.id,
             email: session.user.email || `device-${deviceId}@anonymous.local`,

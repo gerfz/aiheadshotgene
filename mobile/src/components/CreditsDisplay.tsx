@@ -19,8 +19,11 @@ export function CreditsDisplay({ credits }: CreditsDisplayProps) {
     );
   }
 
-  // Show "Upgrade Now" banner when credits are 0
-  if (credits.freeCredits === 0) {
+  // Normalize freeCredits to handle undefined, null, or 0
+  const freeCredits = credits.freeCredits ?? 0;
+
+  // Show "Upgrade Now" banner when credits are 0 or undefined
+  if (freeCredits === 0 || !credits.hasCredits) {
     return (
       <TouchableOpacity 
         style={[styles.container, styles.upgradeContainer]}
@@ -37,7 +40,7 @@ export function CreditsDisplay({ credits }: CreditsDisplayProps) {
     <View style={styles.container}>
       <Text style={styles.icon}>🎁</Text>
       <Text style={styles.text}>
-        {credits.freeCredits} free {credits.freeCredits === 1 ? 'photo' : 'photos'} remaining
+        {freeCredits} free {freeCredits === 1 ? 'photo' : 'photos'} remaining
       </Text>
     </View>
   );

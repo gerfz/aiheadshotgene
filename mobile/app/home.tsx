@@ -66,13 +66,25 @@ export default function HomeScreen() {
         timeoutPromise
       ]) as [any, any];
       
-      setCredits(creditsData);
+      // Ensure freeCredits is a number
+      const normalizedCredits = {
+        ...creditsData,
+        freeCredits: creditsData?.freeCredits ?? 0,
+        hasCredits: creditsData?.hasCredits ?? false,
+        isSubscribed: creditsData?.isSubscribed ?? false,
+      };
+      
+      setCredits(normalizedCredits);
       setGenerations(generationsData?.generations || []);
     } catch (error) {
       console.error('Failed to load data:', error);
       
       // Set default values on error to prevent loading forever
-      setCredits({ credits: 0, generations_count: 0, last_refill_at: null });
+      setCredits({ 
+        freeCredits: 0, 
+        hasCredits: false, 
+        isSubscribed: false 
+      });
       setGenerations([]);
       
       // Retry once after a short delay (in case backend is waking up)
@@ -90,7 +102,15 @@ export default function HomeScreen() {
             timeoutPromise
           ]) as [any, any];
           
-          setCredits(creditsData);
+          // Ensure freeCredits is a number
+          const normalizedCredits = {
+            ...creditsData,
+            freeCredits: creditsData?.freeCredits ?? 0,
+            hasCredits: creditsData?.hasCredits ?? false,
+            isSubscribed: creditsData?.isSubscribed ?? false,
+          };
+          
+          setCredits(normalizedCredits);
           setGenerations(generationsData?.generations || []);
         } catch (retryError) {
           console.error('Retry failed:', retryError);
