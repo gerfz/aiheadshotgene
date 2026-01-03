@@ -52,19 +52,19 @@ const STATIC_CATEGORIES = [
     id: 'adventure',
     name: 'Adventure',
     icon: '🏔️',
-    styles: ['custom'],
+    styles: ['mountain_hiking', 'safari_expedition', 'jungle_explorer', 'canyon_adventure', 'desert_wanderer', 'custom'],
   },
   {
     id: 'classy',
     name: 'Classy',
     icon: '👔',
-    styles: ['custom'],
+    styles: ['black_tie', 'evening_gown', 'gentleman_study', 'champagne_celebration', 'art_museum', 'custom'],
   },
   {
     id: 'winter',
     name: 'Winter',
     icon: '❄️',
-    styles: ['custom'],
+    styles: ['cozy_cabin', 'luxury_ski', 'winter_forest', 'mountain_peak', 'winter_city', 'custom'],
   },
   {
     id: 'jobs',

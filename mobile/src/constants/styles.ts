@@ -40,12 +40,33 @@ const ZOOTOPIA_CABLE_CAR_PHOTO_1 = require('../../assets/slyfoxdumbbunny/example
 // Creative photos
 const MAGAZINE_COVER_PHOTO_1 = require('../../assets/creative/magazincover.jpg');
 
-// Jobs photos (using placeholders - will need actual images)
-const CHEF_PHOTO_1 = { uri: 'https://images.unsplash.com/photo-1577219491135-ce391730fb2c?q=80&w=1000&auto=format&fit=crop' };
-const PILOT_PHOTO_1 = { uri: 'https://images.unsplash.com/photo-1556388158-158ea5ccacbd?q=80&w=1000&auto=format&fit=crop' };
-const DOCTOR_PHOTO_1 = { uri: 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?q=80&w=1000&auto=format&fit=crop' };
-const ARTIST_PHOTO_1 = { uri: 'https://images.unsplash.com/photo-1460661419201-fd4cecdf8a8b?q=80&w=1000&auto=format&fit=crop' };
-const FIREFIGHTER_PHOTO_1 = { uri: 'https://images.unsplash.com/photo-1541450805988-c9c1c8e1f0c7?q=80&w=1000&auto=format&fit=crop' };
+// Jobs photos
+const CHEF_PHOTO_1 = require('../../assets/jobs/chef.png');
+const PILOT_PHOTO_1 = require('../../assets/jobs/pilot.png');
+const SURGEON_PHOTO_1 = require('../../assets/jobs/surgeon.png');
+const ARTIST_PHOTO_1 = require('../../assets/jobs/artist.png');
+const FIREFIGHTER_PHOTO_1 = require('../../assets/jobs/firefighter.png');
+
+// Winter photos (placeholders)
+const WINTER_COZY_PHOTO_1 = { uri: 'https://images.unsplash.com/photo-1483728642387-6c3bdd6c93e5?q=80&w=1000&auto=format&fit=crop' };
+const WINTER_LUXURY_PHOTO_1 = { uri: 'https://images.unsplash.com/photo-1545594651-f3f0c46fae9d?q=80&w=1000&auto=format&fit=crop' };
+const WINTER_FOREST_PHOTO_1 = { uri: 'https://images.unsplash.com/photo-1516975080664-ed2fc6a32937?q=80&w=1000&auto=format&fit=crop' };
+const WINTER_MOUNTAIN_PHOTO_1 = { uri: 'https://images.unsplash.com/photo-1551698618-1dfe5d97d256?q=80&w=1000&auto=format&fit=crop' };
+const WINTER_CITY_PHOTO_1 = { uri: 'https://images.unsplash.com/photo-1477414348463-c0eb7f1359b6?q=80&w=1000&auto=format&fit=crop' };
+
+// Classy photos (placeholders)
+const CLASSY_TUXEDO_PHOTO_1 = { uri: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=1000&auto=format&fit=crop' };
+const CLASSY_GOWN_PHOTO_1 = { uri: 'https://images.unsplash.com/photo-1566174053879-31528523f8ae?q=80&w=1000&auto=format&fit=crop' };
+const CLASSY_GENTLEMAN_PHOTO_1 = { uri: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?q=80&w=1000&auto=format&fit=crop' };
+const CLASSY_CHAMPAGNE_PHOTO_1 = { uri: 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?q=80&w=1000&auto=format&fit=crop' };
+const CLASSY_MUSEUM_PHOTO_1 = { uri: 'https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?q=80&w=1000&auto=format&fit=crop' };
+
+// Adventure photos (placeholders)
+const ADVENTURE_HIKING_PHOTO_1 = { uri: 'https://images.unsplash.com/photo-1551632811-561732d1e306?q=80&w=1000&auto=format&fit=crop' };
+const ADVENTURE_SAFARI_PHOTO_1 = { uri: 'https://images.unsplash.com/photo-1516426122078-c23e76319801?q=80&w=1000&auto=format&fit=crop' };
+const ADVENTURE_EXPLORER_PHOTO_1 = { uri: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?q=80&w=1000&auto=format&fit=crop' };
+const ADVENTURE_CANYON_PHOTO_1 = { uri: 'https://images.unsplash.com/photo-1533130061792-64b345e4a833?q=80&w=1000&auto=format&fit=crop' };
+const ADVENTURE_DESERT_PHOTO_1 = { uri: 'https://images.unsplash.com/photo-1509316785289-025f5b846b35?q=80&w=1000&auto=format&fit=crop' };
 
 // Face consistency prefix that will be added to all custom prompts
 export const FACE_CONSISTENCY_PREFIX = `Keep the facial features of the person in the uploaded image exactly consistent. Maintain 100% accuracy of the face from the reference image. Important: do not change the face. `;
@@ -235,8 +256,8 @@ export const STYLE_PRESETS: Record<string, StylePreset> = {
     key: 'surgeon',
     name: 'Surgeon',
     description: 'Elite surgeon in operating room with dramatic medical intensity',
-    thumbnail: DOCTOR_PHOTO_1,
-    thumbnails: [DOCTOR_PHOTO_1],
+    thumbnail: SURGEON_PHOTO_1,
+    thumbnails: [SURGEON_PHOTO_1],
     prompt: `Keep the facial features of the person in the uploaded image exactly consistent. Preserve 100% accuracy of the face from the reference image. Important: do not change the face. Create a dramatic portrait of an elite surgeon in a modern operating room. The person wears surgical scrubs in deep teal or navy blue, surgical cap, with a stethoscope draped around neck. Surgical mask pulled down to chin or held in hand, revealing face. Expression: Focused, intelligent, compassionate with determined eyes. A look of both intensity and care. Slight confident expression showing mastery and dedication. Pose: Standing with arms crossed holding surgical gloves, or hands clasped in front in a thoughtful pose. Confident professional stance. Setting: Modern operating room with surgical lights creating dramatic overhead illumination. Blurred medical equipment and monitors in background showing vital signs displays. Sterile blue-green color tones from surgical environment. Lighting: Dramatic overhead surgical lights creating strong directional lighting from above. Cool blue-green ambient light from OR environment. Rim lighting separating subject from background. Cinematic medical drama aesthetic. Composition: Medium portrait from waist up, centered with OR environment visible. Sharp focus on surgeon with softly blurred medical equipment. Color palette: Deep teal scrubs, surgical blues and greens, stainless steel, with warm skin tones contrasting cool environment. Photography style: Medical drama editorial. Shot on 50mm lens with dramatic lighting. High-detail fabric texture on scrubs. Mood: Heroic, dedicated, life-saving. The portrait of a medical professional at the height of their calling.`
   },
   creative_artist: {
@@ -254,6 +275,133 @@ export const STYLE_PRESETS: Record<string, StylePreset> = {
     thumbnail: FIREFIGHTER_PHOTO_1,
     thumbnails: [FIREFIGHTER_PHOTO_1],
     prompt: `Keep the facial features of the person in the uploaded image exactly consistent. Preserve 100% accuracy of the face from the reference image. Important: do not change the face. Create a powerful heroic portrait of a firefighter after a successful rescue. The person wears full firefighter turnout gear - heavy tan/beige protective coat with reflective yellow stripes, fire helmet with shield, but coat is partially open showing dark t-shirt underneath. Face shows slight soot marks adding authenticity. Helmet held under one arm or worn pushed back. Expression: Strong, brave, determined yet compassionate. Eyes show courage and dedication. Slight proud smile of someone who saves lives. Authentic hero energy. Pose: Standing confidently with arms crossed or one hand on hip, other holding helmet. Strong heroic stance. Shoulders back, commanding presence. Setting: Fire truck in background with red lights creating dramatic ambient glow. Subtle smoke or mist in air adding atmosphere. Fire station bay or outdoor scene with emergency vehicle. Golden hour or dramatic twilight lighting. Lighting: Dramatic side lighting with warm golden tones. Red emergency lights creating accent lighting and rim light. Slight haze in air catching light beams. Cinematic action movie aesthetic. Composition: Medium to full portrait showing firefighter gear and fire truck background. Shallow depth of field with fire truck and smoke softly blurred. Color palette: Tan firefighter gear, reflective yellow stripes, red fire truck, warm golden light, cool blue shadows. Photography style: Cinematic hero portrait. Shot on 35mm lens with dramatic lighting. High-detail gear texture. Mood: Heroic, brave, inspiring. The portrait of an everyday hero who runs toward danger to save lives. Powerful and emotionally moving.`
+  },
+  // WINTER STYLES
+  cozy_cabin: {
+    key: 'cozy_cabin',
+    name: 'Cozy Cabin',
+    description: 'Warm winter cabin vibes with fireplace glow and chunky knit sweater',
+    thumbnail: WINTER_COZY_PHOTO_1,
+    thumbnails: [WINTER_COZY_PHOTO_1],
+    prompt: `Keep the facial features of the person in the uploaded image exactly consistent. Preserve 100% accuracy of the face from the reference image. Important: do not change the face. Create a warm, cozy winter portrait in a rustic cabin setting. The person wears an oversized chunky knit cream or caramel sweater with cable knit texture. Holding a steaming mug of hot cocoa or coffee with both hands. Expression: Warm, content, peaceful with a gentle smile. Eyes convey comfort and relaxation. Authentic cozy hygge energy. Pose: Sitting comfortably wrapped in the sweater, hands around warm mug. Relaxed, intimate posture. Legs tucked up on cozy chair or sofa. Setting: Rustic wooden cabin interior with stone fireplace visible in soft background. Warm glowing fire creating ambient orange light. Soft plaid blanket nearby. Frosted window showing snow outside. Wood beam ceiling. Lighting: Warm fireplace glow as key light creating golden tones on face. Soft ambient cabin lighting. Rim light separating subject from background. Cozy hygge photography aesthetic. Composition: Medium portrait showing upper body and cozy environment. Shallow depth of field with cabin softly blurred. Color palette: Cream and caramel knits, warm fireplace oranges, rich wood browns, soft winter whites. Photography style: Lifestyle cozy editorial. Shot on 50mm lens with warm natural lighting. Mood: Peaceful, warm, hygge, comforting. The perfect winter retreat moment.`
+  },
+  luxury_ski: {
+    key: 'luxury_ski',
+    name: 'Luxury Ski Resort',
+    description: 'Glamorous apres-ski moment in designer winter fashion',
+    thumbnail: WINTER_LUXURY_PHOTO_1,
+    thumbnails: [WINTER_LUXURY_PHOTO_1],
+    prompt: `Keep the facial features of the person in the uploaded image exactly consistent. Preserve 100% accuracy of the face from the reference image. Important: do not change the face. Create a glamorous luxury ski resort portrait. The person wears high-end winter fashion - elegant white or cream puffer jacket with fur trim, designer ski goggles resting on head, cashmere scarf. Sleek hair styled perfectly. Expression: Confident, glamorous, sophisticated with radiant smile. Eyes sparkle with winter excitement. Luxury lifestyle energy. Pose: Standing confidently with one hand adjusting goggles on head, other hand in jacket pocket. Elegant posture. Setting: Upscale ski resort terrace or lodge with snow-covered mountain peaks in background. Wooden lodge architecture. Clear blue sky. Fresh pristine snow. Apres-ski luxury atmosphere. Lighting: Bright crisp winter sunlight creating sharp highlights and shadows. Snow reflecting light for soft fill. Clear mountain air. Cinematic luxury travel photography. Composition: Medium portrait showing winter fashion and mountain backdrop. Shallow depth of field with mountains softly blurred. Color palette: Pristine whites and creams, luxury gold accents, clear blue sky, warm wood tones. Photography style: High-end travel editorial. Shot on 35mm lens with bright winter lighting. Mood: Glamorous, luxurious, aspirational. Winter fashion at its finest.`
+  },
+  winter_forest: {
+    key: 'winter_forest',
+    name: 'Winter Forest',
+    description: 'Enchanting snowy forest with fairy tale winter magic',
+    thumbnail: WINTER_FOREST_PHOTO_1,
+    thumbnails: [WINTER_FOREST_PHOTO_1],
+    prompt: `Keep the facial features of the person in the uploaded image exactly consistent. Preserve 100% accuracy of the face from the reference image. Important: do not change the face. Create an enchanting winter forest portrait. The person wears a long wool coat in deep burgundy or forest green, fur-lined hood up or down, leather gloves, tall winter boots. Scarf wrapped warmly. Expression: Serene, wonder-filled, peaceful with soft smile. Eyes show magic and tranquility. Winter wonderland energy. Pose: Standing among snow-covered trees, one hand touching a snow-laden branch. Natural, graceful posture. Snow gently falling around them. Setting: Dense forest with snow-covered evergreen trees. Soft snowfall in air. Magical winter forest atmosphere. Morning or twilight blue hour lighting. Frosted branches creating natural frame. Lighting: Soft diffused daylight through snowy clouds. Cool blue winter tones with warm skin tone contrast. Subtle rim light from sky. Dreamy fairy tale photography aesthetic. Composition: Medium portrait showing person and magical forest environment. Snow-covered trees frame subject. Shallow depth of field with forest softly blurred. Color palette: Deep winter coat colors, white snow, forest greens, cool blue atmosphere, warm skin tones. Photography style: Fantasy winter editorial. Shot on 50mm lens with natural winter light. Mood: Magical, serene, enchanting. A fairy tale winter moment.`
+  },
+  mountain_peak: {
+    key: 'mountain_peak',
+    name: 'Mountain Peak',
+    description: 'Epic mountain summit adventure with breathtaking winter landscape',
+    thumbnail: WINTER_MOUNTAIN_PHOTO_1,
+    thumbnails: [WINTER_MOUNTAIN_PHOTO_1],
+    prompt: `Keep the facial features of the person in the uploaded image exactly consistent. Preserve 100% accuracy of the face from the reference image. Important: do not change the face. Create an epic mountain peak winter portrait. The person wears technical outdoor gear - insulated jacket in bold colors (red, orange, or blue), winter beanie or hood, neck gaiter pulled down, sporty sunglasses. Expression: Triumphant, exhilarated, accomplished with proud smile. Eyes show adventure and achievement. Mountain conquest energy. Pose: Standing at summit with arms raised or spread wide in victory. Confident adventurer stance. Or pointing to distant peaks. Setting: Mountain summit or high ridge with dramatic snowy peaks stretching to horizon. Clear blue sky. Vast winter landscape below. Epic scale. Wind-blown snow. Lighting: Bright high-altitude sunlight creating strong contrast. Clear crisp air. Dramatic shadows on snow. Golden hour possible for warm tones. Adventure photography aesthetic. Composition: Wide to medium portrait showing both person and epic mountain landscape. Sharp focus on adventurer with majestic peaks behind. Color palette: Bold jacket colors, brilliant white snow, deep blue sky, mountain grey, golden sunlight. Photography style: Adventure editorial. Shot on 24-35mm lens with dramatic landscape. Mood: Epic, adventurous, triumphant. The thrill of mountain achievement.`
+  },
+  winter_city: {
+    key: 'winter_city',
+    name: 'Winter City Lights',
+    description: 'Urban winter evening with city lights and falling snow',
+    thumbnail: WINTER_CITY_PHOTO_1,
+    thumbnails: [WINTER_CITY_PHOTO_1],
+    prompt: `Keep the facial features of the person in the uploaded image exactly consistent. Preserve 100% accuracy of the face from the reference image. Important: do not change the face. Create an atmospheric urban winter evening portrait. The person wears stylish winter city fashion - wool peacoat or trench in charcoal or camel, elegant scarf, leather gloves, stylish beanie or no hat with hair styled. Expression: Thoughtful, romantic, urban sophistication with subtle smile. Eyes show city energy and warmth. Metropolitan winter vibe. Pose: Walking through city street or standing under streetlight. One hand in coat pocket, other adjusting scarf. Natural urban movement. Setting: City street at dusk with holiday lights or street lamps glowing. Light snow falling. Urban architecture in background. Bokeh of city lights. Shop windows glowing warm. Lighting: Warm street lamp creating key light. Cool winter blue hour ambient. City lights creating colorful bokeh. Cinematic urban photography aesthetic. Falling snow catching light. Composition: Medium portrait with urban environment and lights in background. Shallow depth of field with bokeh city lights. Color palette: Warm street light golds, cool winter blues, city light colors, elegant coat colors, white snow. Photography style: Urban lifestyle editorial. Shot on 50mm lens with city night lighting. Mood: Romantic, sophisticated, urban. The magic of winter city nights.`
+  },
+  // CLASSY STYLES
+  black_tie: {
+    key: 'black_tie',
+    name: 'Black Tie Affair',
+    description: 'Sophisticated black tuxedo or elegant gown for formal events',
+    thumbnail: CLASSY_TUXEDO_PHOTO_1,
+    thumbnails: [CLASSY_TUXEDO_PHOTO_1],
+    prompt: `Keep the facial features of the person in the uploaded image exactly consistent. Preserve 100% accuracy of the face from the reference image. Important: do not change the face. Create an ultra-sophisticated black tie portrait. The person wears either a sharp black tuxedo with bow tie, white dress shirt, cufflinks OR an elegant black evening gown with jewelry. Expression: Confident, refined, elegant with subtle sophisticated smile. Eyes convey class and poise. Red carpet energy. Pose: Standing with confident posture. For tuxedo: adjusting bow tie or cufflinks, hand in pocket. For gown: hand on hip or elegant stance. Setting: Luxury hotel ballroom, grand staircase, or upscale venue. Rich architectural details. Chandeliers softly glowing in background. Elegant drapery or marble. Lighting: Elegant warm lighting from chandeliers creating soft glamorous glow. Rim light for separation. Professional event photography aesthetic. Composition: Full length or 3/4 portrait showing formal wear. Sharp focus on subject with elegant venue softly blurred. Color palette: Deep blacks, crisp whites, warm gold lighting, rich jewel tones from venue. Photography style: High-end formal event editorial. Shot on 85mm lens with elegant lighting. Mood: Sophisticated, timeless, elegant. The epitome of formal elegance.`
+  },
+  evening_gown: {
+    key: 'evening_gown',
+    name: 'Evening Gown Elegance',
+    description: 'Red carpet glamour in stunning evening gown with dramatic lighting',
+    thumbnail: CLASSY_GOWN_PHOTO_1,
+    thumbnails: [CLASSY_GOWN_PHOTO_1],
+    badge: {
+      label: 'Female Only',
+      type: 'female',
+    },
+    prompt: `Keep the facial features of the person in the uploaded image exactly consistent. Preserve 100% accuracy of the face from the reference image. Important: do not change the face. Create a stunning evening gown portrait. The woman wears a floor-length evening gown in jewel tones - emerald, sapphire, ruby red, or classic black. Off-shoulder or elegant neckline. Statement jewelry - diamonds or elegant pieces. Hair in elegant updo or flowing waves. Expression: Glamorous, confident, radiant with captivating smile. Eyes sparkle with elegance. Red carpet goddess energy. Pose: Hand on hip, other hand delicately holding gown. Elegant S-curve posture. Or dramatic pose with gown flowing. Setting: Grand staircase, luxury hotel, or elegant backdrop. Rich velvet curtains or architectural columns. Golden details and luxury elements. Lighting: Dramatic Hollywood lighting with soft key light. Rim light creating glamorous glow. Professional fashion lighting. Cinematic red carpet aesthetic. Composition: Full length portrait showing gown's elegance. Sharp focus with elegant background softly blurred. Color palette: Rich gown color, warm golden lighting, luxury backdrop, statement jewelry sparkle. Photography style: High-fashion evening wear editorial. Shot on 85mm lens with glamorous lighting. Mood: Glamorous, stunning, show-stopping. Red carpet perfection.`
+  },
+  gentleman_study: {
+    key: 'gentleman_study',
+    name: 'Gentleman Study',
+    description: 'Distinguished gentleman in leather-bound study with whiskey and books',
+    thumbnail: CLASSY_GENTLEMAN_PHOTO_1,
+    thumbnails: [CLASSY_GENTLEMAN_PHOTO_1],
+    prompt: `Keep the facial features of the person in the uploaded image exactly consistent. Preserve 100% accuracy of the face from the reference image. Important: do not change the face. Create a distinguished gentleman portrait in a study. The person wears a three-piece suit in charcoal or navy, pocket watch chain visible, leather dress shoes. Holding whiskey glass or book. Expression: Confident, distinguished, intelligent with knowing smile. Eyes show wisdom and refinement. Classic gentleman energy. Pose: Seated in leather armchair or standing by bookshelf. One hand holding whiskey tumbler, other resting on chair arm or holding book. Refined posture. Setting: Rich wood-paneled study or library. Floor-to-ceiling bookshelves filled with leather-bound books. Mahogany desk. Green banker's lamp. Persian rug. Fireplace. Classic oil paintings. Lighting: Warm ambient lighting from table lamps and fireplace. Soft golden tones. Rich shadows. Classic portrait photography aesthetic. Composition: Medium portrait showing gentleman and elegant study environment. Shallow depth of field with library softly blurred. Color palette: Rich browns of leather and wood, deep suit colors, warm golden lighting, green lamp accents. Photography style: Classic gentleman editorial. Shot on 50mm lens with warm interior lighting. Mood: Distinguished, refined, timeless. Old-world sophistication.`
+  },
+  champagne_celebration: {
+    key: 'champagne_celebration',
+    name: 'Champagne Celebration',
+    description: 'Elegant celebration moment with champagne and luxury ambiance',
+    thumbnail: CLASSY_CHAMPAGNE_PHOTO_1,
+    thumbnails: [CLASSY_CHAMPAGNE_PHOTO_1],
+    prompt: `Keep the facial features of the person in the uploaded image exactly consistent. Preserve 100% accuracy of the face from the reference image. Important: do not change the face. Create an elegant celebration portrait. The person wears sophisticated cocktail attire - sleek dress or sharp suit in elegant colors. Holding champagne flute. Statement jewelry or elegant accessories. Expression: Joyful, elegant, celebrating with radiant smile. Eyes sparkle with happiness. Sophisticated celebration energy. Pose: Holding champagne flute elegantly, perhaps mid-toast. Confident celebratory posture. Other hand on hip or holding champagne bottle. Setting: Luxury penthouse, rooftop venue, or elegant party space. Soft bokeh of city lights or party lights in background. Elegant modern decor. Champagne bottles and glasses visible. Lighting: Warm ambient party lighting with soft golden tones. Bokeh lights creating elegant atmosphere. Rim light for glamorous glow. Lifestyle celebration photography. Composition: Medium portrait showing celebration and elegant environment. Shallow depth of field with party lights as beautiful bokeh. Color palette: Champagne gold, elegant clothing colors, warm lighting, sparkling highlights. Photography style: Luxury lifestyle editorial. Shot on 50mm lens with celebration lighting. Mood: Joyful, sophisticated, celebratory. The art of elegant celebration.`
+  },
+  art_museum: {
+    key: 'art_museum',
+    name: 'Art Museum',
+    description: 'Cultured elegance in contemporary art museum setting',
+    thumbnail: CLASSY_MUSEUM_PHOTO_1,
+    thumbnails: [CLASSY_MUSEUM_PHOTO_1],
+    prompt: `Keep the facial features of the person in the uploaded image exactly consistent. Preserve 100% accuracy of the face from the reference image. Important: do not change the face. Create a sophisticated art museum portrait. The person wears elegant contemporary fashion - tailored suit, designer dress, or chic art gallery outfit in black, white, or minimalist colors. Stylish accessories. Expression: Thoughtful, cultured, sophisticated with subtle smile. Eyes show intelligence and appreciation for art. Cultured collector energy. Pose: Standing contemplating artwork, hand touching chin thoughtfully. Or walking through gallery. Elegant cultured posture. Setting: Modern art museum or gallery with white walls. Abstract art pieces visible in background. Clean minimalist architecture. Gallery lighting. High ceilings. Polished floors reflecting light. Lighting: Museum gallery lighting - clean, bright, even illumination. Soft overhead spotlights. Clean shadows. Professional museum photography aesthetic. Composition: Medium portrait showing person and gallery environment. Sharp focus with artwork softly visible behind. Color palette: Clean whites, elegant blacks, minimalist greys, pops of color from artwork. Photography style: Contemporary art editorial. Shot on 35mm lens with gallery lighting. Mood: Sophisticated, cultured, refined. The epitome of contemporary elegance.`
+  },
+  // ADVENTURE STYLES
+  mountain_hiking: {
+    key: 'mountain_hiking',
+    name: 'Mountain Hiking',
+    description: 'Epic mountain trail adventure with stunning vista backdrop',
+    thumbnail: ADVENTURE_HIKING_PHOTO_1,
+    thumbnails: [ADVENTURE_HIKING_PHOTO_1],
+    prompt: `Keep the facial features of the person in the uploaded image exactly consistent. Preserve 100% accuracy of the face from the reference image. Important: do not change the face. Create an epic mountain hiking portrait. The person wears technical hiking gear - moisture-wicking shirt, hiking pants, backpack with visible straps, hiking boots, baseball cap or sun hat. Trekking poles in hand. Expression: Determined, exhilarated, free with genuine smile. Eyes show adventure spirit. Mountain explorer energy. Pose: Standing on mountain trail with backpack, trekking poles in use. Confident hiker stance. Or sitting on rock taking a break. Setting: Mountain trail with dramatic peaks in background. Rolling hills or valleys below. Clear sky. Rocky terrain. Alpine wildflowers possible. Vast wilderness. Lighting: Natural mountain sunlight creating strong directional light. Clear air. Blue sky. Golden hour possible for warm tones. Adventure photography aesthetic. Composition: Wide to medium shot showing hiker and epic landscape. Sharp focus on person with mountains majestically behind. Color palette: Earth tones of hiking gear, mountain greys and greens, blue sky, natural landscape colors. Photography style: Outdoor adventure editorial. Shot on 24-35mm lens. Mood: Free, adventurous, inspiring. The call of the mountains.`
+  },
+  safari_expedition: {
+    key: 'safari_expedition',
+    name: 'Safari Expedition',
+    description: 'African safari adventure with wildlife photography vibes',
+    thumbnail: ADVENTURE_SAFARI_PHOTO_1,
+    thumbnails: [ADVENTURE_SAFARI_PHOTO_1],
+    prompt: `Keep the facial features of the person in the uploaded image exactly consistent. Preserve 100% accuracy of the face from the reference image. Important: do not change the face. Create an adventurous safari portrait. The person wears classic safari outfit - khaki or olive shirt with rolled sleeves, safari pants, wide-brimmed safari hat, leather boots. Binoculars around neck or camera with telephoto lens. Expression: Excited, adventurous, observant with wide smile. Eyes show thrill of wildlife discovery. Explorer energy. Pose: Standing with binoculars raised or holding camera. Adventurous safari stance. Or sitting in safari vehicle. Setting: African savanna with acacia trees. Golden grasslands stretching to horizon. Safari vehicle partially visible. Warm African landscape. Golden hour light. Dust particles in air. Lighting: Warm golden hour African sunlight. Rich warm tones. Strong directional light. Dust catching light. Cinematic safari photography aesthetic. Composition: Medium portrait showing safari outfit and African landscape. Shallow depth of field with savanna softly blurred. Color palette: Khaki safari colors, golden grasslands, warm African sunset, earth tones. Photography style: Adventure travel editorial. Shot on 35mm lens with golden hour light. Mood: Adventurous, exotic, thrilling. The romance of African safari.`
+  },
+  jungle_explorer: {
+    key: 'jungle_explorer',
+    name: 'Jungle Explorer',
+    description: 'Tropical rainforest expedition with explorer adventure aesthetic',
+    thumbnail: ADVENTURE_EXPLORER_PHOTO_1,
+    thumbnails: [ADVENTURE_EXPLORER_PHOTO_1],
+    prompt: `Keep the facial features of the person in the uploaded image exactly consistent. Preserve 100% accuracy of the face from the reference image. Important: do not change the face. Create a jungle explorer portrait. The person wears expedition gear - cargo shirt in olive or tan, adventure pants with multiple pockets, explorer hat or bandana, sturdy boots. Machete in holder or backpack straps visible. Expression: Adventurous, determined, spirited with confident smile. Eyes show exploration passion. Indiana Jones energy. Pose: Standing in jungle clearing, hand on backpack strap. Explorer stance. Or examining tropical plant with curiosity. Setting: Lush tropical rainforest with dense vegetation. Massive trees and vines. Tropical foliage. Dappled sunlight through canopy. Mist in air. Exotic plants and ferns. Lighting: Filtered jungle light through canopy creating dappled patterns. Warm green-tinted ambient light. Rays of light breaking through trees. Adventure photography aesthetic. Composition: Medium portrait showing explorer and lush jungle environment. Sharp focus with jungle softly blurred behind. Color palette: Rich jungle greens, earth tones of explorer gear, warm filtered sunlight, deep shadows. Photography style: Expedition adventure editorial. Shot on 35mm lens with natural jungle light. Mood: Adventurous, mysterious, exploratory. The thrill of jungle discovery.`
+  },
+  canyon_adventure: {
+    key: 'canyon_adventure',
+    name: 'Canyon Adventure',
+    description: 'Desert canyon exploration with dramatic red rock formations',
+    thumbnail: ADVENTURE_CANYON_PHOTO_1,
+    thumbnails: [ADVENTURE_CANYON_PHOTO_1],
+    prompt: `Keep the facial features of the person in the uploaded image exactly consistent. Preserve 100% accuracy of the face from the reference image. Important: do not change the face. Create a dramatic canyon adventure portrait. The person wears desert adventure gear - light breathable shirt, adventure pants, sun protection hat or bandana, hiking boots, sunglasses on or hanging from shirt. Hydration pack visible. Expression: Awestruck, adventurous, free with exhilarated smile. Eyes show wonder at natural beauty. Desert explorer energy. Pose: Standing on canyon edge or rock formation. Arms spread or pointing to view. Confident adventure stance. Setting: Dramatic red rock canyon with layered sandstone formations. Vast desert landscape. Clear blue sky. Iconic Southwest scenery. Ancient rock formations creating natural sculptures. Lighting: Bright desert sunlight creating strong contrast. Deep blue sky. Rich red rocks glowing. Clear dry air. Golden hour possible for magical light. Landscape photography aesthetic. Composition: Wide to medium shot showing adventurer and epic canyon landscape. Sharp focus with dramatic formations behind. Color palette: Rich red and orange rocks, bright blue sky, tan adventure gear, golden sunlight. Photography style: Adventure landscape editorial. Shot on 24-35mm lens. Mood: Awe-inspiring, free, adventurous. The majesty of desert canyons.`
+  },
+  desert_wanderer: {
+    key: 'desert_wanderer',
+    name: 'Desert Wanderer',
+    description: 'Mystical desert dunes adventure with endless golden sands',
+    thumbnail: ADVENTURE_DESERT_PHOTO_1,
+    thumbnails: [ADVENTURE_DESERT_PHOTO_1],
+    prompt: `Keep the facial features of the person in the uploaded image exactly consistent. Preserve 100% accuracy of the face from the reference image. Important: do not change the face. Create a mystical desert wanderer portrait. The person wears flowing adventure clothing - light linen shirt or tunic, comfortable adventure pants, desert scarf draped around shoulders or head, sturdy boots. Backpack visible. Expression: Peaceful, contemplative, free with serene smile. Eyes show desert wisdom and freedom. Nomad wanderer energy. Pose: Standing on sand dune with wind blowing clothing gently. Hand shielding eyes from sun. Or walking through dunes. Nomadic posture. Setting: Endless rolling sand dunes stretching to horizon. Pristine golden sand. Clear sky - either bright blue or warm sunset. Rippled sand patterns. Vast emptiness and beauty. Lighting: Golden hour desert light creating warm magical glow. Long shadows on dunes. Soft warm tones. Or bright midday creating strong contrast. Cinematic desert photography. Composition: Medium to wide shot showing wanderer and endless dunes. Sharp focus with dunes creating beautiful layers behind. Color palette: Golden sand, warm sunset colors, light adventure clothing, rich blue sky. Photography style: Cinematic adventure editorial. Shot on 35mm lens with golden hour light. Mood: Peaceful, mystical, free. The serenity of endless desert.`
   }
 };
 
