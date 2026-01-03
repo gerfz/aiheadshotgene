@@ -21,10 +21,10 @@ const PROFESSIONAL_HEADSHOT_1 = require('../../assets/professionalheadshot/examp
 const PUPPY_PHOTO_1 = require('../../assets/withpuppy/example1.png');
 
 // Childhood Character photos
-const PIKACHU_PHOTO_1 = require('../../assets/childhood/pika.jpg');
-const TOM_AND_JERRY_PHOTO_1 = require('../../assets/childhood/tomnjerry.jpg');
-const BEN_TEN_PHOTO_1 = require('../../assets/childhood/benten.jpg');
-const PINK_PANTHER_PHOTO_1 = require('../../assets/childhood/pinkpanther.jpg');
+const PIKACHU_PHOTO_1 = require('../../assets/Childhood/pika.jpg');
+const TOM_AND_JERRY_PHOTO_1 = require('../../assets/Childhood/tomnjerry.jpg');
+const BEN_TEN_PHOTO_1 = require('../../assets/Childhood/benten.jpg');
+const PINK_PANTHER_PHOTO_1 = require('../../assets/Childhood/pinkpanther.jpg');
 
 // Face consistency prefix that will be added to all custom prompts
 export const FACE_CONSISTENCY_PREFIX = `Keep the facial features of the person in the uploaded image exactly consistent. Maintain 100% accuracy of the face from the reference image. Important: do not change the face. `;
