@@ -20,6 +20,12 @@ const PROFESSIONAL_HEADSHOT_1 = require('../../assets/professionalheadshot/examp
 // With Puppy photos
 const PUPPY_PHOTO_1 = require('../../assets/withpuppy/example1.png');
 
+// Childhood Character photos
+const PIKACHU_PHOTO_1 = require('../../assets/childhood/pika.jpg');
+const TOM_AND_JERRY_PHOTO_1 = require('../../assets/childhood/tomnjerry.jpg');
+const BEN_TEN_PHOTO_1 = require('../../assets/childhood/benten.jpg');
+const PINK_PANTHER_PHOTO_1 = require('../../assets/childhood/pinkpanther.jpg');
+
 // Face consistency prefix that will be added to all custom prompts
 export const FACE_CONSISTENCY_PREFIX = `Keep the facial features of the person in the uploaded image exactly consistent. Maintain 100% accuracy of the face from the reference image. Important: do not change the face. `;
 
@@ -87,6 +93,38 @@ export const STYLE_PRESETS: Record<string, StylePreset> = {
     thumbnail: PUPPY_PHOTO_1,
     thumbnails: [PUPPY_PHOTO_1],
     prompt: `The person's facial features, expression, and identity must remain exactly the same as the reference image. Preserve the original face completely. The person is outdoors in a winter scene, puckering their lips toward the camera in a playful, cute expression. They are wearing a black hooded sweatshirt and holding a small white puppy with light blue eyes. The puppy has a calm expression, looking forward. Environment: outdoors in a winter scene with snow covering the ground, bare trees in the background, and a blurred silver car behind the person. The sky is a clear light blue. Mood: cute, natural, winter outdoor moment. Camera style: soft depth of field, natural daylight, subtle winter tones. The composition captures a heartwarming moment between the person and the adorable puppy.`
+  },
+  pikachu: {
+    key: 'pikachu',
+    name: 'With Pikachu',
+    description: 'Energetic portrait with giant 3D Pikachu character',
+    thumbnail: PIKACHU_PHOTO_1,
+    thumbnails: [PIKACHU_PHOTO_1],
+    prompt: `Keep the facial features of the person in the uploaded image exactly consistent. Preserve 100% accuracy of the face from the reference image. Important: do not change the face. Create a hyper-realistic, professional fashion photoshoot. The person is wearing an electric yellow knitted sweater, black high-waisted jeans, and white high-top sneakers with black accents. The person is standing casually with their arm resting on a giant 3D photorealistic Pikachu character beside them. Pikachu should be rendered in ultra-realistic 3D with accurate proportions, textures, and the iconic red cheeks, smiling up at the person with a cheerful expression. The person has an energetic, cheerful expression. Environment: vibrant yellow backdrop with professional studio lighting. The lighting creates soft shadows and highlights the texture of the knitted sweater. Camera: Shot on a high-end fashion camera with shallow depth of field. The composition captures a fun, playful interaction between the person and the beloved Pokémon character in a modern, stylish photoshoot aesthetic.`
+  },
+  tom_and_jerry: {
+    key: 'tom_and_jerry',
+    name: 'With Tom & Jerry',
+    description: 'Fun portrait with iconic Tom & Jerry duo in 3D',
+    thumbnail: TOM_AND_JERRY_PHOTO_1,
+    thumbnails: [TOM_AND_JERRY_PHOTO_1],
+    prompt: `Keep the facial features of the person in the uploaded image exactly consistent. Preserve 100% accuracy of the face from the reference image. Important: do not change the face. Create a hyper-realistic, professional fashion photoshoot. The person is wearing a light grey knitted sweater, blue high-waisted jeans, and white high-top sneakers. The person is standing with their arm around a giant 3D photorealistic Tom Cat character. Tom should be rendered in ultra-realistic 3D while maintaining his iconic cartoon appearance - grey and white fur, posing confidently with a mischievous smirk. On Tom's shoulder sits Jerry Mouse, also in 3D photorealistic style with his characteristic brown fur and playful expression. The person has a fun, mischievous expression. Environment: clean grey-blue backdrop with professional studio lighting. Camera: Shot on a high-end fashion camera with perfect focus on all three subjects. The composition captures the playful dynamic between the person and the classic cartoon duo in a modern photoshoot style.`
+  },
+  ben_ten: {
+    key: 'ben_ten',
+    name: 'With Ben 10',
+    description: 'Dynamic hero-style portrait with Ben 10 and glowing Omnitrix',
+    thumbnail: BEN_TEN_PHOTO_1,
+    thumbnails: [BEN_TEN_PHOTO_1],
+    prompt: `Keep the facial features of the person in the uploaded image exactly consistent. Preserve 100% accuracy of the face from the reference image. Important: do not change the face. Create a hyper-realistic, professional fashion photoshoot with sci-fi hero aesthetics. The person is wearing a Ben 10 themed green and black sweater, dark grey jeans, and white sneakers with green accents. The person is standing confidently beside a giant 3D photorealistic render of Ben Tennyson (Classic Ben 10 character) who is activating his Omnitrix. Ben should be rendered in ultra-realistic 3D with cartoon accuracy - wearing his iconic green jacket with the number 10, black shirt, cargo pants, and the glowing green Omnitrix device on his wrist. The Omnitrix emits a dynamic bright green glow. The person has a confident, energetic expression. Environment: neon-green and black circuitry patterns backdrop, with dynamic green glow reflecting from the Omnitrix onto both subjects. The lighting creates a sci-fi hero fashion shoot mood. Camera: Shot on a high-end fashion camera with professional lighting that emphasizes the dramatic green glow. The composition captures an action-ready, superhero-inspired moment.`
+  },
+  pink_panther: {
+    key: 'pink_panther',
+    name: 'With Pink Panther',
+    description: 'Elegant and stylish portrait with the suave Pink Panther',
+    thumbnail: PINK_PANTHER_PHOTO_1,
+    thumbnails: [PINK_PANTHER_PHOTO_1],
+    prompt: `Keep the facial features of the person in the uploaded image exactly consistent. Preserve 100% accuracy of the face from the reference image. Important: do not change the face. Create a hyper-realistic, professional fashion photoshoot. The person is wearing a pastel pink knitted sweater, white high-waisted jeans, and white sneakers with pink accents. The person is posing fashionably beside a tall giant 3D photorealistic Pink Panther character. The Pink Panther should be rendered in ultra-realistic 3D with accurate iconic features - bright pink fur, elongated body, distinctive snout, and characteristic cool, suave posture striking a stylish pose with one paw raised. The person has an elegant, stylish expression. Environment: light pastel pink backdrop with soft, flattering professional studio lighting. The lighting creates a dreamy, fashionable atmosphere. Camera: Shot on a high-end fashion camera with shallow depth of field and perfect focus. The composition captures a sophisticated, fashion-forward moment with the legendary cool character in a modern editorial style.`
   }
 };
 

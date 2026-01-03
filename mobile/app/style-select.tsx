@@ -46,7 +46,7 @@ const STATIC_CATEGORIES = [
     id: 'creative',
     name: 'Creative',
     icon: '🎭',
-    styles: ['victoria_secret', 'custom', 'emotional_film'],
+    styles: ['pikachu', 'tom_and_jerry', 'ben_ten', 'pink_panther', 'victoria_secret', 'custom'],
   },
 ];
 
@@ -132,7 +132,7 @@ export default function StyleSelectScreen() {
     <>
       <Stack.Screen 
         options={{ 
-          title: 'Realistic AI',
+          title: 'Choose Style',
           headerStyle: { backgroundColor: '#0F172A' },
           headerTintColor: '#FFFFFF',
           headerTitleStyle: { fontWeight: '600', fontSize: 20 },

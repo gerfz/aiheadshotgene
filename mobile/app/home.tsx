@@ -204,7 +204,7 @@ export default function HomeScreen() {
             <View style={styles.updateCard}>
               <View style={styles.updateTopRow}>
                 <View style={styles.latestUpdateBadge}>
-                  <Text style={styles.latestUpdateBadgeText}>LATEST UPDATE</Text>
+                  <Text style={styles.latestUpdateBadgeText}>WHAT'S NEW</Text>
                 </View>
               </View>
               

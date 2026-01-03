@@ -11,6 +11,7 @@ import {
   Share,
   TextInput,
   Modal,
+  ImageBackground,
 } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import { router, Stack } from 'expo-router';
@@ -244,29 +245,51 @@ export default function ProfileScreen() {
           {/* Premium Card (if not subscribed) */}
           {!credits?.isSubscribed && (
             <TouchableOpacity 
-              style={styles.premiumCard}
+              style={styles.premiumCardWrapper}
               onPress={handleSubscription}
-              activeOpacity={0.9}
+              activeOpacity={0.95}
             >
-              <View style={styles.premiumContent}>
-                <View style={styles.benefitsContainer}>
-                  <View style={styles.benefitRow}>
-                    <Ionicons name="checkmark-circle" size={20} color="#FFFFFF" />
-                    <Text style={styles.benefitText}>Multiple Results</Text>
+              <ImageBackground
+                source={require('../assets/victoriasecret/G6TSEqzWYAIvaf9.jpg')}
+                style={styles.premiumBackground}
+                imageStyle={{ borderRadius: 24, opacity: 0.6 }}
+              >
+                <View style={styles.premiumOverlay}>
+                  <View style={styles.premiumHeader}>
+                    <Text style={styles.premiumTitle}>Unlock Pro Access</Text>
+                    <View style={styles.proBadge}>
+                      <Text style={styles.proBadgeText}>PRO</Text>
+                    </View>
                   </View>
-                  <View style={styles.benefitRow}>
-                    <Ionicons name="checkmark-circle" size={20} color="#FFFFFF" />
-                    <Text style={styles.benefitText}>Fast processing</Text>
+                  
+                  <View style={styles.premiumFeatures}>
+                    <View style={styles.featureItem}>
+                      <View style={styles.featureIconBox}>
+                        <Ionicons name="infinite" size={20} color="#FFFFFF" />
+                      </View>
+                      <View>
+                        <Text style={styles.featureTitle}>Unlimited Generations</Text>
+                        <Text style={styles.featureSubtitle}>Create as many portraits as you want</Text>
+                      </View>
+                    </View>
+                    
+                    <View style={styles.featureItem}>
+                      <View style={[styles.featureIconBox, { backgroundColor: 'rgba(236, 72, 153, 0.2)' }]}>
+                        <Ionicons name="sparkles" size={20} color="#F472B6" />
+                      </View>
+                      <View>
+                        <Text style={styles.featureTitle}>Custom Style Prompts</Text>
+                        <Text style={styles.featureSubtitle}>Write your own unique prompts</Text>
+                      </View>
+                    </View>
                   </View>
-                  <View style={styles.benefitRow}>
-                    <Ionicons name="checkmark-circle" size={20} color="#FFFFFF" />
-                    <Text style={styles.benefitText}>Remove all ads</Text>
-                  </View>
+
+                  <TouchableOpacity style={styles.upgradeButton} onPress={handleSubscription}>
+                    <Text style={styles.upgradeButtonText}>Upgrade Now</Text>
+                    <Ionicons name="arrow-forward" size={20} color="#FFFFFF" />
+                  </TouchableOpacity>
                 </View>
-                <TouchableOpacity style={styles.tryProButton} onPress={handleSubscription}>
-                  <Text style={styles.tryProButtonText}>Try Pro Now</Text>
-                </TouchableOpacity>
-              </View>
+              </ImageBackground>
             </TouchableOpacity>
           )}
 
@@ -451,39 +474,90 @@ const styles = StyleSheet.create({
   },
   
   // Premium Card
-  premiumCard: {
-    backgroundColor: '#6366F1',
-    borderRadius: 20,
-    padding: 24,
-    marginBottom: 20,
+  premiumCardWrapper: {
+    marginBottom: 24,
+    borderRadius: 24,
+    backgroundColor: '#000',
     overflow: 'hidden',
   },
-  premiumContent: {
-    gap: 20,
+  premiumBackground: {
+    width: '100%',
+    minHeight: 280,
   },
-  benefitsContainer: {
-    gap: 12,
+  premiumOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.75)',
+    padding: 24,
+    justifyContent: 'space-between',
   },
-  benefitRow: {
+  premiumHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
+    marginBottom: 24,
   },
-  benefitText: {
+  premiumTitle: {
+    fontSize: 24,
+    fontWeight: '800',
     color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '500',
+    letterSpacing: -0.5,
   },
-  tryProButton: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    paddingVertical: 14,
+  proBadge: {
+    backgroundColor: '#6366F1',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  proBadgeText: {
+    color: '#FFFFFF',
+    fontWeight: '800',
+    fontSize: 12,
+  },
+  premiumFeatures: {
+    gap: 12,
+    marginBottom: 24,
+  },
+  featureItem: {
+    flexDirection: 'row',
     alignItems: 'center',
+    gap: 16,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    padding: 12,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
   },
-  tryProButtonText: {
-    color: '#6366F1',
-    fontSize: 16,
-    fontWeight: '600',
+  featureIconBox: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(99, 102, 241, 0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  featureTitle: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '700',
+    marginBottom: 2,
+  },
+  featureSubtitle: {
+    color: '#94A3B8',
+    fontSize: 12,
+  },
+  upgradeButton: {
+    backgroundColor: '#6366F1',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 16,
+    borderRadius: 16,
+    gap: 8,
+  },
+  upgradeButtonText: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: '700',
   },
   
   // Action Buttons
