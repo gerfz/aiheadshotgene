@@ -121,7 +121,7 @@ export default function RootLayout() {
             // Continue even if backend is slow/sleeping
           }
         } else {
-          // No session - create anonymous user
+          // No session - create anonymous user (backend will handle credit merging)
           console.log('🔄 Creating anonymous user for device:', deviceId);
           
           const { data, error } = await supabase.auth.signInAnonymously({
