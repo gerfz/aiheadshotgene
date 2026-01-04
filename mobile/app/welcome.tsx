@@ -29,9 +29,9 @@ export default function WelcomeScreen() {
       // Go to next screen
       setCurrentIndex(currentIndex + 1);
     } else {
-      // Mark that user has seen welcome screen and go to home
+      // Mark that user has seen welcome screen and go to subscription
       await SecureStore.setItemAsync(FIRST_TIME_KEY, 'true');
-      router.replace('/home');
+      router.replace('/subscription');
     }
   };
 

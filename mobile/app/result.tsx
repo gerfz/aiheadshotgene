@@ -4,7 +4,6 @@ import {
   Text,
   StyleSheet,
   Image,
-  ScrollView,
   Alert,
   TouchableOpacity,
   Dimensions,
@@ -133,10 +132,11 @@ export default function ResultScreen() {
   };
 
   const handleCreateNew = () => {
-    setSelectedImage(null);
+    // Keep the selected image so user can reuse it
+    // Only clear the selected style
     setSelectedStyle(null);
-    // Navigate directly to photo upload screen
-    router.push('/upload');
+    // Navigate to style selection screen (skip upload since we have the photo)
+    router.push('/style-select');
   };
 
   const handleDelete = async () => {
@@ -187,7 +187,7 @@ export default function ResultScreen() {
         }} 
       />
       <SafeAreaView style={styles.container}>
-        <ScrollView contentContainerStyle={styles.content}>
+        <View style={styles.content}>
           <View style={styles.header}>
             <Text style={styles.styleName}>{styleName}</Text>
           </View>
@@ -278,7 +278,7 @@ export default function ResultScreen() {
             <Ionicons name="add-circle-outline" size={24} color="#FFFFFF" style={{ marginRight: 8 }} />
             <Text style={styles.newButtonText}>Create New Portrait</Text>
           </TouchableOpacity>
-        </ScrollView>
+        </View>
       </SafeAreaView>
     </>
   );

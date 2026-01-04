@@ -4,7 +4,6 @@ import {
   Text,
   StyleSheet,
   Image,
-  ScrollView,
   Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -75,14 +74,15 @@ export function ResultScreen({ navigation, route }: Props) {
   };
 
   const handleCreateNew = () => {
-    setSelectedImage(null);
+    // Keep the selected image so user can reuse it
+    // Only clear the selected style
     setSelectedStyle(null);
     navigation.navigate('Home');
   };
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.content}>
+      <View style={styles.content}>
         <View style={styles.header}>
           <Text style={styles.successIcon}>🎉</Text>
           <Text style={styles.title}>Your Portrait is Ready!</Text>
@@ -137,7 +137,7 @@ export function ResultScreen({ navigation, route }: Props) {
           variant="outline"
           style={styles.newButton}
         />
-      </ScrollView>
+      </View>
     </SafeAreaView>
   );
 }

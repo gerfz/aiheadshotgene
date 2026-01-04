@@ -79,7 +79,7 @@ const CATEGORIES = [
     id: 'business',
     name: 'Business',
     icon: '💼',
-    styles: ['business', 'tight_portrait', 'luxury_fashion', 'professional_headshot', 'nineties_camera'],
+    styles: ['business', 'tight_portrait', 'luxury_fashion', 'professional_headshot'],
   },
   {
     id: 'dating',

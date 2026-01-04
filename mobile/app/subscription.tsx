@@ -26,6 +26,7 @@ import type { PurchasesPackage } from 'react-native-purchases';
 import { useAppStore } from '../src/store/useAppStore';
 import { supabase } from '../src/services/supabase';
 import { API_URL } from '../src/constants/config';
+import { analytics } from '../src/services/posthog';
 
 const { width, height } = Dimensions.get('window');
 
@@ -52,6 +53,8 @@ export default function SubscriptionScreen() {
 
   useEffect(() => {
     loadOfferings();
+    // Track subscription screen view
+    analytics.subscriptionScreenViewed();
   }, []);
 
   // Auto-scroll background images
@@ -127,13 +130,49 @@ export default function SubscriptionScreen() {
     setPurchasing(true);
     try {
       const customerInfo = await restorePurchases();
-      if (customerInfo && await checkProStatus()) {
-        Alert.alert('✅ Restored!', 'Your subscription has been restored.', [{ text: 'OK', onPress: () => router.back() }]);
+      
+      if (!customerInfo) {
+        Alert.alert('Error', 'Failed to restore purchases. Please try again.');
+        return;
+      }
+      
+      const isPro = await checkProStatus();
+      
+      if (isPro) {
+        // Update subscription status in backend
+        try {
+          const response = await fetch(`${API_URL}/api/user/subscription`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${user?.id}`,
+            },
+            body: JSON.stringify({ isSubscribed: true }),
+          });
+          
+          if (response.ok) {
+            Alert.alert(
+              '✅ Subscription Restored!',
+              'Your subscription has been successfully restored.',
+              [{ text: 'OK', onPress: () => router.back() }]
+            );
+          } else {
+            Alert.alert('⚠️ Partially Restored', 'Subscription found but failed to sync. Please restart the app.');
+          }
+        } catch (error) {
+          console.error('Failed to update subscription status:', error);
+          Alert.alert('⚠️ Partially Restored', 'Subscription found but failed to sync. Please restart the app.');
+        }
       } else {
-        Alert.alert('No Purchases', 'No active subscription found.');
+        Alert.alert(
+          'No Subscription Found',
+          'No active subscription was found for this account. If you recently purchased, please wait a few minutes and try again.',
+          [{ text: 'OK' }]
+        );
       }
     } catch (error) {
-      Alert.alert('Error', 'Failed to restore purchases.');
+      console.error('Failed to restore purchases:', error);
+      Alert.alert('Error', 'Failed to restore purchases. Please check your internet connection and try again.');
     } finally {
       setPurchasing(false);
     }
@@ -269,7 +308,14 @@ export default function SubscriptionScreen() {
           <View style={styles.header}>
             <TouchableOpacity 
               style={styles.closeButton} 
-              onPress={() => router.back()}
+              onPress={() => {
+                // Check if we can go back, otherwise go to home
+                if (router.canGoBack()) {
+                  router.back();
+                } else {
+                  router.replace('/home');
+                }
+              }}
               hitSlop={{ top: 20, bottom: 20, left: 20, right: 20 }}
             >
               <Ionicons name="close" size={24} color="#FFFFFF" opacity={0.8} />
@@ -340,6 +386,20 @@ export default function SubscriptionScreen() {
             </TouchableOpacity>
 
             <Text style={styles.renewalText}>{getRenewalText()}</Text>
+            
+            {/* Maybe Later Button */}
+            <TouchableOpacity
+              style={styles.skipButton}
+              onPress={() => {
+                if (router.canGoBack()) {
+                  router.back();
+                } else {
+                  router.replace('/home');
+                }
+              }}
+            >
+              <Text style={styles.skipButtonText}>Maybe Later</Text>
+            </TouchableOpacity>
           </View>
 
         </View>
@@ -562,5 +622,15 @@ const styles = StyleSheet.create({
     fontSize: 12,
     textAlign: 'center',
     marginTop: 4,
+  },
+  skipButton: {
+    paddingVertical: 12,
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  skipButtonText: {
+    color: '#94A3B8',
+    fontSize: 16,
+    fontWeight: '500',
   },
 });

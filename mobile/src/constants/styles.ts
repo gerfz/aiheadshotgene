@@ -47,26 +47,26 @@ const SURGEON_PHOTO_1 = { uri: 'https://pyziuothzjdijkvdryht.supabase.co/storage
 const ARTIST_PHOTO_1 = { uri: 'https://pyziuothzjdijkvdryht.supabase.co/storage/v1/object/public/style-previews/jobs/artist.png' };
 const FIREFIGHTER_PHOTO_1 = { uri: 'https://pyziuothzjdijkvdryht.supabase.co/storage/v1/object/public/style-previews/jobs/firefighter.png' };
 
-// Winter photos (placeholders)
-const WINTER_COZY_PHOTO_1 = { uri: 'https://images.unsplash.com/photo-1483728642387-6c3bdd6c93e5?q=80&w=1000&auto=format&fit=crop' };
-const WINTER_LUXURY_PHOTO_1 = { uri: 'https://images.unsplash.com/photo-1545594651-f3f0c46fae9d?q=80&w=1000&auto=format&fit=crop' };
-const WINTER_FOREST_PHOTO_1 = { uri: 'https://images.unsplash.com/photo-1516975080664-ed2fc6a32937?q=80&w=1000&auto=format&fit=crop' };
-const WINTER_MOUNTAIN_PHOTO_1 = { uri: 'https://images.unsplash.com/photo-1551698618-1dfe5d97d256?q=80&w=1000&auto=format&fit=crop' };
-const WINTER_CITY_PHOTO_1 = { uri: 'https://images.unsplash.com/photo-1477414348463-c0eb7f1359b6?q=80&w=1000&auto=format&fit=crop' };
+// Winter photos - Now hosted on Supabase Storage
+const WINTER_COZY_PHOTO_1 = { uri: 'https://pyziuothzjdijkvdryht.supabase.co/storage/v1/object/public/style-previews/winter/cozy_cabin.png' };
+const WINTER_LUXURY_PHOTO_1 = { uri: 'https://pyziuothzjdijkvdryht.supabase.co/storage/v1/object/public/style-previews/winter/luxury_ski_resort.png' };
+const WINTER_FOREST_PHOTO_1 = { uri: 'https://pyziuothzjdijkvdryht.supabase.co/storage/v1/object/public/style-previews/winter/winter_forest.png' };
+const WINTER_MOUNTAIN_PHOTO_1 = { uri: 'https://pyziuothzjdijkvdryht.supabase.co/storage/v1/object/public/style-previews/winter/Mountain_peak.png' };
+const WINTER_CITY_PHOTO_1 = { uri: 'https://pyziuothzjdijkvdryht.supabase.co/storage/v1/object/public/style-previews/winter/winter_city_lights.png' };
 
-// Classy photos (placeholders)
-const CLASSY_TUXEDO_PHOTO_1 = { uri: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=1000&auto=format&fit=crop' };
-const CLASSY_GOWN_PHOTO_1 = { uri: 'https://images.unsplash.com/photo-1566174053879-31528523f8ae?q=80&w=1000&auto=format&fit=crop' };
-const CLASSY_GENTLEMAN_PHOTO_1 = { uri: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?q=80&w=1000&auto=format&fit=crop' };
-const CLASSY_CHAMPAGNE_PHOTO_1 = { uri: 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?q=80&w=1000&auto=format&fit=crop' };
-const CLASSY_MUSEUM_PHOTO_1 = { uri: 'https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?q=80&w=1000&auto=format&fit=crop' };
+// Classy photos - Now hosted on Supabase Storage
+const CLASSY_TUXEDO_PHOTO_1 = { uri: 'https://pyziuothzjdijkvdryht.supabase.co/storage/v1/object/public/style-previews/classy/black_tie_affair.png' };
+const CLASSY_GOWN_PHOTO_1 = { uri: 'https://pyziuothzjdijkvdryht.supabase.co/storage/v1/object/public/style-previews/classy/evening_gown_elegance.png' };
+const CLASSY_GENTLEMAN_PHOTO_1 = { uri: 'https://pyziuothzjdijkvdryht.supabase.co/storage/v1/object/public/style-previews/classy/gentleman_study.png' };
+const CLASSY_CHAMPAGNE_PHOTO_1 = { uri: 'https://pyziuothzjdijkvdryht.supabase.co/storage/v1/object/public/style-previews/classy/champagne_celebration.png' };
+const CLASSY_MUSEUM_PHOTO_1 = { uri: 'https://pyziuothzjdijkvdryht.supabase.co/storage/v1/object/public/style-previews/classy/art_museum.png' };
 
-// Adventure photos (placeholders)
-const ADVENTURE_HIKING_PHOTO_1 = { uri: 'https://images.unsplash.com/photo-1551632811-561732d1e306?q=80&w=1000&auto=format&fit=crop' };
-const ADVENTURE_SAFARI_PHOTO_1 = { uri: 'https://images.unsplash.com/photo-1516426122078-c23e76319801?q=80&w=1000&auto=format&fit=crop' };
-const ADVENTURE_EXPLORER_PHOTO_1 = { uri: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?q=80&w=1000&auto=format&fit=crop' };
-const ADVENTURE_CANYON_PHOTO_1 = { uri: 'https://images.unsplash.com/photo-1533130061792-64b345e4a833?q=80&w=1000&auto=format&fit=crop' };
-const ADVENTURE_DESERT_PHOTO_1 = { uri: 'https://images.unsplash.com/photo-1509316785289-025f5b846b35?q=80&w=1000&auto=format&fit=crop' };
+// Adventure photos - Now hosted on Supabase Storage
+const ADVENTURE_HIKING_PHOTO_1 = { uri: 'https://pyziuothzjdijkvdryht.supabase.co/storage/v1/object/public/style-previews/adventure/mountain_hiking.png' };
+const ADVENTURE_SAFARI_PHOTO_1 = { uri: 'https://pyziuothzjdijkvdryht.supabase.co/storage/v1/object/public/style-previews/adventure/safari_expedition.png' };
+const ADVENTURE_EXPLORER_PHOTO_1 = { uri: 'https://pyziuothzjdijkvdryht.supabase.co/storage/v1/object/public/style-previews/adventure/jungle_expolorer.png' };
+const ADVENTURE_CANYON_PHOTO_1 = { uri: 'https://pyziuothzjdijkvdryht.supabase.co/storage/v1/object/public/style-previews/adventure/canyon_adventure.png' };
+const ADVENTURE_DESERT_PHOTO_1 = { uri: 'https://pyziuothzjdijkvdryht.supabase.co/storage/v1/object/public/style-previews/adventure/desert_wanderer.png' };
 
 // Face consistency prefix that will be added to all custom prompts
 export const FACE_CONSISTENCY_PREFIX = `Keep the facial features of the person in the uploaded image exactly consistent. Maintain 100% accuracy of the face from the reference image. Important: do not change the face. `;

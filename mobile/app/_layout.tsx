@@ -10,6 +10,7 @@ import { getHardwareDeviceId } from '../src/services/deviceId';
 import { getCredits } from '../src/services/api';
 import { ErrorBoundary } from '../src/components/ErrorBoundary';
 import { Toast } from '../src/components';
+import { posthog, identifyUser, analytics } from '../src/services/posthog';
 
 const FIRST_TIME_KEY = 'has_seen_welcome';
 
@@ -24,6 +25,9 @@ export default function RootLayout() {
     
     const initApp = async () => {
       try {
+        // Track app opened
+        analytics.appOpened();
+        
         // Get device ID
         const deviceId = await getHardwareDeviceId();
         console.log('📱 Device ID:', deviceId);

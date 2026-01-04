@@ -336,3 +336,102 @@ export async function migrateGuestToUser(deviceId: string, userId: string) {
   return true;
 }
 
+
+  
+  if (error) throw error;
+  return data;
+}
+
+/**
+ * Get generations for a guest user
+ */
+export async function getGuestGenerations(deviceId: string) {
+  const { data, error } = await supabaseAdmin
+    .from('generations')
+    .select('*')
+    .eq('guest_device_id', deviceId)
+    .order('created_at', { ascending: false });
+  
+  if (error) throw error;
+  return data;
+}
+
+/**
+ * Migrate guest data to a user account
+ */
+export async function migrateGuestToUser(deviceId: string, userId: string) {
+  const { error } = await supabaseAdmin.rpc('migrate_guest_to_user', {
+    p_device_id: deviceId,
+    p_user_id: userId
+  });
+  
+  if (error) throw error;
+  return true;
+}
+
+
+  
+  if (error) throw error;
+  return data;
+}
+
+/**
+ * Get generations for a guest user
+ */
+export async function getGuestGenerations(deviceId: string) {
+  const { data, error } = await supabaseAdmin
+    .from('generations')
+    .select('*')
+    .eq('guest_device_id', deviceId)
+    .order('created_at', { ascending: false });
+  
+  if (error) throw error;
+  return data;
+}
+
+/**
+ * Migrate guest data to a user account
+ */
+export async function migrateGuestToUser(deviceId: string, userId: string) {
+  const { error } = await supabaseAdmin.rpc('migrate_guest_to_user', {
+    p_device_id: deviceId,
+    p_user_id: userId
+  });
+  
+  if (error) throw error;
+  return true;
+}
+
+
+  
+  if (error) throw error;
+  return data;
+}
+
+/**
+ * Get generations for a guest user
+ */
+export async function getGuestGenerations(deviceId: string) {
+  const { data, error } = await supabaseAdmin
+    .from('generations')
+    .select('*')
+    .eq('guest_device_id', deviceId)
+    .order('created_at', { ascending: false });
+  
+  if (error) throw error;
+  return data;
+}
+
+/**
+ * Migrate guest data to a user account
+ */
+export async function migrateGuestToUser(deviceId: string, userId: string) {
+  const { error } = await supabaseAdmin.rpc('migrate_guest_to_user', {
+    p_device_id: deviceId,
+    p_user_id: userId
+  });
+  
+  if (error) throw error;
+  return true;
+}
+

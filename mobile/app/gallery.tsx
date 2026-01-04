@@ -3,7 +3,7 @@ import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
+  FlatList,
   TouchableOpacity,
   Image,
   RefreshControl,
@@ -45,6 +45,44 @@ export default function GalleryScreen() {
     ? generations.filter(g => g.status === 'completed')
     : [];
 
+  const renderItem = ({ item }: { item: any }) => (
+    <TouchableOpacity
+      style={styles.gridItem}
+      onPress={() =>
+        router.push({
+          pathname: '/result',
+          params: {
+            id: item.id,
+            generatedUrl: item.generated_image_url || '',
+            originalUrl: item.original_image_url || '',
+            styleKey: item.style_key,
+            customPrompt: item.custom_prompt || '',
+          },
+        })
+      }
+    >
+      <Image
+        source={{ uri: item.generated_image_url! }}
+        style={styles.gridImage}
+      />
+      <View style={styles.gridOverlay}>
+        <Text style={styles.gridStyle}>
+          {item.style_key.charAt(0).toUpperCase() + item.style_key.slice(1)}
+        </Text>
+      </View>
+    </TouchableOpacity>
+  );
+
+  const renderEmpty = () => (
+    <View style={styles.emptyState}>
+      <Text style={styles.emptyIcon}>🖼️</Text>
+      <Text style={styles.emptyTitle}>No portraits yet</Text>
+      <Text style={styles.emptySubtitle}>
+        Create your first professional portrait to see it here
+      </Text>
+    </View>
+  );
+
   return (
     <>
       <Stack.Screen 
@@ -57,53 +95,19 @@ export default function GalleryScreen() {
         }} 
       />
       <View style={styles.container}>
-        <ScrollView
+        <FlatList
+          data={completedGenerations}
+          renderItem={renderItem}
+          keyExtractor={(item) => item.id}
+          numColumns={2}
           contentContainerStyle={styles.content}
+          columnWrapperStyle={styles.columnWrapper}
+          ListEmptyComponent={renderEmpty}
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#6366F1" />
           }
-        >
-          {completedGenerations.length === 0 ? (
-            <View style={styles.emptyState}>
-              <Text style={styles.emptyIcon}>🖼️</Text>
-              <Text style={styles.emptyTitle}>No portraits yet</Text>
-              <Text style={styles.emptySubtitle}>
-                Create your first professional portrait to see it here
-              </Text>
-            </View>
-          ) : (
-            <View style={styles.grid}>
-              {completedGenerations.map((gen) => (
-                <TouchableOpacity
-                  key={gen.id}
-                  style={styles.gridItem}
-                  onPress={() =>
-                    router.push({
-                      pathname: '/result',
-                      params: {
-                        id: gen.id,
-                        generatedUrl: gen.generated_image_url || '',
-                        originalUrl: gen.original_image_url || '',
-                        styleKey: gen.style_key,
-                        customPrompt: gen.custom_prompt || '',
-                      },
-                    })
-                  }
-                >
-                  <Image
-                    source={{ uri: gen.generated_image_url! }}
-                    style={styles.gridImage}
-                  />
-                  <View style={styles.gridOverlay}>
-                    <Text style={styles.gridStyle}>
-                      {gen.style_key.charAt(0).toUpperCase() + gen.style_key.slice(1)}
-                    </Text>
-                  </View>
-                </TouchableOpacity>
-              ))}
-            </View>
-          )}
-        </ScrollView>
+          showsVerticalScrollIndicator={false}
+        />
         <BottomNav />
       </View>
     </>
@@ -118,6 +122,9 @@ const styles = StyleSheet.create({
   content: {
     padding: 20,
     paddingBottom: 120,
+  },
+  columnWrapper: {
+    justifyContent: 'space-between',
   },
   emptyState: {
     alignItems: 'center',
@@ -139,11 +146,6 @@ const styles = StyleSheet.create({
     color: '#9CA3AF',
     textAlign: 'center',
     paddingHorizontal: 40,
-  },
-  grid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
   },
   gridItem: {
     width: imageSize,
@@ -171,4 +173,10 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
 });
+
+
+
+
+
+
 

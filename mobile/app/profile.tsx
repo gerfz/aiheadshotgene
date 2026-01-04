@@ -20,6 +20,7 @@ import * as Application from 'expo-application';
 import { useAppStore } from '../src/store/useAppStore';
 import { signOut, supabase } from '../src/services/supabase';
 import { getCredits, getGenerations } from '../src/services/api';
+import { restorePurchases, checkProStatus } from '../src/services/purchases';
 import Constants from 'expo-constants';
 
 export default function ProfileScreen() {
@@ -158,6 +159,63 @@ export default function ProfileScreen() {
     } catch (error) {
       console.error('Failed to copy:', error);
       Alert.alert('Error', 'Failed to copy User ID');
+    }
+  };
+
+  const handleRestorePurchases = async () => {
+    try {
+      setRefreshing(true);
+      
+      // Restore purchases from Google Play
+      const customerInfo = await restorePurchases();
+      
+      if (!customerInfo) {
+        Alert.alert('Error', 'Failed to restore purchases. Please try again.');
+        return;
+      }
+      
+      // Check if user has active subscription
+      const isPro = await checkProStatus();
+      
+      if (isPro) {
+        // Update subscription status in backend
+        try {
+          const response = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/api/user/subscription`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${user?.id}`,
+            },
+            body: JSON.stringify({ isSubscribed: true }),
+          });
+          
+          if (response.ok) {
+            // Refresh credits to show updated subscription status
+            const creditsData = await getCredits();
+            setCredits(creditsData);
+            
+            Alert.alert(
+              '✅ Subscription Restored!',
+              'Your subscription has been successfully restored.',
+              [{ text: 'OK' }]
+            );
+          }
+        } catch (error) {
+          console.error('Failed to update subscription status:', error);
+          Alert.alert('⚠️ Partially Restored', 'Subscription found but failed to sync. Please restart the app.');
+        }
+      } else {
+        Alert.alert(
+          'No Subscription Found',
+          'No active subscription was found for this account. If you recently purchased, please wait a few minutes and try again.',
+          [{ text: 'OK' }]
+        );
+      }
+    } catch (error) {
+      console.error('Failed to restore purchases:', error);
+      Alert.alert('Error', 'Failed to restore purchases. Please check your internet connection and try again.');
+    } finally {
+      setRefreshing(false);
     }
   };
 
@@ -398,7 +456,7 @@ export default function ProfileScreen() {
             
             <View style={styles.divider} />
             
-            <TouchableOpacity style={styles.settingRow}>
+            <TouchableOpacity style={styles.settingRow} onPress={handleRestorePurchases}>
               <View style={styles.settingLeft}>
                 <Ionicons name="reload" size={24} color="#FFFFFF" />
                 <Text style={styles.settingText}>Restore Subscriptions</Text>

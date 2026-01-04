@@ -18,6 +18,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAppStore } from '../src/store/useAppStore';
 import { STYLE_PRESETS } from '../src/constants/styles';
 import { getMostUsedStyles } from '../src/services/api';
+import { analytics } from '../src/services/posthog';
 
 const { width } = Dimensions.get('window');
 const cardWidth = (width - 60) / 2; // 2 columns with padding
@@ -78,7 +79,7 @@ const STATIC_CATEGORIES = [
     id: 'business',
     name: 'Business',
     icon: '💼',
-    styles: ['business', 'tight_portrait', 'luxury_fashion', 'professional_headshot', 'nineties_camera'],
+    styles: ['business', 'tight_portrait', 'luxury_fashion', 'professional_headshot'],
   },
   {
     id: 'dating',
@@ -187,6 +188,10 @@ export default function StyleSelectScreen() {
   const handleStyleSelect = useCallback((styleKey: string) => {
     setSelectedStyle(styleKey);
     
+    // Track style selection
+    const category = categories.find(cat => cat.styles.includes(styleKey))?.name || 'Unknown';
+    analytics.styleSelected(styleKey, category);
+    
     // Show custom prompt input if custom style is selected
     if (styleKey === 'custom') {
       setShowCustomPrompt(true);
@@ -195,7 +200,7 @@ export default function StyleSelectScreen() {
       // Clear custom prompt when selecting a non-custom style
       setCustomPrompt(null);
     }
-  }, [setSelectedStyle, setCustomPrompt]);
+  }, [setSelectedStyle, setCustomPrompt, categories]);
 
   const handleContinue = useCallback(() => {
     if (selectedStyle) {
