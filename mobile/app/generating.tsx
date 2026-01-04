@@ -14,6 +14,7 @@ import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useAppStore } from '../src/store/useAppStore';
 import { generatePortrait, editPortrait } from '../src/services/api';
 import { STYLE_PRESETS } from '../src/constants/styles';
+import { analytics } from '../src/services/posthog';
 
 const LOADING_MESSAGES = [
   'Analyzing your photo...',
@@ -94,6 +95,10 @@ export default function GeneratingScreen() {
     setIsGenerating(true);
     setError(null);
 
+    // Track generation started
+    const startTime = Date.now();
+    analytics.generationStarted(selectedStyle, true);
+
     try {
       console.log('📤 Calling generatePortrait API...');
       
@@ -110,6 +115,11 @@ export default function GeneratingScreen() {
       
       if (result.success) {
         console.log('✅ Generation successful, navigating to result...');
+        
+        // Track generation completed
+        const duration = (Date.now() - startTime) / 1000;
+        analytics.generationCompleted(selectedStyle, duration);
+        
         router.replace({ 
           pathname: '/result', 
           params: { 
@@ -125,6 +135,9 @@ export default function GeneratingScreen() {
       }
     } catch (err: any) {
       console.error('❌ Generation error:', err);
+      
+      // Track generation failed
+      analytics.generationFailed(selectedStyle, err.message || 'Unknown error');
       console.error('Error details:', JSON.stringify(err, null, 2));
       
       // Check if error is about no credits (403)

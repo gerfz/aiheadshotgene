@@ -17,6 +17,7 @@ import * as MediaLibrary from 'expo-media-library';
 import { useAppStore } from '../src/store/useAppStore';
 import { STYLE_PRESETS } from '../src/constants/styles';
 import { deleteGeneration, getUserGenerations } from '../src/services/api';
+import { analytics } from '../src/services/posthog';
 
 export default function ResultScreen() {
   const { setSelectedImage, setSelectedStyle, setGenerations } = useAppStore();
@@ -59,8 +60,8 @@ export default function ResultScreen() {
 
   const handleDownload = async () => {
     try {
-      // Request media library permissions
-      const { status } = await MediaLibrary.requestPermissionsAsync();
+      // Request media library permissions (only for photos, not audio)
+      const { status } = await MediaLibrary.requestPermissionsAsync(false);
       
       if (status !== 'granted') {
         Alert.alert(
@@ -100,6 +101,9 @@ export default function ResultScreen() {
         console.log('Cleanup skipped:', cleanupError);
       }
       
+      // Track download
+      analytics.photoDownloaded(styleKey || 'unknown');
+      
       Alert.alert(
         'Success! 🎉',
         'Portrait saved to your gallery',
@@ -125,6 +129,9 @@ export default function ResultScreen() {
 
       await FileSystem.downloadAsync(generatedUrl, fileUri);
       await Sharing.shareAsync(fileUri);
+      
+      // Track share
+      analytics.photoShared(styleKey || 'unknown');
     } catch (error) {
       console.error('Share error:', error);
       Alert.alert('Error', 'Failed to share image');
@@ -156,6 +163,10 @@ export default function ResultScreen() {
           onPress: async () => {
             try {
               await deleteGeneration(id);
+              
+              // Track delete
+              analytics.photoDeleted(styleKey || 'unknown');
+              
               // Refresh the generations list
               const generationsData = await getUserGenerations();
               setGenerations(generationsData.generations);
@@ -226,15 +237,18 @@ export default function ResultScreen() {
                 <Text style={styles.iconLabel}>Share</Text>
               </TouchableOpacity>
               
-              <TouchableOpacity style={styles.iconButton} onPress={() => router.push({
-                pathname: '/edit-portrait',
-                params: {
-                  generatedUrl,
-                  originalUrl,
-                  styleKey,
-                  id: id || '',
-                }
-              })}>
+              <TouchableOpacity style={styles.iconButton} onPress={() => {
+                analytics.photoEdited(styleKey || 'unknown');
+                router.push({
+                  pathname: '/edit-portrait',
+                  params: {
+                    generatedUrl,
+                    originalUrl,
+                    styleKey,
+                    id: id || '',
+                  }
+                });
+              }}>
                 <View style={[styles.iconCircle, styles.editIcon]}>
                   <Ionicons name="color-wand-outline" size={24} color="#FFFFFF" />
                 </View>
@@ -336,7 +350,6 @@ const styles = StyleSheet.create({
   imageContainer: {
     alignItems: 'center',
     marginBottom: 24,
-    flex: 1, // Allow image container to take available space
   },
   resultImage: {
     width: width - 60, // Slightly smaller width
@@ -351,11 +364,11 @@ const styles = StyleSheet.create({
     justifyContent: 'space-around',
     width: '100%',
     paddingHorizontal: 0,
+    paddingVertical: 12,
     marginBottom: 8,
   },
   iconButton: {
     alignItems: 'center',
-    gap: 6,
   },
   iconCircle: {
     width: 48, // Slightly smaller icons
@@ -389,6 +402,7 @@ const styles = StyleSheet.create({
     color: '#94A3B8',
     fontSize: 11,
     fontWeight: '500',
+    marginTop: 6,
   },
   comparison: {
     flexDirection: 'row',

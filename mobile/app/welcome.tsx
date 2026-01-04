@@ -10,15 +10,17 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, Stack } from 'expo-router';
 import * as SecureStore from 'expo-secure-store';
+import { analytics } from '../src/services/posthog';
 
 const { width, height } = Dimensions.get('window');
 const FIRST_TIME_KEY = 'has_seen_welcome';
+const SHOW_SUBSCRIPTION_KEY = 'show_subscription_after_onboarding';
 
 const onboardingImages = [
-  { uri: 'https://pyziuothzjdijkvdryht.supabase.co/storage/v1/object/public/style-previews/onboarding/onboarding_1.png' },
-  { uri: 'https://pyziuothzjdijkvdryht.supabase.co/storage/v1/object/public/style-previews/onboarding/onboarding_2.png' },
-  { uri: 'https://pyziuothzjdijkvdryht.supabase.co/storage/v1/object/public/style-previews/onboarding/onboarding_3.png' },
-  { uri: 'https://pyziuothzjdijkvdryht.supabase.co/storage/v1/object/public/style-previews/onboarding/onboarding_4.png' },
+  require('../assets/onboarding/onboarding_1.png'),
+  require('../assets/onboarding/onboarding_2.png'),
+  require('../assets/onboarding/onboarding_3.png'),
+  require('../assets/onboarding/onboarding_4.png'),
 ];
 
 export default function WelcomeScreen() {
@@ -29,9 +31,15 @@ export default function WelcomeScreen() {
       // Go to next screen
       setCurrentIndex(currentIndex + 1);
     } else {
-      // Mark that user has seen welcome screen and go to subscription
+      // Mark that user has seen welcome screen
       await SecureStore.setItemAsync(FIRST_TIME_KEY, 'true');
-      router.replace('/subscription');
+      // Set flag to show subscription screen
+      await SecureStore.setItemAsync(SHOW_SUBSCRIPTION_KEY, 'true');
+      
+      // Track onboarding completion
+      analytics.onboardingCompleted();
+      
+      router.replace('/home');
     }
   };
 

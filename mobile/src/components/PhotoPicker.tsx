@@ -7,6 +7,7 @@ import {
   StyleSheet,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
+import { analytics } from '../services/posthog';
 
 interface PhotoPickerProps {
   imageUri: string | null;
@@ -31,6 +32,7 @@ export function PhotoPicker({ imageUri, onImageSelected }: PhotoPickerProps) {
 
     if (!result.canceled && result.assets[0]) {
       onImageSelected(result.assets[0].uri);
+      analytics.photoUploaded('gallery');
     }
   };
 
@@ -50,6 +52,7 @@ export function PhotoPicker({ imageUri, onImageSelected }: PhotoPickerProps) {
 
     if (!result.canceled && result.assets[0]) {
       onImageSelected(result.assets[0].uri);
+      analytics.photoUploaded('camera');
     }
   };
 

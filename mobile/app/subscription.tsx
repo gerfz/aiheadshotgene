@@ -15,6 +15,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import * as SecureStore from 'expo-secure-store';
 import { 
   getOfferings, 
   purchasePackage, 
@@ -29,6 +30,7 @@ import { API_URL } from '../src/constants/config';
 import { analytics } from '../src/services/posthog';
 
 const { width, height } = Dimensions.get('window');
+const SHOW_SUBSCRIPTION_KEY = 'show_subscription_after_onboarding';
 
 // Sample images from your style folders - Now hosted on Supabase
 const SAMPLE_IMAGES = [
@@ -112,6 +114,9 @@ export default function SubscriptionScreen() {
             isSubscribed: true 
           });
           
+          // Clear the subscription flag
+          await SecureStore.deleteItemAsync(SHOW_SUBSCRIPTION_KEY);
+          
           Alert.alert('🎉 Success!', 'Welcome to Pro!', [
             { text: 'Start Creating', onPress: () => router.back() }
           ]);
@@ -151,6 +156,9 @@ export default function SubscriptionScreen() {
           });
           
           if (response.ok) {
+            // Clear the subscription flag
+            await SecureStore.deleteItemAsync(SHOW_SUBSCRIPTION_KEY);
+            
             Alert.alert(
               '✅ Subscription Restored!',
               'Your subscription has been successfully restored.',
@@ -308,7 +316,10 @@ export default function SubscriptionScreen() {
           <View style={styles.header}>
             <TouchableOpacity 
               style={styles.closeButton} 
-              onPress={() => {
+              onPress={async () => {
+                // Clear the subscription flag
+                await SecureStore.deleteItemAsync(SHOW_SUBSCRIPTION_KEY);
+                
                 // Check if we can go back, otherwise go to home
                 if (router.canGoBack()) {
                   router.back();
@@ -390,7 +401,10 @@ export default function SubscriptionScreen() {
             {/* Maybe Later Button */}
             <TouchableOpacity
               style={styles.skipButton}
-              onPress={() => {
+              onPress={async () => {
+                // Clear the subscription flag
+                await SecureStore.deleteItemAsync(SHOW_SUBSCRIPTION_KEY);
+                
                 if (router.canGoBack()) {
                   router.back();
                 } else {
