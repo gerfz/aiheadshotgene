@@ -15,6 +15,7 @@ import { useAppStore } from '../src/store/useAppStore';
 import { generatePortrait, editPortrait } from '../src/services/api';
 import { STYLE_PRESETS } from '../src/constants/styles';
 import { analytics } from '../src/services/posthog';
+import { incrementGenerationCount } from '../src/components/RateUsModal';
 
 const LOADING_MESSAGES = [
   'Analyzing your photo...',
@@ -120,6 +121,10 @@ export default function GeneratingScreen() {
         const duration = (Date.now() - startTime) / 1000;
         analytics.generationCompleted(selectedStyle, duration);
         
+        // Increment generation count for Rate Us popup logic
+        const genCount = await incrementGenerationCount();
+        console.log('📊 Generation count:', genCount);
+        
         router.replace({ 
           pathname: '/result', 
           params: { 
@@ -127,6 +132,7 @@ export default function GeneratingScreen() {
             originalUrl: result.generation.originalImageUrl,
             styleKey: result.generation.styleKey,
             customPrompt: promptToSend || '',
+            showRateUs: genCount === 2 ? 'true' : 'false',
           } 
         });
       } else {

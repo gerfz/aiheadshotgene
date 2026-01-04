@@ -85,6 +85,13 @@ These events are automatically captured by the PostHog SDK:
 |-------|------------|-------------|
 | `screen_viewed` | `screen_name`: string | User navigates to a screen |
 
+### App Rating
+
+| Event | Properties | Description |
+|-------|------------|-------------|
+| `rate_us_shown` | - | Rate Us popup is displayed to the user |
+| `app_rated` | `rating`: number (1-5) | User rates the app |
+
 ---
 
 ## Usage Examples

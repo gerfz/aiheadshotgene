@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -6,7 +6,6 @@ import {
   Image,
   Alert,
   TouchableOpacity,
-  Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
@@ -18,9 +17,12 @@ import { useAppStore } from '../src/store/useAppStore';
 import { STYLE_PRESETS } from '../src/constants/styles';
 import { deleteGeneration, getUserGenerations } from '../src/services/api';
 import { analytics } from '../src/services/posthog';
+import { RateUsModal, shouldShowRateUs } from '../src/components/RateUsModal';
 
 export default function ResultScreen() {
   const { setSelectedImage, setSelectedStyle, setGenerations } = useAppStore();
+  const [showRateModal, setShowRateModal] = useState(false);
+  
   const params = useLocalSearchParams<{
     id?: string;
     generatedUrl: string;
@@ -28,9 +30,27 @@ export default function ResultScreen() {
     styleKey: string;
     customPrompt?: string;
     isEdited?: string;
+    showRateUs?: string;
   }>();
 
-  const { id, generatedUrl, originalUrl, styleKey, customPrompt, isEdited } = params;
+  const { id, generatedUrl, originalUrl, styleKey, customPrompt, isEdited, showRateUs } = params;
+
+  // Check if we should show the Rate Us modal
+  useEffect(() => {
+    const checkRateUs = async () => {
+      // If param says show rate us, or check the stored count
+      if (showRateUs === 'true') {
+        const shouldShow = await shouldShowRateUs();
+        if (shouldShow) {
+          // Small delay to let the screen render first
+          setTimeout(() => {
+            setShowRateModal(true);
+          }, 1000);
+        }
+      }
+    };
+    checkRateUs();
+  }, [showRateUs]);
 
   if (!generatedUrl) {
     return (
@@ -197,8 +217,9 @@ export default function ResultScreen() {
           ),
         }} 
       />
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
         <View style={styles.content}>
+          {/* Header - fixed */}
           <View style={styles.header}>
             <Text style={styles.styleName}>{styleName}</Text>
           </View>
@@ -210,62 +231,64 @@ export default function ResultScreen() {
                 <Text style={styles.customPromptIcon}>✨</Text>
                 <Text style={styles.customPromptTitle}>Your Prompt</Text>
               </View>
-              <Text style={styles.customPromptText}>{customPrompt}</Text>
+              <Text style={styles.customPromptText} numberOfLines={2}>{customPrompt}</Text>
             </View>
           )}
 
+          {/* Image container - flexible, takes remaining space */}
           <View style={styles.imageContainer}>
             <Image
               source={{ uri: generatedUrl }}
               style={styles.resultImage}
-              resizeMode="cover"
+              resizeMode="contain"
             />
+          </View>
+          
+          {/* Icon Bar - fixed */}
+          <View style={styles.iconBar}>
+            <TouchableOpacity style={styles.iconButton} onPress={handleDownload}>
+              <View style={styles.iconCircle}>
+                <Ionicons name="download-outline" size={22} color="#FFFFFF" />
+              </View>
+              <Text style={styles.iconLabel}>Save</Text>
+            </TouchableOpacity>
             
-            {/* Icon Bar under image */}
-            <View style={styles.iconBar}>
-              <TouchableOpacity style={styles.iconButton} onPress={handleDownload}>
-                <View style={styles.iconCircle}>
-                  <Ionicons name="download-outline" size={24} color="#FFFFFF" />
+            <TouchableOpacity style={styles.iconButton} onPress={handleShare}>
+              <View style={[styles.iconCircle, styles.secondaryIcon]}>
+                <Ionicons name="share-outline" size={22} color="#FFFFFF" />
+              </View>
+              <Text style={styles.iconLabel}>Share</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity style={styles.iconButton} onPress={() => {
+              analytics.photoEdited(styleKey || 'unknown');
+              router.push({
+                pathname: '/edit-portrait',
+                params: {
+                  generatedUrl,
+                  originalUrl,
+                  styleKey,
+                  id: id || '',
+                }
+              });
+            }}>
+              <View style={[styles.iconCircle, styles.editIcon]}>
+                <Ionicons name="color-wand-outline" size={22} color="#FFFFFF" />
+              </View>
+              <Text style={styles.iconLabel}>Edit</Text>
+            </TouchableOpacity>
+            
+            {id && (
+              <TouchableOpacity style={styles.iconButton} onPress={handleDelete}>
+                <View style={[styles.iconCircle, styles.deleteIcon]}>
+                  <Ionicons name="trash-outline" size={22} color="#EF4444" />
                 </View>
-                <Text style={styles.iconLabel}>Save</Text>
+                <Text style={styles.iconLabel}>Delete</Text>
               </TouchableOpacity>
-              
-              <TouchableOpacity style={styles.iconButton} onPress={handleShare}>
-                <View style={[styles.iconCircle, styles.secondaryIcon]}>
-                  <Ionicons name="share-outline" size={24} color="#FFFFFF" />
-                </View>
-                <Text style={styles.iconLabel}>Share</Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity style={styles.iconButton} onPress={() => {
-                analytics.photoEdited(styleKey || 'unknown');
-                router.push({
-                  pathname: '/edit-portrait',
-                  params: {
-                    generatedUrl,
-                    originalUrl,
-                    styleKey,
-                    id: id || '',
-                  }
-                });
-              }}>
-                <View style={[styles.iconCircle, styles.editIcon]}>
-                  <Ionicons name="color-wand-outline" size={24} color="#FFFFFF" />
-                </View>
-                <Text style={styles.iconLabel}>Edit</Text>
-              </TouchableOpacity>
-              
-              {id && (
-                <TouchableOpacity style={styles.iconButton} onPress={handleDelete}>
-                  <View style={[styles.iconCircle, styles.deleteIcon]}>
-                    <Ionicons name="trash-outline" size={24} color="#EF4444" />
-                  </View>
-                  <Text style={styles.iconLabel}>Delete</Text>
-                </TouchableOpacity>
-              )}
-            </View>
+            )}
           </View>
 
+          {/* Comparison - fixed (optional) */}
           {originalUrl && (
             <View style={styles.comparison}>
               <View style={styles.compareItem}>
@@ -276,7 +299,7 @@ export default function ResultScreen() {
                 <Text style={styles.compareLabel}>Original</Text>
               </View>
               <View style={styles.arrow}>
-                <Ionicons name="arrow-forward" size={20} color="#6366F1" />
+                <Ionicons name="arrow-forward" size={16} color="#6366F1" />
               </View>
               <View style={styles.compareItem}>
                 <Image
@@ -288,17 +311,24 @@ export default function ResultScreen() {
             </View>
           )}
 
+          {/* Button - fixed at bottom */}
           <TouchableOpacity style={styles.newButton} onPress={handleCreateNew}>
-            <Ionicons name="add-circle-outline" size={24} color="#FFFFFF" style={{ marginRight: 8 }} />
+            <Ionicons name="add-circle-outline" size={22} color="#FFFFFF" style={{ marginRight: 8 }} />
             <Text style={styles.newButtonText}>Create New Portrait</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
+
+      {/* Rate Us Modal */}
+      <RateUsModal 
+        visible={showRateModal} 
+        onClose={() => setShowRateModal(false)} 
+      />
     </>
   );
 }
 
-const { width, height } = Dimensions.get('window');
+// Styles
 
 const styles = StyleSheet.create({
   container: {
@@ -306,81 +336,81 @@ const styles = StyleSheet.create({
     backgroundColor: '#0F172A',
   },
   content: {
-    padding: 20,
-    paddingTop: 10,
-    minHeight: height - 100, // Ensure content fills screen
+    flex: 1,
+    paddingHorizontal: 20,
+    paddingTop: 8,
+    paddingBottom: 16,
   },
   header: {
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 8,
   },
   styleName: {
-    fontSize: 20,
+    fontSize: 18,
     color: '#FFFFFF',
     fontWeight: '700',
     textAlign: 'center',
   },
   customPromptContainer: {
     backgroundColor: '#1E293B',
-    borderRadius: 16,
-    padding: 12,
-    marginBottom: 16,
+    borderRadius: 12,
+    padding: 10,
+    marginBottom: 8,
     borderWidth: 1,
     borderColor: '#334155',
   },
   customPromptHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 8,
-    gap: 8,
+    marginBottom: 4,
+    gap: 6,
   },
   customPromptIcon: {
-    fontSize: 18,
+    fontSize: 14,
   },
   customPromptTitle: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '600',
     color: '#FFFFFF',
   },
   customPromptText: {
-    fontSize: 13,
+    fontSize: 12,
     color: '#E2E8F0',
-    lineHeight: 18,
+    lineHeight: 16,
   },
   imageContainer: {
+    flex: 1,
     alignItems: 'center',
-    marginBottom: 24,
+    justifyContent: 'center',
+    marginBottom: 8,
   },
   resultImage: {
-    width: width - 60, // Slightly smaller width
-    height: (width - 60) * 1.2, // 4:5 aspect ratio
-    maxHeight: height * 0.45, // Cap height to ensure other elements fit
-    borderRadius: 24,
-    marginBottom: 20,
+    width: '100%',
+    height: '100%',
+    borderRadius: 20,
     backgroundColor: '#1E293B',
   },
   iconBar: {
     flexDirection: 'row',
     justifyContent: 'space-around',
-    width: '100%',
-    paddingHorizontal: 0,
-    paddingVertical: 12,
+    paddingVertical: 8,
     marginBottom: 8,
   },
   iconButton: {
     alignItems: 'center',
+    minWidth: 60,
   },
   iconCircle: {
-    width: 48, // Slightly smaller icons
-    height: 48,
-    borderRadius: 24,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     backgroundColor: '#6366F1',
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#6366F1',
-    shadowOffset: { width: 0, height: 4 },
+    shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.3,
-    shadowRadius: 8,
+    shadowRadius: 6,
     elevation: 4,
   },
   secondaryIcon: {
@@ -402,54 +432,52 @@ const styles = StyleSheet.create({
     color: '#94A3B8',
     fontSize: 11,
     fontWeight: '500',
-    marginTop: 6,
+    marginTop: 4,
   },
   comparison: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 20,
+    marginBottom: 12,
     backgroundColor: '#1E293B',
-    padding: 12,
-    borderRadius: 16,
-    gap: 12,
+    padding: 8,
+    borderRadius: 12,
+    gap: 10,
   },
   compareItem: {
     alignItems: 'center',
   },
   compareImage: {
-    width: 60, // Smaller comparison images
-    height: 75,
-    borderRadius: 8,
-    marginBottom: 4,
+    width: 50,
+    height: 62,
+    borderRadius: 6,
+    marginBottom: 2,
     backgroundColor: '#334155',
   },
   compareLabel: {
-    fontSize: 11,
+    fontSize: 10,
     color: '#94A3B8',
     fontWeight: '500',
   },
   arrow: {
-    paddingHorizontal: 4,
+    paddingHorizontal: 2,
   },
   newButton: {
     backgroundColor: '#6366F1',
-    paddingVertical: 16,
-    borderRadius: 16,
+    paddingVertical: 14,
+    borderRadius: 14,
     alignItems: 'center',
     flexDirection: 'row',
     justifyContent: 'center',
-    marginBottom: 20,
     shadowColor: '#6366F1',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 6,
-    width: '100%', // Full width button
   },
   newButtonText: {
     color: '#FFFFFF',
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: 'bold',
   },
   errorIcon: {

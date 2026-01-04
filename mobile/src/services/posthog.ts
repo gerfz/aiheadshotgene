@@ -95,6 +95,16 @@ export const analytics = {
   // Navigation
   screenViewed: (screenName: string) => 
     trackEvent('screen_viewed', { screen_name: screenName }),
+  
+  // App rating
+  rateUsShown: () => 
+    trackEvent('rate_us_shown'),
+  
+  appRated: (rating: number) => 
+    trackEvent('app_rated', { rating }),
+  
+  // Generic event for custom tracking
+  trackEvent,
 };
 
 export default posthog;

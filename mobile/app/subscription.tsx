@@ -397,23 +397,6 @@ export default function SubscriptionScreen() {
             </TouchableOpacity>
 
             <Text style={styles.renewalText}>{getRenewalText()}</Text>
-            
-            {/* Maybe Later Button */}
-            <TouchableOpacity
-              style={styles.skipButton}
-              onPress={async () => {
-                // Clear the subscription flag
-                await SecureStore.deleteItemAsync(SHOW_SUBSCRIPTION_KEY);
-                
-                if (router.canGoBack()) {
-                  router.back();
-                } else {
-                  router.replace('/home');
-                }
-              }}
-            >
-              <Text style={styles.skipButtonText}>Maybe Later</Text>
-            </TouchableOpacity>
           </View>
 
         </View>
@@ -636,15 +619,5 @@ const styles = StyleSheet.create({
     fontSize: 12,
     textAlign: 'center',
     marginTop: 4,
-  },
-  skipButton: {
-    paddingVertical: 12,
-    alignItems: 'center',
-    marginTop: 8,
-  },
-  skipButtonText: {
-    color: '#94A3B8',
-    fontSize: 16,
-    fontWeight: '500',
   },
 });
