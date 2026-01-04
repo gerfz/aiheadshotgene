@@ -152,6 +152,39 @@ export async function updateGeneration(
 }
 
 export async function getUserGenerations(userId: string) {
+  // First, get the user's device_id
+  const { data: profile } = await supabaseAdmin
+    .from('profiles')
+    .select('device_id')
+    .eq('id', userId)
+    .single();
+  
+  // If user has a device_id, get generations from ALL users with same device_id
+  if (profile?.device_id) {
+    // Get all user IDs with the same device_id
+    const { data: profiles } = await supabaseAdmin
+      .from('profiles')
+      .select('id')
+      .eq('device_id', profile.device_id);
+    
+    if (profiles && profiles.length > 0) {
+      const userIds = profiles.map(p => p.id);
+      
+      // Get generations from all these users
+      const { data, error } = await supabaseAdmin
+        .from('generations')
+        .select('*')
+        .in('user_id', userIds)
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      
+      console.log(`✅ Fetched ${data?.length || 0} generations for device_id: ${profile.device_id}`);
+      return data || [];
+    }
+  }
+  
+  // Fallback: just get this user's generations
   const { data, error } = await supabaseAdmin
     .from('generations')
     .select('*')
@@ -159,7 +192,7 @@ export async function getUserGenerations(userId: string) {
     .order('created_at', { ascending: false });
   
   if (error) throw error;
-  return data;
+  return data || [];
 }
 
 export async function uploadImage(
