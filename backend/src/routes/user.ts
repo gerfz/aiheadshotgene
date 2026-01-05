@@ -150,6 +150,16 @@ router.post(
       const userId = req.userId!;
       const { isSubscribed } = req.body;
 
+      // Get the user's profile to find their device_id
+      const { data: profile, error: profileError } = await supabaseAdmin
+        .from('profiles')
+        .select('device_id')
+        .eq('id', userId)
+        .single();
+
+      if (profileError) throw profileError;
+
+      // Update subscription status for this user
       const { data, error } = await supabaseAdmin
         .from('profiles')
         .update({ is_subscribed: isSubscribed })
@@ -158,6 +168,22 @@ router.post(
         .single();
 
       if (error) throw error;
+
+      // If device_id exists, sync subscription status to all profiles with same device_id
+      if (profile.device_id) {
+        const { error: syncError } = await supabaseAdmin
+          .from('profiles')
+          .update({ is_subscribed: isSubscribed })
+          .eq('device_id', profile.device_id)
+          .neq('id', userId); // Don't update the current user again
+
+        if (syncError) {
+          console.error('Failed to sync subscription status across device_id:', syncError);
+          // Don't throw - main update succeeded
+        } else {
+          console.log(`✅ Synced subscription status (${isSubscribed}) across device_id: ${profile.device_id}`);
+        }
+      }
 
       res.json({
         success: true,
