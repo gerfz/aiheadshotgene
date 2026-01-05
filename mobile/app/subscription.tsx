@@ -11,6 +11,7 @@ import {
   Animated,
   Platform,
   StatusBar,
+  Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, Stack } from 'expo-router';
@@ -49,9 +50,12 @@ export default function SubscriptionScreen() {
   const [loading, setLoading] = useState(true);
   const [purchasing, setPurchasing] = useState(false);
   const [selectedPackage, setSelectedPackage] = useState<string | null>(null);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
   const { setCredits } = useAppStore();
   const scrollX = useRef(new Animated.Value(0)).current;
   const scrollViewRef = useRef<any>(null);
+  const successScale = useRef(new Animated.Value(0)).current;
+  const successOpacity = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     loadOfferings();
@@ -117,9 +121,23 @@ export default function SubscriptionScreen() {
           // Clear the subscription flag
           await SecureStore.deleteItemAsync(SHOW_SUBSCRIPTION_KEY);
           
-          Alert.alert('🎉 Success!', 'Welcome to Pro!', [
-            { text: 'Start Creating', onPress: () => router.back() }
-          ]);
+          // Show success modal
+          setShowSuccessModal(true);
+          
+          // Animate success modal
+          Animated.parallel([
+            Animated.spring(successScale, {
+              toValue: 1,
+              tension: 50,
+              friction: 7,
+              useNativeDriver: true,
+            }),
+            Animated.timing(successOpacity, {
+              toValue: 1,
+              duration: 300,
+              useNativeDriver: true,
+            }),
+          ]).start();
         }
       }
     } catch (error: any) {
@@ -159,11 +177,23 @@ export default function SubscriptionScreen() {
             // Clear the subscription flag
             await SecureStore.deleteItemAsync(SHOW_SUBSCRIPTION_KEY);
             
-            Alert.alert(
-              '✅ Subscription Restored!',
-              'Your subscription has been successfully restored.',
-              [{ text: 'OK', onPress: () => router.back() }]
-            );
+            // Show success modal
+            setShowSuccessModal(true);
+            
+            // Animate success modal
+            Animated.parallel([
+              Animated.spring(successScale, {
+                toValue: 1,
+                tension: 50,
+                friction: 7,
+                useNativeDriver: true,
+              }),
+              Animated.timing(successOpacity, {
+                toValue: 1,
+                duration: 300,
+                useNativeDriver: true,
+              }),
+            ]).start();
           } else {
             Alert.alert('⚠️ Partially Restored', 'Subscription found but failed to sync. Please restart the app.');
           }
@@ -280,6 +310,13 @@ export default function SubscriptionScreen() {
     }
     
     return '';
+  };
+
+  const handleSuccessClose = () => {
+    setShowSuccessModal(false);
+    successScale.setValue(0);
+    successOpacity.setValue(0);
+    router.replace('/home');
   };
 
   return (
@@ -401,6 +438,66 @@ export default function SubscriptionScreen() {
 
         </View>
       </SafeAreaView>
+
+      {/* Success Modal */}
+      <Modal
+        visible={showSuccessModal}
+        transparent
+        animationType="none"
+        statusBarTranslucent
+      >
+        <View style={styles.successOverlay}>
+          <Animated.View
+            style={[
+              styles.successModal,
+              {
+                transform: [{ scale: successScale }],
+                opacity: successOpacity,
+              },
+            ]}
+          >
+            {/* Confetti/Celebration Icon */}
+            <View style={styles.successIconContainer}>
+              <Text style={styles.successEmoji}>🎉</Text>
+              <View style={styles.successGlow} />
+            </View>
+
+            {/* Success Title */}
+            <Text style={styles.successTitle}>Welcome to Pro!</Text>
+            
+            {/* Success Message */}
+            <Text style={styles.successMessage}>
+              You now have unlimited access to all features. Start creating amazing portraits!
+            </Text>
+
+            {/* Features unlocked */}
+            <View style={styles.successFeatures}>
+              <View style={styles.successFeatureItem}>
+                <Ionicons name="checkmark-circle" size={20} color="#10B981" />
+                <Text style={styles.successFeatureText}>Unlimited Generations</Text>
+              </View>
+              <View style={styles.successFeatureItem}>
+                <Ionicons name="checkmark-circle" size={20} color="#10B981" />
+                <Text style={styles.successFeatureText}>Custom Prompts</Text>
+              </View>
+              <View style={styles.successFeatureItem}>
+                <Ionicons name="checkmark-circle" size={20} color="#10B981" />
+                <Text style={styles.successFeatureText}>AI Editing Tools</Text>
+              </View>
+            </View>
+
+            {/* CTA Button */}
+            <TouchableOpacity
+              style={styles.successButton}
+              onPress={handleSuccessClose}
+              activeOpacity={0.9}
+            >
+              <Text style={styles.successButtonText}>Start Creating</Text>
+              <Ionicons name="arrow-forward" size={20} color="#FFFFFF" />
+            </TouchableOpacity>
+          </Animated.View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -619,5 +716,104 @@ const styles = StyleSheet.create({
     fontSize: 12,
     textAlign: 'center',
     marginTop: 4,
+  },
+
+  // Success Modal
+  successOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.85)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  successModal: {
+    backgroundColor: '#1E293B',
+    borderRadius: 28,
+    padding: 32,
+    width: '100%',
+    maxWidth: 360,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#334155',
+    shadowColor: '#6366F1',
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.4,
+    shadowRadius: 24,
+    elevation: 12,
+  },
+  successIconContainer: {
+    position: 'relative',
+    marginBottom: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  successEmoji: {
+    fontSize: 72,
+    textAlign: 'center',
+  },
+  successGlow: {
+    position: 'absolute',
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: '#6366F1',
+    opacity: 0.15,
+    zIndex: -1,
+  },
+  successTitle: {
+    fontSize: 28,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    textAlign: 'center',
+    marginBottom: 12,
+    letterSpacing: 0.5,
+  },
+  successMessage: {
+    fontSize: 15,
+    color: '#94A3B8',
+    textAlign: 'center',
+    lineHeight: 22,
+    marginBottom: 24,
+  },
+  successFeatures: {
+    width: '100%',
+    backgroundColor: 'rgba(15, 23, 42, 0.6)',
+    borderRadius: 16,
+    padding: 16,
+    gap: 12,
+    marginBottom: 24,
+    borderWidth: 1,
+    borderColor: 'rgba(16, 185, 129, 0.2)',
+  },
+  successFeatureItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  successFeatureText: {
+    fontSize: 14,
+    color: '#E2E8F0',
+    fontWeight: '600',
+  },
+  successButton: {
+    backgroundColor: '#6366F1',
+    paddingVertical: 16,
+    paddingHorizontal: 32,
+    borderRadius: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    width: '100%',
+    justifyContent: 'center',
+    shadowColor: '#6366F1',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  successButtonText: {
+    color: '#FFFFFF',
+    fontSize: 17,
+    fontWeight: 'bold',
   },
 });

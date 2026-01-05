@@ -6,6 +6,7 @@ import {
   Image,
   Alert,
   TouchableOpacity,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
@@ -13,6 +14,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import * as MediaLibrary from 'expo-media-library';
+import * as ImagePicker from 'expo-image-picker';
 import { useAppStore } from '../src/store/useAppStore';
 import { STYLE_PRESETS } from '../src/constants/styles';
 import { deleteGeneration, getUserGenerations } from '../src/services/api';
@@ -80,10 +82,21 @@ export default function ResultScreen() {
 
   const handleDownload = async () => {
     try {
-      // Request media library permissions (only for photos, not audio)
-      const { status } = await MediaLibrary.requestPermissionsAsync(false);
+      // On Android, use ImagePicker permissions which only asks for photos
+      // On iOS, use MediaLibrary permissions
+      let hasPermission = false;
       
-      if (status !== 'granted') {
+      if (Platform.OS === 'android') {
+        // Use ImagePicker's media library permission - this only asks for photos/videos, NOT audio
+        const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        hasPermission = status === 'granted';
+      } else {
+        // iOS - use MediaLibrary
+        const { status } = await MediaLibrary.requestPermissionsAsync();
+        hasPermission = status === 'granted';
+      }
+      
+      if (!hasPermission) {
         Alert.alert(
           'Permission Required',
           'Please grant permission to save photos to your gallery.',

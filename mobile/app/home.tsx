@@ -11,9 +11,16 @@ import {
 import { router, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAppStore } from '../src/store/useAppStore';
-import { getCredits, getGenerations } from '../src/services/api';
+import { getCredits, getGenerations, updateSubscriptionStatus } from '../src/services/api';
 import { signOut } from '../src/services/supabase';
 import { CreditsDisplay, BottomNav } from '../src/components';
+import { syncSubscriptionStatus } from '../src/services/purchases';
+import { 
+  getCachedCredits, 
+  getCachedGenerations, 
+  cacheCredits, 
+  cacheGenerations 
+} from '../src/services/cache';
 
 // Helper to convert style keys to professional display names
 const getStyleDisplayName = (styleKey: string, isEdited?: boolean): string => {
@@ -47,9 +54,38 @@ const getStyleDisplayName = (styleKey: string, isEdited?: boolean): string => {
 export default function HomeScreen() {
   const { user, credits, generations, setCredits, setGenerations, setUser } = useAppStore();
   const [refreshing, setRefreshing] = useState(false);
+  const [isLoadingFresh, setIsLoadingFresh] = useState(false);
 
-  const loadData = async () => {
+  const loadCachedData = async () => {
     try {
+      const [cachedCredits, cachedGenerations] = await Promise.all([
+        getCachedCredits(),
+        getCachedGenerations(),
+      ]);
+      
+      if (cachedCredits) {
+        console.log('⚡ Loading cached credits instantly');
+        setCredits(cachedCredits);
+      }
+      
+      if (cachedGenerations) {
+        console.log('⚡ Loading cached generations instantly');
+        setGenerations(cachedGenerations);
+      }
+      
+      return { hasCache: !!(cachedCredits || cachedGenerations) };
+    } catch (error) {
+      console.error('Failed to load cached data:', error);
+      return { hasCache: false };
+    }
+  };
+
+  const loadFreshData = async (showAsRefreshing = false) => {
+    try {
+      if (!showAsRefreshing) {
+        setIsLoadingFresh(true);
+      }
+      
       // Small delay to ensure auth state is updated after signup
       await new Promise(resolve => setTimeout(resolve, 100));
       
@@ -74,61 +110,65 @@ export default function HomeScreen() {
         isSubscribed: creditsData?.isSubscribed ?? false,
       };
       
+      // Update state
       setCredits(normalizedCredits);
       setGenerations(generationsData?.generations || []);
+      
+      // Cache the fresh data
+      await Promise.all([
+        cacheCredits(normalizedCredits),
+        cacheGenerations(generationsData?.generations || []),
+      ]);
+      
+      console.log('✅ Fresh data loaded and cached');
     } catch (error) {
-      console.error('Failed to load data:', error);
+      console.error('Failed to load fresh data:', error);
       
-      // Set default values on error to prevent loading forever
-      setCredits({ 
-        freeCredits: 0, 
-        hasCredits: false, 
-        isSubscribed: false 
-      });
-      setGenerations([]);
-      
-      // Retry once after a short delay (in case backend is waking up)
-      setTimeout(async () => {
-        try {
-          const timeoutPromise = new Promise((_, reject) => 
-            setTimeout(() => reject(new Error('API timeout on retry')), 15000) // 15 second timeout for retry
-          );
-          
-          const [creditsData, generationsData] = await Promise.race([
-            Promise.all([
-              getCredits(),
-              getGenerations(),
-            ]),
-            timeoutPromise
-          ]) as [any, any];
-          
-          // Ensure freeCredits is a number
-          const normalizedCredits = {
-            ...creditsData,
-            freeCredits: creditsData?.freeCredits ?? 0,
-            hasCredits: creditsData?.hasCredits ?? false,
-            isSubscribed: creditsData?.isSubscribed ?? false,
-          };
-          
-          setCredits(normalizedCredits);
-          setGenerations(generationsData?.generations || []);
-        } catch (retryError) {
-          console.error('Retry failed:', retryError);
-          // Keep default values if retry also fails
-        }
-      }, 2000);
+      // Only set default values if we don't have cached data
+      if (!credits) {
+        setCredits({ 
+          freeCredits: 0, 
+          hasCredits: false, 
+          isSubscribed: false 
+        });
+      }
+      if (generations.length === 0) {
+        setGenerations([]);
+      }
+    } finally {
+      setIsLoadingFresh(false);
     }
   };
 
   useEffect(() => {
     if (user?.id) {
-      loadData();
+      // Load cached data immediately (instant UI)
+      loadCachedData().then(({ hasCache }) => {
+        // Then load fresh data in background
+        loadFreshData();
+        
+        if (hasCache) {
+          console.log('⚡ Instant load complete, fetching fresh data in background');
+        }
+      });
     }
   }, [user?.id]);
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await loadData();
+    
+    // Run subscription sync and data fetch in parallel
+    await Promise.all([
+      // Sync subscription status from RevenueCat
+      syncSubscriptionStatus()
+        .then(isSubscribed => updateSubscriptionStatus(isSubscribed))
+        .then(() => console.log('✅ Subscription status synced on refresh'))
+        .catch(syncError => console.warn('⚠️ Failed to sync subscription status:', syncError)),
+      
+      // Load fresh data from backend
+      loadFreshData(true),
+    ]);
+    
     setRefreshing(false);
   };
 

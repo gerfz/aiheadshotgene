@@ -218,3 +218,25 @@ export function getPackageByIdentifier(
 ): PurchasesPackage | undefined {
   return packages.find(pkg => pkg.identifier === identifier);
 }
+
+/**
+ * Sync subscription status with backend
+ * This should be called on app startup to ensure Supabase matches RevenueCat
+ */
+export async function syncSubscriptionStatus(): Promise<boolean> {
+  try {
+    const customerInfo = await Purchases.getCustomerInfo();
+    
+    // Check if user has active subscription
+    const hasProAccess = customerInfo.entitlements.active[ENTITLEMENT_ID] !== undefined;
+    const hasAnySubscription = customerInfo.activeSubscriptions.length > 0;
+    const isSubscribed = hasProAccess || hasAnySubscription;
+    
+    console.log('🔄 Syncing subscription status:', isSubscribed);
+    
+    return isSubscribed;
+  } catch (error) {
+    console.error('❌ Failed to sync subscription status:', error);
+    return false;
+  }
+}

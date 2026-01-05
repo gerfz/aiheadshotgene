@@ -5,9 +5,9 @@ import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 import { useAppStore } from '../src/store/useAppStore';
 import { supabase } from '../src/services/supabase';
-import { initializePurchases, loginUser } from '../src/services/purchases';
+import { initializePurchases, loginUser, syncSubscriptionStatus } from '../src/services/purchases';
 import { getHardwareDeviceId } from '../src/services/deviceId';
-import { getCredits } from '../src/services/api';
+import { getCredits, updateSubscriptionStatus } from '../src/services/api';
 import { ErrorBoundary } from '../src/components/ErrorBoundary';
 import { Toast } from '../src/components';
 import { posthog, identifyUser, analytics } from '../src/services/posthog';
@@ -85,18 +85,24 @@ export default function RootLayout() {
               
               // Initialize with new user
               try {
-                await Promise.race([
-                  Promise.all([
-                    initializePurchases(newData.user.id),
-                    loginUser(newData.user.id)
-                  ]),
-                  new Promise((_, reject) => 
-                    setTimeout(() => reject(new Error('Initialization timeout')), 8000)
-                  )
-                ]);
-              } catch (timeoutError) {
-                console.warn('⚠️ Initialization timeout, continuing anyway:', timeoutError);
-              }
+              await Promise.race([
+                Promise.all([
+                  initializePurchases(newData.user.id),
+                  loginUser(newData.user.id)
+                ]),
+                new Promise((_, reject) => 
+                  setTimeout(() => reject(new Error('Initialization timeout')), 8000)
+                )
+              ]);
+              
+              // Sync subscription status in background (non-blocking)
+              syncSubscriptionStatus()
+                .then(isSubscribed => updateSubscriptionStatus(isSubscribed))
+                .then(() => console.log('✅ Subscription status synced in background'))
+                .catch(syncError => console.warn('⚠️ Background sync failed:', syncError));
+            } catch (timeoutError) {
+              console.warn('⚠️ Initialization timeout, continuing anyway:', timeoutError);
+            }
               
               return; // Exit early
             }
@@ -120,6 +126,12 @@ export default function RootLayout() {
                 setTimeout(() => reject(new Error('Initialization timeout')), 8000)
               )
             ]);
+            
+            // Sync subscription status in background (non-blocking)
+            syncSubscriptionStatus()
+              .then(isSubscribed => updateSubscriptionStatus(isSubscribed))
+              .then(() => console.log('✅ Subscription status synced in background'))
+              .catch(syncError => console.warn('⚠️ Background sync failed:', syncError));
           } catch (timeoutError) {
             console.warn('⚠️ Initialization timeout, continuing anyway:', timeoutError);
             // Continue even if backend is slow/sleeping
@@ -160,6 +172,12 @@ export default function RootLayout() {
                   setTimeout(() => reject(new Error('Initialization timeout')), 8000)
                 )
               ]);
+              
+              // Sync subscription status in background (non-blocking)
+              syncSubscriptionStatus()
+                .then(isSubscribed => updateSubscriptionStatus(isSubscribed))
+                .then(() => console.log('✅ Subscription status synced in background'))
+                .catch(syncError => console.warn('⚠️ Background sync failed:', syncError));
             } catch (timeoutError) {
               console.warn('⚠️ Initialization timeout, continuing anyway:', timeoutError);
               // Continue even if backend is slow/sleeping

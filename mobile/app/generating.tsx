@@ -12,10 +12,11 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useAppStore } from '../src/store/useAppStore';
-import { generatePortrait, editPortrait } from '../src/services/api';
+import { generatePortrait, editPortrait, getCredits } from '../src/services/api';
 import { STYLE_PRESETS } from '../src/constants/styles';
 import { analytics } from '../src/services/posthog';
 import { incrementGenerationCount } from '../src/components/RateUsModal';
+import { cacheCredits } from '../src/services/cache';
 
 const LOADING_MESSAGES = [
   'Analyzing your photo...',
@@ -37,7 +38,7 @@ export default function GeneratingScreen() {
     originalId?: string;
   }>();
 
-  const { selectedImage, selectedStyle, customPrompt, setIsGenerating } = useAppStore();
+  const { selectedImage, selectedStyle, customPrompt, setIsGenerating, setCredits } = useAppStore();
   const [messageIndex, setMessageIndex] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [editedResult, setEditedResult] = useState<any>(null);
@@ -124,6 +125,21 @@ export default function GeneratingScreen() {
         // Increment generation count for Rate Us popup logic
         const genCount = await incrementGenerationCount();
         console.log('📊 Generation count:', genCount);
+        
+        // Update credits cache in background (non-blocking)
+        getCredits()
+          .then(creditsData => {
+            const normalizedCredits = {
+              ...creditsData,
+              freeCredits: creditsData?.freeCredits ?? 0,
+              hasCredits: creditsData?.hasCredits ?? false,
+              isSubscribed: creditsData?.isSubscribed ?? false,
+            };
+            setCredits(normalizedCredits);
+            cacheCredits(normalizedCredits);
+            console.log('💾 Credits updated and cached after generation');
+          })
+          .catch(err => console.warn('Failed to update credits cache:', err));
         
         router.replace({ 
           pathname: '/result', 

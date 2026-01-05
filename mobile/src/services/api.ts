@@ -324,6 +324,27 @@ export async function deleteGeneration(generationId: string): Promise<{ success:
   return response.json();
 }
 
+// Update subscription status in backend
+export async function updateSubscriptionStatus(isSubscribed: boolean): Promise<{ success: boolean }> {
+  const headers = await getAuthHeaders();
+  
+  const response = await fetch(`${API_URL}/api/user/subscription`, {
+    method: 'POST',
+    headers: {
+      ...headers,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ isSubscribed }),
+  });
+  
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || 'Failed to update subscription status');
+  }
+  
+  return response.json();
+}
+
 // Edit portrait - refine an existing generated portrait
 export async function editPortrait(
   imageUrl: string,

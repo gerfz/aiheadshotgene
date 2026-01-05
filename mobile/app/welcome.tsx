@@ -39,7 +39,8 @@ export default function WelcomeScreen() {
       // Track onboarding completion
       analytics.onboardingCompleted();
       
-      router.replace('/home');
+      // Navigate to subscription page
+      router.replace('/subscription');
     }
   };
 
