@@ -82,7 +82,9 @@ export default function HomeScreen() {
     }
   };
 
-  const loadFreshData = async (showAsRefreshing = false) => {
+  const loadFreshData = async (showAsRefreshing = false, retryCount = 0) => {
+    const maxRetries = 3;
+    
     try {
       if (!showAsRefreshing) {
         setIsLoadingFresh(true);
@@ -93,7 +95,7 @@ export default function HomeScreen() {
       
       // Add timeout to API calls to prevent infinite loading
       const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('API timeout')), 10000) // 10 second timeout
+        setTimeout(() => reject(new Error('API timeout')), 15000) // 15 second timeout (increased from 10)
       );
       
       const [creditsData, generationsData] = await Promise.race([
@@ -124,17 +126,26 @@ export default function HomeScreen() {
       
       console.log('✅ Fresh data loaded and cached');
     } catch (error) {
-      console.error('Failed to load fresh data:', error);
+      console.error(`Failed to load fresh data (attempt ${retryCount + 1}/${maxRetries}):`, error);
       
-      // Only set default values if we don't have cached data
-      if (!credits) {
+      // Retry if we haven't exceeded max retries
+      if (retryCount < maxRetries) {
+        console.log(`🔄 Retrying in ${(retryCount + 1) * 2} seconds...`);
+        await new Promise(resolve => setTimeout(resolve, (retryCount + 1) * 2000)); // Exponential backoff: 2s, 4s, 6s
+        return loadFreshData(showAsRefreshing, retryCount + 1);
+      }
+      
+      // After all retries failed, keep existing data (don't reset to 0)
+      console.warn('⚠️ All retries failed. Keeping cached/existing data.');
+      
+      // Only set defaults if we have absolutely nothing
+      if (!credits && !generations.length) {
+        console.warn('⚠️ No cached data available, showing empty state');
         setCredits({ 
           freeCredits: 0, 
           hasCredits: false, 
           isSubscribed: false 
         });
-      }
-      if (generations.length === 0) {
         setGenerations([]);
       }
     } finally {
@@ -146,14 +157,16 @@ export default function HomeScreen() {
     if (user?.id && !hasInitialLoad) {
       setHasInitialLoad(true);
       
-      // Load cached data immediately (instant UI)
+      // ALWAYS load cached data first for instant UI
       loadCachedData().then(({ hasCache }) => {
-        // Then load fresh data in background
-        loadFreshData();
-        
         if (hasCache) {
-          console.log('⚡ Instant load complete, fetching fresh data in background');
+          console.log('⚡ Cached data loaded instantly');
+        } else {
+          console.log('ℹ️ No cached data, showing fresh data only');
         }
+        
+        // Then load fresh data in background (with retries)
+        loadFreshData();
       });
     }
   }, [user?.id, hasInitialLoad]);
