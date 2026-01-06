@@ -34,6 +34,7 @@ async function uploadImage(
 
 async function processNextJob(): Promise<boolean> {
   if (isProcessing) {
+    console.log('⏸️ Worker already processing a job, skipping...');
     return false; // Already processing a job
   }
 
@@ -50,7 +51,7 @@ async function processNextJob(): Promise<boolean> {
     }
 
     if (!jobs || jobs.length === 0) {
-      // No jobs in queue
+      // No jobs in queue (this is normal, don't log every time)
       return false;
     }
 
@@ -167,5 +168,16 @@ export function getWorkerStatus() {
     running: workerInterval !== null,
     processing: isProcessing
   };
+}
+
+/**
+ * Manually trigger worker to check for jobs immediately
+ * Call this after creating a new job to avoid waiting for the interval
+ */
+export function triggerWorker() {
+  if (!isProcessing && workerInterval) {
+    console.log('⚡ Manually triggering worker to check for jobs...');
+    processNextJob();
+  }
 }
 

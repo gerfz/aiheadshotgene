@@ -3,12 +3,15 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import generateRoutes from './routes/generate';
 import userRoutes from './routes/user';
-import { startWorker, getWorkerStatus } from './workers/generationWorker';
+import { startWorker, getWorkerStatus, triggerWorker } from './workers/generationWorker';
 
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+// Export triggerWorker so routes can use it
+export { triggerWorker };
 
 // Middleware
 app.use(cors());

@@ -160,6 +160,17 @@ router.post(
       // Track style usage
       await incrementStyleUsage(styleKey);
 
+      console.log(`✅ Job created: ${job.id}, triggering worker...`);
+
+      // Immediately trigger worker to pick up this job (don't wait for 2s interval)
+      try {
+        const { triggerWorker } = await import('../index');
+        triggerWorker();
+      } catch (e) {
+        console.warn('⚠️ Could not trigger worker:', e);
+        // Not critical, worker will pick it up on next interval
+      }
+
       // Return immediately with 202 Accepted
       res.status(202).json({
         success: true,
