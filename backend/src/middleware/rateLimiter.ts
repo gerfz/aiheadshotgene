@@ -14,9 +14,10 @@ export const generationRateLimiter = rateLimit({
   },
   standardHeaders: true, // Return rate limit info in `RateLimit-*` headers
   legacyHeaders: false, // Disable `X-RateLimit-*` headers
-  // Use user ID as key (if authenticated)
+  // Use user ID as key (if authenticated), don't use IP fallback to avoid IPv6 issues
   keyGenerator: (req: any) => {
-    return req.userId || req.ip; // Use user ID if authenticated, otherwise IP
+    // Always use userId if available, otherwise just allow it (will use default key)
+    return req.userId || 'anonymous';
   },
   // Skip successful requests from counting if needed
   skipSuccessfulRequests: false,
@@ -30,7 +31,7 @@ export const generationRateLimiter = rateLimit({
  */
 export const generalRateLimiter = rateLimit({
   windowMs: 1 * 60 * 1000, // 1 minute
-  max: 60, // Max 60 requests per minute per IP
+  max: 60, // Max 60 requests per minute per user
   message: {
     error: 'Too many requests',
     message: 'You have exceeded the rate limit. Please try again later.',
@@ -38,7 +39,7 @@ export const generalRateLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: (req: any) => {
-    return req.userId || req.ip;
+    return req.userId || 'anonymous';
   },
 });
 
@@ -56,7 +57,7 @@ export const strictRateLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: (req: any) => {
-    return req.userId || req.ip;
+    return req.userId || 'anonymous';
   },
 });
 
