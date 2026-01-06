@@ -8,7 +8,7 @@ import {
   Image,
   RefreshControl,
 } from 'react-native';
-import { router, Stack } from 'expo-router';
+import { router, Stack, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAppStore } from '../src/store/useAppStore';
 import { getCredits, getGenerations, updateSubscriptionStatus } from '../src/services/api';
@@ -19,7 +19,8 @@ import {
   getCachedCredits, 
   getCachedGenerations, 
   cacheCredits, 
-  cacheGenerations 
+  cacheGenerations,
+  clearCache
 } from '../src/services/cache';
 
 // Helper to convert style keys to professional display names
@@ -55,6 +56,7 @@ export default function HomeScreen() {
   const { user, credits, generations, setCredits, setGenerations, setUser } = useAppStore();
   const [refreshing, setRefreshing] = useState(false);
   const [isLoadingFresh, setIsLoadingFresh] = useState(false);
+  const [hasInitialLoad, setHasInitialLoad] = useState(false);
 
   const loadCachedData = async () => {
     try {
@@ -141,7 +143,9 @@ export default function HomeScreen() {
   };
 
   useEffect(() => {
-    if (user?.id) {
+    if (user?.id && !hasInitialLoad) {
+      setHasInitialLoad(true);
+      
       // Load cached data immediately (instant UI)
       loadCachedData().then(({ hasCache }) => {
         // Then load fresh data in background
@@ -152,7 +156,20 @@ export default function HomeScreen() {
         }
       });
     }
-  }, [user?.id]);
+  }, [user?.id, hasInitialLoad]);
+  
+  // When navigating back to home (e.g., from subscription page), force refresh
+  useFocusEffect(
+    React.useCallback(() => {
+      if (hasInitialLoad && user?.id) {
+        console.log('🔄 Screen focused, forcing fresh data load');
+        // Clear cache to ensure we get fresh subscription state
+        clearCache().then(() => {
+          loadFreshData();
+        });
+      }
+    }, [hasInitialLoad, user?.id])
+  );
 
   const onRefresh = async () => {
     setRefreshing(true);

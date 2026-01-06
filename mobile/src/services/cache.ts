@@ -103,3 +103,16 @@ export async function clearCache(): Promise<void> {
   }
 }
 
+/**
+ * Clear only credits cache (useful when subscription status changes)
+ */
+export async function clearCreditsCache(): Promise<void> {
+  try {
+    await SecureStore.deleteItemAsync(CACHE_KEYS.CREDITS);
+    console.log('🗑️ Credits cache cleared');
+  } catch (error) {
+    console.error('Failed to clear credits cache:', error);
+  }
+}
+
+
