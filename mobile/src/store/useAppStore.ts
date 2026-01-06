@@ -7,10 +7,6 @@ interface AppState {
   isLoading: boolean;
   isAuthenticated: boolean;
   
-  // Guest state
-  guestId: string | null;
-  isGuest: boolean;
-  
   // Credits state
   credits: CreditsInfo | null;
   
@@ -24,7 +20,6 @@ interface AppState {
   
   // Actions
   setUser: (user: User | null) => void;
-  setGuestId: (guestId: string | null) => void;
   setIsLoading: (isLoading: boolean) => void;
   setCredits: (credits: CreditsInfo | null) => void;
   setSelectedImage: (uri: string | null) => void;
@@ -34,15 +29,12 @@ interface AppState {
   setGenerations: (generations: Generation[]) => void;
   setIsGenerating: (isGenerating: boolean) => void;
   reset: () => void;
-  resetForSignup: () => void;
 }
 
 const initialState = {
   user: null,
   isLoading: true,
   isAuthenticated: false,
-  guestId: null,
-  isGuest: false,
   credits: null,
   selectedImage: null,
   selectedStyle: null,
@@ -55,16 +47,9 @@ const initialState = {
 export const useAppStore = create<AppState>((set, get) => ({
   ...initialState,
   
-  setUser: (user) => set((state) => ({ 
+  setUser: (user) => set({ 
     user, 
     isAuthenticated: !!user,
-    // When user is null and we have a guestId, we're in guest mode
-    isGuest: !user && state.guestId !== null,
-  })),
-  
-  setGuestId: (guestId) => set({ 
-    guestId,
-    isGuest: guestId !== null,
   }),
   
   setIsLoading: (isLoading) => set({ isLoading }),
@@ -84,15 +69,4 @@ export const useAppStore = create<AppState>((set, get) => ({
   setIsGenerating: (isGenerating) => set({ isGenerating }),
   
   reset: () => set(initialState),
-  
-  // Reset for signup - clears guest state but keeps guestId for migration
-  resetForSignup: () => set({
-    credits: null,
-    generations: [],
-    selectedImage: null,
-    selectedStyle: null,
-    customPrompt: null,
-    currentGeneration: null,
-    isGenerating: false,
-  }),
 }));

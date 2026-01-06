@@ -1,7 +1,7 @@
 import { Router, Response } from 'express';
 import multer from 'multer';
 import { v4 as uuidv4 } from 'uuid';
-import { verifyToken, verifyGuestOrToken, AuthenticatedRequest } from '../middleware/auth';
+import { verifyToken, AuthenticatedRequest } from '../middleware/auth';
 import { generatePortrait, getAvailableStyles } from '../services/nanoBanana';
 import {
   getUserProfile,
@@ -9,9 +9,6 @@ import {
   createGeneration,
   updateGeneration,
   uploadImage,
-  getOrCreateGuestProfile,
-  decrementGuestCredits,
-  createGuestGeneration,
   incrementStyleUsage,
   getMostUsedStyles
 } from '../services/supabase';
@@ -50,16 +47,15 @@ router.get('/most-used-styles', async (req, res) => {
   }
 });
 
-// Generate portrait (supports both authenticated users and guests)
+// Generate portrait (authenticated users only)
 router.post(
   '/',
-  verifyGuestOrToken,
+  verifyToken,
   upload.single('image'),
   async (req: AuthenticatedRequest, res: Response) => {
     try {
       const { styleKey, customPrompt, editPrompt } = req.body;
       const file = req.file;
-      const isGuest = req.isGuest;
 
       console.log('Generate request - styleKey:', styleKey, 'customPrompt:', customPrompt, 'editPrompt:', editPrompt);
 
@@ -87,74 +83,38 @@ router.post(
         });
       }
 
-      let hasCredits = false;
-      let isSubscribed = false;
-      let generation: any;
-      let folderPath: string;
-
-      if (isGuest) {
-        // Guest user flow
-        const deviceId = req.guestDeviceId!;
-        const guestProfile = await getOrCreateGuestProfile(deviceId);
-        
-        if (guestProfile.free_credits <= 0) {
-          return res.status(403).json({ 
-            error: 'No credits remaining',
-            message: 'Sign up for a free account to get more credits!',
-            requiresSignup: true
-          });
-        }
-        
-        hasCredits = true;
-        folderPath = `guests/${deviceId}`;
-        
-        // Upload original image
-        const originalFileName = `${folderPath}/${uuidv4()}-original.${file.mimetype.split('/')[1]}`;
-        const originalImageUrl = await uploadImage(
-          'portraits',
-          originalFileName,
-          file.buffer,
-          file.mimetype
-        );
-        
-        // Create guest generation record
-        generation = await createGuestGeneration(deviceId, styleKey, originalImageUrl, customPrompt);
-        
-      } else {
-        // Authenticated user flow
-        const userId = req.userId!;
-        const profile = await getUserProfile(userId);
-        
-        if (!profile.is_subscribed && profile.free_credits <= 0) {
-          return res.status(403).json({ 
-            error: 'No credits remaining',
-            message: 'Please subscribe to continue generating portraits'
-          });
-        }
-        
-        hasCredits = true;
-        isSubscribed = profile.is_subscribed;
-        folderPath = userId;
-        
-        // Upload original image
-        const originalFileName = `${folderPath}/${uuidv4()}-original.${file.mimetype.split('/')[1]}`;
-        const originalImageUrl = await uploadImage(
-          'portraits',
-          originalFileName,
-          file.buffer,
-          file.mimetype
-        );
-        
-        // For edit mode, keep the original styleKey, not 'edit'
-        const actualStyleKey = styleKey === 'edit' && req.body.originalStyleKey 
-          ? req.body.originalStyleKey 
-          : styleKey;
-        
-        const isEdited = styleKey === 'edit';
-        
-        // Create generation record
-        generation = await createGeneration(userId, actualStyleKey, originalImageUrl, customPrompt, isEdited);
+      // Authenticated user flow
+      const userId = req.userId!;
+      const profile = await getUserProfile(userId);
+      
+      if (!profile.is_subscribed && profile.free_credits <= 0) {
+        return res.status(403).json({ 
+          error: 'No credits remaining',
+          message: 'Please subscribe to continue generating portraits'
+        });
       }
+      
+      const isSubscribed = profile.is_subscribed;
+      const folderPath = userId;
+      
+      // Upload original image
+      const originalFileName = `${folderPath}/${uuidv4()}-original.${file.mimetype.split('/')[1]}`;
+      const originalImageUrl = await uploadImage(
+        'portraits',
+        originalFileName,
+        file.buffer,
+        file.mimetype
+      );
+      
+      // For edit mode, keep the original styleKey, not 'edit'
+      const actualStyleKey = styleKey === 'edit' && req.body.originalStyleKey 
+        ? req.body.originalStyleKey 
+        : styleKey;
+      
+      const isEdited = styleKey === 'edit';
+      
+      // Create generation record
+      const generation = await createGeneration(userId, actualStyleKey, originalImageUrl, customPrompt, isEdited);
 
       // Generate portrait using Nano Banana
       const imageBase64 = file.buffer.toString('base64');
@@ -186,11 +146,9 @@ router.post(
           generated_image_url: generatedImageUrl
         });
 
-        // Decrement credits
-        if (isGuest) {
-          await decrementGuestCredits(req.guestDeviceId!);
-        } else if (!isSubscribed) {
-          await decrementCredits(req.userId!);
+        // Decrement credits if not subscribed
+        if (!isSubscribed) {
+          await decrementCredits(userId);
         }
 
         // Track style usage
@@ -222,27 +180,20 @@ router.post(
   }
 );
 
-// Get generation status (supports both users and guests)
+// Get generation status (authenticated users only)
 router.get(
   '/:id/status',
-  verifyGuestOrToken,
+  verifyToken,
   async (req: AuthenticatedRequest, res: Response) => {
     try {
       const { id } = req.params;
-      const isGuest = req.isGuest;
 
-      let query = require('../services/supabase').supabaseAdmin
+      const { data, error } = await require('../services/supabase').supabaseAdmin
         .from('generations')
         .select('*')
-        .eq('id', id);
-
-      if (isGuest) {
-        query = query.eq('guest_device_id', req.guestDeviceId);
-      } else {
-        query = query.eq('user_id', req.userId);
-      }
-
-      const { data, error } = await query.single();
+        .eq('id', id)
+        .eq('user_id', req.userId)
+        .single();
 
       if (error || !data) {
         return res.status(404).json({ error: 'Generation not found' });
@@ -255,27 +206,21 @@ router.get(
   }
 );
 
-// Delete generation (supports both users and guests)
+// Delete generation (authenticated users only)
 router.delete(
   '/:id',
-  verifyGuestOrToken,
+  verifyToken,
   async (req: AuthenticatedRequest, res: Response) => {
     try {
       const { id } = req.params;
-      const isGuest = req.isGuest;
 
-      let query = require('../services/supabase').supabaseAdmin
+      const { data, error } = await require('../services/supabase').supabaseAdmin
         .from('generations')
         .delete()
-        .eq('id', id);
-
-      if (isGuest) {
-        query = query.eq('guest_device_id', req.guestDeviceId);
-      } else {
-        query = query.eq('user_id', req.userId);
-      }
-
-      const { data, error } = await query.select().single();
+        .eq('id', id)
+        .eq('user_id', req.userId)
+        .select()
+        .single();
 
       if (error || !data) {
         return res.status(404).json({ error: 'Generation not found' });

@@ -1,7 +1,6 @@
 import * as FileSystem from 'expo-file-system/legacy';
 import { API_URL } from '../constants/config';
 import { getAccessToken } from './supabase';
-import { getGuestId } from './guestStorage';
 import { CreditsInfo, Generation, GenerationResult } from '../types';
 
 /**
@@ -41,28 +40,10 @@ async function getAuthHeaders(): Promise<Record<string, string>> {
 }
 
 /**
- * Get headers for guest requests
- */
-async function getGuestHeaders(): Promise<Record<string, string>> {
-  const guestId = await getGuestId();
-  if (guestId) {
-    return {
-      'X-Guest-Device-Id': guestId,
-    };
-  }
-  return {};
-}
-
-/**
  * Get appropriate headers based on auth state
- * Prefers auth token over guest ID
  */
 async function getHeaders(): Promise<Record<string, string>> {
-  const authHeaders = await getAuthHeaders();
-  if (authHeaders['Authorization']) {
-    return authHeaders;
-  }
-  return getGuestHeaders();
+  return getAuthHeaders();
 }
 
 // =============================================
@@ -121,96 +102,21 @@ export async function getUserGenerations(): Promise<{ generations: Generation[] 
   return response.json();
 }
 
-// Migrate guest data to user account (after signup)
-export async function migrateGuestData(guestDeviceId: string): Promise<{ success: boolean }> {
-  const headers = await getAuthHeaders();
-  
-  const response = await fetch(`${API_URL}/api/user/migrate-guest`, {
-    method: 'POST',
-    headers: {
-      ...headers,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ guestDeviceId }),
-  });
-  
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.message || 'Failed to migrate guest data');
-  }
-  
-  return response.json();
-}
-
 // =============================================
-// GUEST USER ENDPOINTS
+// UNIFIED ENDPOINTS
 // =============================================
 
-// Get guest credits
-export async function getGuestCredits(): Promise<CreditsInfo & { isGuest: boolean }> {
-  const headers = await getGuestHeaders();
-  
-  const response = await fetchWithTimeout(`${API_URL}/api/user/guest/credits`, {
-    method: 'GET',
-    headers,
-  }, 10000); // 10 second timeout
-  
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.message || 'Failed to get guest credits');
-  }
-  
-  return response.json();
-}
-
-// Get guest's generation history
-export async function getGuestGenerations(): Promise<{ generations: Generation[] }> {
-  const headers = await getGuestHeaders();
-  
-  const response = await fetchWithTimeout(`${API_URL}/api/user/guest/generations`, {
-    method: 'GET',
-    headers,
-  }, 10000); // 10 second timeout
-  
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.message || 'Failed to get guest generations');
-  }
-  
-  return response.json();
-}
-
-// =============================================
-// UNIFIED ENDPOINTS (WORK FOR BOTH)
-// =============================================
-
-// Get credits (works for both authenticated users and guests)
+// Get credits (authenticated users only)
 export async function getCredits(): Promise<CreditsInfo> {
-  const authHeaders = await getAuthHeaders();
-  
-  // If authenticated, use user credits endpoint
-  if (authHeaders['Authorization']) {
-    return getUserCredits();
-  }
-  
-  // Otherwise, use guest credits endpoint
-  return getGuestCredits();
+  return getUserCredits();
 }
 
-// Get generations (works for both authenticated users and guests)
+// Get generations (authenticated users only)
 export async function getGenerations(): Promise<{ generations: Generation[] }> {
-  const authHeaders = await getAuthHeaders();
-  
-  // If authenticated, use user generations endpoint
-  if (authHeaders['Authorization']) {
-    return getUserGenerations();
-  }
-  
-  // Otherwise, use guest generations endpoint
-  return getGuestGenerations();
+  return getUserGenerations();
 }
 
-// Generate portrait (works for both authenticated users and guests)
+// Generate portrait (authenticated users only)
 export async function generatePortrait(
   imageUri: string,
   styleKey: string,
