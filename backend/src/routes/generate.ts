@@ -200,7 +200,20 @@ router.get(
         return res.status(404).json({ error: 'Generation not found' });
       }
 
-      res.json({ generation: data });
+      // Transform snake_case to camelCase for mobile app compatibility
+      const generation = {
+        id: data.id,
+        userId: data.user_id,
+        styleKey: data.style_key,
+        originalImageUrl: data.original_image_url,
+        generatedImageUrl: data.generated_image_url,
+        customPrompt: data.custom_prompt,
+        status: data.status,
+        createdAt: data.created_at,
+        isEdited: data.is_edited
+      };
+
+      res.json({ generation });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }

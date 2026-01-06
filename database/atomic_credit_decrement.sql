@@ -20,10 +20,10 @@ DECLARE
   v_new_credits integer;
 BEGIN
   -- Get user's current credits and device_id with row lock
-  SELECT device_id, free_credits 
+  SELECT p.device_id, p.free_credits 
   INTO v_device_id, v_current_credits
-  FROM profiles
-  WHERE id = p_user_id
+  FROM profiles p
+  WHERE p.id = p_user_id
   FOR UPDATE; -- This locks the row until transaction completes
   
   -- Check if user was found
@@ -42,16 +42,16 @@ BEGIN
   v_new_credits := GREATEST(v_current_credits - 1, 0);
   
   -- Update this user's credits atomically
-  UPDATE profiles
+  UPDATE profiles p
   SET free_credits = v_new_credits
-  WHERE id = p_user_id;
+  WHERE p.id = p_user_id;
   
   -- If user has a device_id, sync credits to all profiles with same device_id
   IF v_device_id IS NOT NULL THEN
-    UPDATE profiles
+    UPDATE profiles p
     SET free_credits = v_new_credits
-    WHERE device_id = v_device_id
-    AND id != p_user_id;
+    WHERE p.device_id = v_device_id
+    AND p.id != p_user_id;
   END IF;
   
   -- Return success
