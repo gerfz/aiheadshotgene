@@ -2,6 +2,7 @@ import { Router, Response } from 'express';
 import multer from 'multer';
 import { v4 as uuidv4 } from 'uuid';
 import { verifyToken, AuthenticatedRequest } from '../middleware/auth';
+import { generationRateLimiter } from '../middleware/rateLimiter';
 import { generatePortrait, getAvailableStyles } from '../services/nanoBanana';
 import {
   getUserProfile,
@@ -51,6 +52,7 @@ router.get('/most-used-styles', async (req, res) => {
 router.post(
   '/',
   verifyToken,
+  generationRateLimiter, // Rate limiting: max 5 generations per minute
   upload.single('image'),
   async (req: AuthenticatedRequest, res: Response) => {
     try {
@@ -113,62 +115,61 @@ router.post(
       
       const isEdited = styleKey === 'edit';
       
-      // Create generation record
+      // Create generation record with 'queued' status
       const generation = await createGeneration(userId, actualStyleKey, originalImageUrl, customPrompt, isEdited);
 
-      // Generate portrait using Nano Banana
-      const imageBase64 = file.buffer.toString('base64');
-      
-      try {
-        await updateGeneration(generation.id, { status: 'processing' });
-        
-        const generatedImageBase64 = await generatePortrait(
-          imageBase64,
-          styleKey,
-          file.mimetype,
-          customPrompt,
-          editPrompt
-        );
-
-        // Upload generated image
-        const generatedFileName = `${folderPath}/${uuidv4()}-generated.jpg`;
-        const generatedBuffer = Buffer.from(generatedImageBase64, 'base64');
-        const generatedImageUrl = await uploadImage(
-          'portraits',
-          generatedFileName,
-          generatedBuffer,
-          'image/jpeg'
-        );
-
-        // Update generation record
-        await updateGeneration(generation.id, {
-          status: 'completed',
-          generated_image_url: generatedImageUrl
-        });
-
-        // Decrement credits if not subscribed
-        if (!isSubscribed) {
+      // Decrement credits immediately (before job is queued)
+      if (!isSubscribed) {
+        try {
           await decrementCredits(userId);
+        } catch (creditError: any) {
+          // If credit decrement fails, delete the generation and fail
+          await require('../services/supabase').supabaseAdmin
+            .from('generations')
+            .delete()
+            .eq('id', generation.id);
+          
+          return res.status(403).json({
+            error: 'Failed to use credit',
+            message: creditError.message || 'Could not decrement credits'
+          });
         }
-
-        // Track style usage
-        await incrementStyleUsage(styleKey);
-
-        res.json({
-          success: true,
-          generation: {
-            id: generation.id,
-            originalImageUrl: generation.original_image_url,
-            generatedImageUrl,
-            styleKey,
-            status: 'completed'
-          }
-        });
-
-      } catch (genError: any) {
-        await updateGeneration(generation.id, { status: 'failed' });
-        throw genError;
       }
+
+      // Create job in queue
+      const { data: job, error: jobError } = await require('../services/supabase').supabaseAdmin
+        .from('generation_jobs')
+        .insert({
+          user_id: userId,
+          generation_id: generation.id,
+          status: 'queued',
+          style_key: styleKey,
+          custom_prompt: customPrompt,
+          edit_prompt: editPrompt,
+          original_image_url: originalImageUrl
+        })
+        .select()
+        .single();
+
+      if (jobError) {
+        console.error('Failed to create job:', jobError);
+        await updateGeneration(generation.id, { status: 'failed' });
+        throw new Error('Failed to queue generation job');
+      }
+
+      // Track style usage
+      await incrementStyleUsage(styleKey);
+
+      // Return immediately with 202 Accepted
+      res.status(202).json({
+        success: true,
+        message: 'Generation queued successfully',
+        generation: {
+          id: generation.id,
+          status: 'queued',
+          jobId: job.id
+        }
+      });
 
     } catch (error: any) {
       console.error('Generation error:', error);

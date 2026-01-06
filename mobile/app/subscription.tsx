@@ -83,6 +83,19 @@ export default function SubscriptionScreen() {
     try {
       const availablePackages = await getOfferings();
       setPackages(availablePackages);
+      
+      // Debug: Log intro offer information
+      availablePackages.forEach(pkg => {
+        console.log(`📦 Package: ${pkg.identifier}`);
+        console.log(`  Price: ${pkg.product.priceString}`);
+        console.log(`  Intro Price:`, pkg.product.introPrice);
+        if (pkg.product.introPrice) {
+          console.log(`    Intro Price String: ${pkg.product.introPrice.priceString}`);
+          console.log(`    Intro Price: ${pkg.product.introPrice.price}`);
+          console.log(`    Period: ${pkg.product.introPrice.period}`);
+          console.log(`    Cycles: ${pkg.product.introPrice.cycles}`);
+        }
+      });
     } catch (error) {
       console.error('❌ Failed to load offerings:', error);
     } finally {
@@ -251,9 +264,46 @@ export default function SubscriptionScreen() {
     }
   }, [packages]); // Run when packages load
 
-  const renderPackage = (pkg: any, label: string, subLabel?: string, badge?: string, hasIntroOffer?: boolean) => {
+  // Helper to check if package has intro offer
+  const hasIntroOffer = (pkg: any): boolean => {
+    return pkg?.product?.introPrice !== null && pkg?.product?.introPrice !== undefined;
+  };
+
+  // Helper to get intro price display text
+  const getIntroOfferText = (pkg: any): string | null => {
+    if (!hasIntroOffer(pkg)) return null;
+    
+    const introPrice = pkg.product.introPrice;
+    if (introPrice?.priceString) {
+      return introPrice.priceString;
+    }
+    return null;
+  };
+
+  // Helper to calculate discount percentage
+  const getDiscountPercentage = (pkg: any): string | null => {
+    if (!hasIntroOffer(pkg)) return null;
+    
+    const introPrice = pkg.product.introPrice;
+    const regularPrice = pkg.product.price;
+    
+    if (introPrice?.price && regularPrice) {
+      const discount = Math.round(((regularPrice - introPrice.price) / regularPrice) * 100);
+      return `${discount}% off`;
+    }
+    
+    return null;
+  };
+
+  const renderPackage = (pkg: any, label: string, defaultBadge?: string) => {
     if (!pkg) return null;
     const isSelected = selectedPackage === pkg.identifier;
+    
+    // Dynamically determine badge and sublabel based on intro offer
+    const hasIntro = hasIntroOffer(pkg);
+    const discountText = getDiscountPercentage(pkg);
+    const badge = hasIntro && discountText ? discountText : defaultBadge;
+    const subLabel = hasIntro ? `${discountText} first period` : 'Cancel anytime';
     
     return (
       <TouchableOpacity 
@@ -269,7 +319,7 @@ export default function SubscriptionScreen() {
         <View style={styles.planContent}>
           <View style={styles.planTextContainer}>
              <Text style={[styles.planName, isSelected && styles.textSelected]}>{label}</Text>
-             {subLabel && <Text style={[styles.planSubLabel, isSelected && styles.textSelectedSub]}>{subLabel}</Text>}
+             <Text style={[styles.planSubLabel, isSelected && styles.textSelectedSub]}>{subLabel}</Text>
           </View>
           <View style={styles.priceContainer}>
              <Text style={[styles.planPrice, isSelected && styles.textSelected]}>{pkg.product.priceString}</Text>
@@ -286,30 +336,38 @@ export default function SubscriptionScreen() {
   const getRenewalText = () => {
     if (!selectedPackage) return '';
     
-    const isWeekly = selectedPackage.includes('weekly');
-    const isMonthly = selectedPackage.includes('monthly');
-    const isYearly = selectedPackage.includes('annual') || selectedPackage.includes('yearly');
+    // Find the selected package
+    let selectedPkg = null;
+    let period = '';
     
-    // Check if weekly has intro offer (50% off)
-    const weeklyHasIntro = isWeekly; // Assuming weekly always has intro offer
-    
-    if (isWeekly && weeklyHasIntro) {
-      // For weekly with intro offer
-      const introPrice = '$3.90'; // 50% of $7.79
-      const regularPrice = weeklyPkg?.product?.priceString || '$7.79';
-      return `Start 1-week trial for ${introPrice}, then ${regularPrice}/week`;
-    } else if (isWeekly) {
-      const price = weeklyPkg?.product?.priceString || '$7.79';
-      return `Renews automatically at ${price}/week`;
-    } else if (isMonthly) {
-      const price = monthlyPkg?.product?.priceString || '$14.79';
-      return `Renews automatically at ${price}/month`;
-    } else if (isYearly) {
-      const price = yearlyPkg?.product?.priceString || '$79.79';
-      return `Renews automatically at ${price}/year`;
+    if (selectedPackage.includes('weekly')) {
+      selectedPkg = weeklyPkg;
+      period = 'week';
+    } else if (selectedPackage.includes('monthly')) {
+      selectedPkg = monthlyPkg;
+      period = 'month';
+    } else if (selectedPackage.includes('annual') || selectedPackage.includes('yearly')) {
+      selectedPkg = yearlyPkg;
+      period = 'year';
     }
     
-    return '';
+    if (!selectedPkg) return '';
+    
+    // Check if package has intro offer
+    const hasIntro = hasIntroOffer(selectedPkg);
+    const regularPrice = selectedPkg.product.priceString;
+    
+    if (hasIntro) {
+      const introPrice = getIntroOfferText(selectedPkg);
+      const introPeriod = selectedPkg.product.introPrice?.period || period;
+      
+      if (introPrice) {
+        return `Start trial for ${introPrice}, then ${regularPrice}/${period}`;
+      }
+    }
+    
+    // No intro offer
+    return `Renews automatically at ${regularPrice}/${period}`;
   };
 
   const handleSuccessClose = () => {
@@ -409,9 +467,9 @@ export default function SubscriptionScreen() {
 
           {/* Plans */}
           <View style={styles.plansContainer}>
-            {renderPackage(weeklyPkg, 'Weekly', '50% off first week', '1-Week Trial')}
-            {renderPackage(monthlyPkg, 'Monthly', 'Cancel anytime')}
-            {renderPackage(yearlyPkg, 'Yearly', 'Best value', 'Best Value')}
+            {renderPackage(weeklyPkg, 'Weekly')}
+            {renderPackage(monthlyPkg, 'Monthly')}
+            {renderPackage(yearlyPkg, 'Yearly', 'Best Value')}
           </View>
 
           {/* Bottom Action */}
@@ -428,7 +486,13 @@ export default function SubscriptionScreen() {
                 <ActivityIndicator color="#FFF" />
               ) : (
                 <Text style={styles.ctaText}>
-                  {selectedPackage?.includes('weekly') ? 'Start 1-Week Trial' : 'Continue'}
+                  {(() => {
+                    const pkg = [weeklyPkg, monthlyPkg, yearlyPkg].find(p => p.identifier === selectedPackage);
+                    if (pkg && hasIntroOffer(pkg)) {
+                      return 'Start Trial';
+                    }
+                    return 'Continue';
+                  })()}
                 </Text>
               )}
             </TouchableOpacity>

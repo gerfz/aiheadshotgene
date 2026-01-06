@@ -76,35 +76,25 @@ export async function getMostUsedStyles() {
 }
 
 export async function decrementCredits(userId: string) {
-  // Get the user's profile to find their device_id
-  const { data: profile } = await supabaseAdmin
-    .from('profiles')
-    .select('device_id, free_credits')
-    .eq('id', userId)
-    .single();
+  // Use atomic Postgres function to prevent race conditions
+  const { data, error } = await supabaseAdmin
+    .rpc('decrement_user_credits', { p_user_id: userId });
   
-  const newCredits = Math.max(0, (profile?.free_credits || 0) - 1);
-  
-  // Update this user's credits
-  const { error } = await supabaseAdmin
-    .from('profiles')
-    .update({ free_credits: newCredits })
-    .eq('id', userId);
-  
-  if (error) throw error;
-  
-  // If user has a device_id, sync credits to all other profiles with same device_id
-  if (profile?.device_id) {
-    await supabaseAdmin
-      .from('profiles')
-      .update({ free_credits: newCredits })
-      .eq('device_id', profile.device_id)
-      .neq('id', userId);
-    
-    console.log(`✅ Synced ${newCredits} credits to all profiles with device_id: ${profile.device_id}`);
+  if (error) {
+    console.error('❌ Failed to decrement credits:', error);
+    throw error;
   }
   
-  return { free_credits: newCredits };
+  // The function returns: { success: boolean, free_credits: number, message: string }
+  const result = data?.[0];
+  
+  if (!result?.success) {
+    throw new Error(result?.message || 'Failed to decrement credits');
+  }
+  
+  console.log(`✅ Credits decremented atomically: ${result.free_credits} remaining`);
+  
+  return { free_credits: result.free_credits };
 }
 
 export async function createGeneration(

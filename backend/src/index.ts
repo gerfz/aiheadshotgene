@@ -3,6 +3,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import generateRoutes from './routes/generate';
 import userRoutes from './routes/user';
+import { startWorker, getWorkerStatus } from './workers/generationWorker';
 
 dotenv.config();
 
@@ -25,7 +26,12 @@ app.use((req, res, next) => {
 
 // Health check
 app.get('/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+  const workerStatus = getWorkerStatus();
+  res.json({ 
+    status: 'ok', 
+    timestamp: new Date().toISOString(),
+    worker: workerStatus
+  });
 });
 
 // Root endpoint
@@ -55,6 +61,9 @@ app.use((err: Error, req: express.Request, res: express.Response, next: express.
 
 app.listen(PORT, () => {
   console.log(`🚀 Server running on http://localhost:${PORT}`);
+  
+  // Start background worker for processing generation jobs
+  startWorker();
 });
 
 export default app;

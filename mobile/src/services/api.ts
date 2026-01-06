@@ -180,7 +180,69 @@ export async function generatePortrait(
     }
   }
   
-  return response.json();
+  const result = await response.json();
+  
+  // If status is 202 (job queued), poll for completion
+  if (response.status === 202 || result.generation?.status === 'queued') {
+    const generationId = result.generation.id;
+    console.log(`📋 Job queued, polling for completion: ${generationId}`);
+    
+    // Poll for completion
+    return pollGenerationStatus(generationId);
+  }
+  
+  return result;
+}
+
+// Poll generation status until complete
+async function pollGenerationStatus(generationId: string, maxAttempts: number = 60): Promise<{ success: boolean; generation: any }> {
+  const headers = await getHeaders();
+  let attempts = 0;
+  
+  while (attempts < maxAttempts) {
+    attempts++;
+    
+    try {
+      const response = await fetch(`${API_URL}/api/generate/${generationId}/status`, {
+        method: 'GET',
+        headers,
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to check generation status');
+      }
+      
+      const data = await response.json();
+      const status = data.generation?.status;
+      
+      console.log(`📊 Generation status (attempt ${attempts}): ${status}`);
+      
+      if (status === 'completed') {
+        return {
+          success: true,
+          generation: data.generation
+        };
+      } else if (status === 'failed') {
+        throw new Error('Generation failed');
+      }
+      
+      // Wait 2 seconds before next poll
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+    } catch (pollError: any) {
+      console.error('Polling error:', pollError);
+      
+      // If we've tried enough times, give up
+      if (attempts >= maxAttempts) {
+        throw new Error('Generation timed out. Please check your gallery later.');
+      }
+      
+      // Wait before retrying
+      await new Promise(resolve => setTimeout(resolve, 2000));
+    }
+  }
+  
+  throw new Error('Generation timed out after 2 minutes');
 }
 
 // Check generation status
@@ -311,5 +373,16 @@ export async function editPortrait(
     }
   }
   
-  return response.json();
+  const result = await response.json();
+  
+  // If status is 202 (job queued), poll for completion
+  if (response.status === 202 || result.generation?.status === 'queued') {
+    const generationId = result.generation.id;
+    console.log(`📋 Edit job queued, polling for completion: ${generationId}`);
+    
+    // Poll for completion
+    return pollGenerationStatus(generationId);
+  }
+  
+  return result;
 }
