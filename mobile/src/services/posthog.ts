@@ -103,6 +103,13 @@ export const analytics = {
   appRated: (rating: number) => 
     trackEvent('app_rated', { rating }),
   
+  // Feedback
+  feedbackRequested: (source: string) => 
+    trackEvent('feedback_requested', { source }),
+  
+  feedbackSubmitted: (feedback: string, source: string) => 
+    trackEvent('feedback_submitted', { feedback, source }),
+  
   // Generic event for custom tracking
   trackEvent,
 };

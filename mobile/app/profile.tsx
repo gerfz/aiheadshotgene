@@ -22,6 +22,8 @@ import { signOut, supabase } from '../src/services/supabase';
 import { getCredits, getGenerations } from '../src/services/api';
 import { restorePurchases, checkProStatus } from '../src/services/purchases';
 import Constants from 'expo-constants';
+import posthog from '../src/services/posthog';
+import { FeedbackModal } from '../src/components/FeedbackModal';
 
 export default function ProfileScreen() {
   const { user, setUser, credits, setCredits, generations, setGenerations } = useAppStore();
@@ -30,6 +32,7 @@ export default function ProfileScreen() {
   const [userEmail, setUserEmail] = useState<string>('');
   const [showEmailModal, setShowEmailModal] = useState(false);
   const [emailInput, setEmailInput] = useState<string>('');
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
 
   useEffect(() => {
     // Get device ID on mount
@@ -105,7 +108,13 @@ export default function ProfileScreen() {
   };
 
   const handleContactUs = () => {
-    router.push('/contact-us');
+    // Track feedback request
+    posthog.capture('feedback_requested', {
+      source: 'profile_contact_us',
+    });
+    
+    // Show feedback modal
+    setShowFeedbackModal(true);
   };
 
   const handlePrivacyPolicy = () => {
@@ -516,6 +525,13 @@ export default function ProfileScreen() {
             </View>
           </View>
         </Modal>
+
+        {/* Feedback Modal */}
+        <FeedbackModal
+          visible={showFeedbackModal}
+          onClose={() => setShowFeedbackModal(false)}
+          userId={user?.id}
+        />
       </View>
     </>
   );
