@@ -305,6 +305,11 @@ export default function SubscriptionScreen() {
     const badge = hasIntro && discountText ? discountText : defaultBadge;
     const subLabel = hasIntro ? `${discountText} first period` : 'Cancel anytime';
     
+    // Display intro price if available, otherwise show regular price
+    const displayPrice = hasIntro && pkg.product.introPrice?.priceString 
+      ? pkg.product.introPrice.priceString 
+      : pkg.product.priceString;
+    
     return (
       <TouchableOpacity 
         style={[styles.planCard, isSelected && styles.planCardSelected]} 
@@ -322,7 +327,7 @@ export default function SubscriptionScreen() {
              <Text style={[styles.planSubLabel, isSelected && styles.textSelectedSub]}>{subLabel}</Text>
           </View>
           <View style={styles.priceContainer}>
-             <Text style={[styles.planPrice, isSelected && styles.textSelected]}>{pkg.product.priceString}</Text>
+             <Text style={[styles.planPrice, isSelected && styles.textSelected]}>{displayPrice}</Text>
              <View style={[styles.radioButton, isSelected && styles.radioButtonSelected]}>
                 {isSelected && <View style={styles.radioButtonInner} />}
              </View>
