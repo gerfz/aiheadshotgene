@@ -123,7 +123,7 @@ async function processNextJob(): Promise<boolean> {
 
 /**
  * Start the worker
- * Polls the queue every 2 seconds for new jobs
+ * Polls the queue every 5 seconds for new jobs (reduced from 2s to save DB calls)
  */
 export function startWorker() {
   if (workerInterval) {
@@ -133,20 +133,20 @@ export function startWorker() {
 
   console.log('🚀 Starting generation worker...');
 
-  // Process jobs every 2 seconds
+  // Process jobs every 5 seconds (when idle)
   workerInterval = setInterval(async () => {
     const processed = await processNextJob();
     if (processed) {
       // If we processed a job, immediately check for another
-      // (don't wait for the full interval)
-      setTimeout(() => processNextJob(), 100);
+      // This ensures we process jobs back-to-back without delay
+      setTimeout(() => processNextJob(), 500);
     }
-  }, 2000);
+  }, 5000);
 
   // Process first job immediately
   processNextJob();
 
-  console.log('✅ Generation worker started');
+  console.log('✅ Generation worker started (polling every 5s when idle)');
 }
 
 /**
