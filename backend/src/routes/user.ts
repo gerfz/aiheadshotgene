@@ -71,7 +71,7 @@ router.get(
           const deviceId = authUser?.user?.user_metadata?.device_id;
           
           // Check if this device has already been used
-          let freeCredits = 3; // Default for new devices
+          let freeCredits = 5; // Default for new devices
           let isSubscribed = false;
           
           if (deviceId) {

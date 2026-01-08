@@ -353,12 +353,21 @@ async function pollGenerationStatus(generationId: string, maxAttempts: number = 
     } catch (pollError: any) {
       console.error('Polling error:', pollError);
       
-      // If we've tried enough times, give up
+      // If this is a content violation or generation failed error, throw immediately
+      if (pollError.message && (
+        pollError.message.includes('CONTENT_POLICY_VIOLATION') ||
+        pollError.message.includes('Generation failed') ||
+        pollError.message.includes('flagged as sensitive')
+      )) {
+        throw pollError; // Re-throw immediately, don't continue polling
+      }
+      
+      // For network errors, check if we've exceeded max attempts
       if (attempts >= maxAttempts) {
         throw new Error('Generation timed out. Please check your gallery later.');
       }
       
-      // Wait before retrying
+      // Wait before retrying (only for network/API errors)
       await new Promise(resolve => setTimeout(resolve, 2000));
     }
   }
