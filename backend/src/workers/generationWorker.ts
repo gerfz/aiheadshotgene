@@ -104,7 +104,36 @@ async function processNextJob(): Promise<boolean> {
     } catch (genError: any) {
       console.error(`❌ Generation failed for job ${job.job_id}:`, genError.message);
 
-      // Mark job as failed (will retry if retries remaining)
+      // Check if this is a content policy violation - these should NOT be retried
+      const isContentViolation = genError.message && (
+        genError.message.includes('CONTENT_POLICY_VIOLATION') ||
+        genError.message.includes('E005') ||
+        genError.message.includes('flagged as sensitive')
+      );
+
+      if (isContentViolation) {
+        console.log('🚫 Content policy violation detected - marking as permanent failure (no retries)');
+        
+        // Mark job as permanently failed
+        await supabaseAdmin
+          .from('generation_jobs')
+          .update({
+            status: 'failed',
+            error_message: genError.message,
+            completed_at: new Date().toISOString()
+          })
+          .eq('id', job.job_id);
+        
+        // Update generation record to failed
+        await supabaseAdmin
+          .from('generations')
+          .update({ status: 'failed' })
+          .eq('id', job.generation_id);
+        
+        return false;
+      }
+
+      // For other errors, use the retry logic
       await supabaseAdmin.rpc('fail_generation_job', {
         p_job_id: job.job_id,
         p_error_message: genError.message || 'Generation failed'
