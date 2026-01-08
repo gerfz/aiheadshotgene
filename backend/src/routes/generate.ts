@@ -211,6 +211,22 @@ router.get(
         return res.status(404).json({ error: 'Generation not found' });
       }
 
+      // If generation failed, fetch the error message from generation_jobs table
+      let errorMessage = null;
+      if (data.status === 'failed') {
+        const { data: jobData } = await require('../services/supabase').supabaseAdmin
+          .from('generation_jobs')
+          .select('error_message')
+          .eq('generation_id', id)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .single();
+        
+        if (jobData?.error_message) {
+          errorMessage = jobData.error_message;
+        }
+      }
+
       // Transform snake_case to camelCase for mobile app compatibility
       const generation = {
         id: data.id,
@@ -221,7 +237,8 @@ router.get(
         customPrompt: data.custom_prompt,
         status: data.status,
         createdAt: data.created_at,
-        isEdited: data.is_edited
+        isEdited: data.is_edited,
+        errorMessage: errorMessage // Include error message if failed
       };
 
       res.json({ generation });

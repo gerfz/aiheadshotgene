@@ -5,4 +5,5 @@ export { CreditsDisplay } from './CreditsDisplay';
 export { ErrorBoundary } from './ErrorBoundary';
 export { BottomNav } from './BottomNav';
 export { Toast } from './Toast';
+export { LoadingScreen } from './LoadingScreen';
 

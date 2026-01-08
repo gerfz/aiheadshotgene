@@ -309,20 +309,49 @@ export default function GeneratingScreen() {
   }
 
   if (error) {
+    // Check if this is a content policy violation
+    const isContentViolation = error.includes('CONTENT_POLICY_VIOLATION') || error.includes('flagged as sensitive');
+    
     return (
       <>
         <Stack.Screen options={{ headerShown: false }} />
         <SafeAreaView style={styles.container}>
           <View style={styles.content}>
-            <Text style={styles.errorIcon}>😔</Text>
-            <Text style={styles.errorTitle}>{isEditMode ? 'Edit Failed' : 'Generation Failed'}</Text>
-            <Text style={styles.errorMessage}>{error}</Text>
-            <Text
+            <Text style={styles.errorIcon}>{isContentViolation ? '🚫' : '😔'}</Text>
+            <Text style={styles.errorTitle}>
+              {isContentViolation ? 'Content Not Allowed' : (isEditMode ? 'Edit Failed' : 'Generation Failed')}
+            </Text>
+            <Text style={styles.errorMessage}>
+              {isContentViolation 
+                ? 'Your prompt contains content that violates our community guidelines. Please ensure your request is appropriate and does not include explicit, sensitive, or inappropriate content.'
+                : error
+              }
+            </Text>
+            
+            {isContentViolation && (
+              <View style={styles.guidelinesBox}>
+                <Text style={styles.guidelinesTitle}>✓ Allowed Content:</Text>
+                <Text style={styles.guidelineText}>• Professional portraits</Text>
+                <Text style={styles.guidelineText}>• Fashion & lifestyle photos</Text>
+                <Text style={styles.guidelineText}>• Creative & artistic styles</Text>
+                <Text style={styles.guidelineText}>• Family-friendly edits</Text>
+                
+                <Text style={[styles.guidelinesTitle, { marginTop: 12 }]}>✗ Not Allowed:</Text>
+                <Text style={styles.guidelineText}>• Adult or explicit content</Text>
+                <Text style={styles.guidelineText}>• Violence or gore</Text>
+                <Text style={styles.guidelineText}>• Discriminatory content</Text>
+                <Text style={styles.guidelineText}>• Illegal activities</Text>
+              </View>
+            )}
+            
+            <TouchableOpacity
               style={styles.retryButton}
               onPress={() => router.back()}
             >
-              Go Back
-            </Text>
+              <Text style={styles.retryButtonText}>
+                {isContentViolation ? '← Try a Different Prompt' : 'Go Back'}
+              </Text>
+            </TouchableOpacity>
           </View>
         </SafeAreaView>
       </>
@@ -441,14 +470,50 @@ const styles = StyleSheet.create({
   },
   errorMessage: {
     fontSize: 16,
-    color: '#EF4444',
+    color: '#94A3B8',
     textAlign: 'center',
-    marginBottom: 32,
+    marginBottom: 24,
+    lineHeight: 24,
+    paddingHorizontal: 8,
+  },
+  guidelinesBox: {
+    backgroundColor: '#1E293B',
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 24,
+    borderWidth: 1,
+    borderColor: '#334155',
+    width: '100%',
+    maxWidth: 400,
+  },
+  guidelinesTitle: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+    marginBottom: 8,
+  },
+  guidelineText: {
+    fontSize: 13,
+    color: '#94A3B8',
+    marginBottom: 4,
+    marginLeft: 8,
   },
   retryButton: {
+    backgroundColor: '#6366F1',
+    paddingVertical: 16,
+    paddingHorizontal: 32,
+    borderRadius: 12,
+    shadowColor: '#6366F1',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  retryButtonText: {
     fontSize: 16,
-    color: '#6366F1',
+    color: '#FFFFFF',
     fontWeight: '600',
+    textAlign: 'center',
   },
   comparisonContent: {
     flex: 1,

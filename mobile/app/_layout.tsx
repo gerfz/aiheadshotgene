@@ -1,15 +1,14 @@
 import { useEffect, useState } from 'react';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 import { useAppStore } from '../src/store/useAppStore';
 import { supabase } from '../src/services/supabase';
 import { initializePurchases, loginUser, syncSubscriptionStatus, addCustomerInfoListener } from '../src/services/purchases';
 import { getHardwareDeviceId } from '../src/services/deviceId';
-import { getCredits, updateSubscriptionStatus } from '../src/services/api';
+import { getCredits, updateSubscriptionStatus, waitForBackendReady } from '../src/services/api';
 import { ErrorBoundary } from '../src/components/ErrorBoundary';
-import { Toast } from '../src/components';
+import { Toast, LoadingScreen } from '../src/components';
 import { posthog, identifyUser, analytics } from '../src/services/posthog';
 import { clearCache } from '../src/services/cache';
 
@@ -18,6 +17,7 @@ const FIRST_TIME_KEY = 'has_seen_welcome';
 export default function RootLayout() {
   const { setUser, setIsLoading } = useAppStore();
   const [initializing, setInitializing] = useState(true);
+  const [loadingProgress, setLoadingProgress] = useState(0);
   const [showVerificationToast, setShowVerificationToast] = useState(false);
 
   useEffect(() => {
@@ -84,6 +84,13 @@ export default function RootLayout() {
                 email: `device-${deviceId}@anonymous.local`,
               });
               
+              // 🔥 FIX 1: Wait for backend to be ready
+              console.log('🔍 Warming up backend...');
+              setLoadingProgress(10);
+              await waitForBackendReady(15000, (progress) => {
+                setLoadingProgress(10 + progress * 0.8); // 10% to 82%
+              });
+              
               // Initialize with new user
               try {
               await Promise.race([
@@ -116,27 +123,44 @@ export default function RootLayout() {
             email: session.user.email || `device-${deviceId}@anonymous.local`,
           });
           
-          // Initialize purchases and login with timeout
-          try {
-            await Promise.race([
-              Promise.all([
-                initializePurchases(session.user.id),
-                loginUser(session.user.id)
-              ]),
-              new Promise((_, reject) => 
-                setTimeout(() => reject(new Error('Initialization timeout')), 8000)
-              )
-            ]);
-            
-            // Sync subscription status in background (non-blocking)
-            syncSubscriptionStatus()
-              .then(isSubscribed => updateSubscriptionStatus(isSubscribed))
-              .then(() => console.log('✅ Subscription status synced in background'))
-              .catch(syncError => console.warn('⚠️ Background sync failed:', syncError));
-          } catch (timeoutError) {
-            console.warn('⚠️ Initialization timeout, continuing anyway:', timeoutError);
-            // Continue even if backend is slow/sleeping
-          }
+          // 🔥 FIX 1: Wait for backend to be ready before making API calls
+          console.log('🔍 Warming up backend...');
+          setLoadingProgress(10); // Starting
+          await waitForBackendReady(15000, (progress) => {
+            setLoadingProgress(10 + progress * 0.8); // 10% to 82%
+          });
+          
+            // Initialize purchases and login with timeout
+            try {
+              setLoadingProgress(85); // Starting initialization
+              await Promise.race([
+                Promise.all([
+                  initializePurchases(session.user.id),
+                  loginUser(session.user.id)
+                ]),
+                new Promise((_, reject) => 
+                  setTimeout(() => reject(new Error('Initialization timeout')), 8000)
+                )
+              ]);
+              
+              setLoadingProgress(95); // Initialization complete
+              
+              // Sync subscription status in background (non-blocking)
+              syncSubscriptionStatus()
+                .then(isSubscribed => updateSubscriptionStatus(isSubscribed))
+                .then(() => {
+                  console.log('✅ Subscription status synced in background');
+                  setLoadingProgress(100); // All done
+                })
+                .catch(syncError => {
+                  console.warn('⚠️ Background sync failed:', syncError);
+                  setLoadingProgress(100); // Continue anyway
+                });
+            } catch (timeoutError) {
+              console.warn('⚠️ Initialization timeout, continuing anyway:', timeoutError);
+              setLoadingProgress(100); // Continue anyway
+              // 🔥 FIX 3: Never downgrade auth state on timeout - keep user logged in
+            }
         } else {
           // No session - create anonymous user (backend will handle credit merging)
           console.log('🔄 Creating anonymous user for device:', deviceId);
@@ -160,6 +184,13 @@ export default function RootLayout() {
             setUser({
               id: data.user.id,
               email: `device-${deviceId}@anonymous.local`,
+            });
+            
+            // 🔥 FIX 1: Wait for backend to be ready
+            console.log('🔍 Warming up backend...');
+            setLoadingProgress(10);
+            await waitForBackendReady(15000, (progress) => {
+              setLoadingProgress(10 + progress * 0.8); // 10% to 82%
             });
             
             // Initialize purchases and login with timeout
@@ -296,14 +327,7 @@ export default function RootLayout() {
   }, []);
 
   if (initializing) {
-    return (
-      <>
-        <StatusBar style="light" />
-        <View style={styles.loading}>
-          <ActivityIndicator color="#6366F1" />
-        </View>
-      </>
-    );
+    return <LoadingScreen progress={loadingProgress} />;
   }
 
   return (
@@ -328,11 +352,4 @@ export default function RootLayout() {
   );
 }
 
-const styles = StyleSheet.create({
-  loading: {
-    flex: 1,
-    backgroundColor: '#0F172A',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-});
+// Styles removed - using LoadingScreen component

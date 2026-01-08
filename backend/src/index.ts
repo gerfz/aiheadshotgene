@@ -27,13 +27,14 @@ app.use((req, res, next) => {
   next();
 });
 
-// Health check
+// Health check - lightweight endpoint for cold start detection
 app.get('/health', (req, res) => {
   const workerStatus = getWorkerStatus();
   res.json({ 
-    status: 'ok', 
+    status: 'ready', // Changed from 'ok' to 'ready' for clarity
     timestamp: new Date().toISOString(),
-    worker: workerStatus
+    worker: workerStatus,
+    uptime: process.uptime()
   });
 });
 

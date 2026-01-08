@@ -238,6 +238,17 @@ export async function generatePortrait(
     if (error.response) {
       console.error('Replicate API Status:', error.response.status, error.response.statusText);
     }
+    
+    // Check for content moderation errors (E005 - sensitive content)
+    if (error.message && error.message.includes('E005')) {
+      throw new Error('CONTENT_POLICY_VIOLATION: Your prompt was flagged by our content filter. Please ensure your request follows community guidelines and does not include inappropriate, explicit, or sensitive content.');
+    }
+    
+    // Check for other common Replicate errors
+    if (error.message && error.message.includes('flagged as sensitive')) {
+      throw new Error('CONTENT_POLICY_VIOLATION: Content detected as sensitive. Please try a different prompt that follows our community guidelines.');
+    }
+    
     throw new Error(`Image generation failed: ${error.message}`);
   }
 }

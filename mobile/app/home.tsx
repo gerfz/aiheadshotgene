@@ -11,7 +11,7 @@ import {
 import { router, Stack, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAppStore } from '../src/store/useAppStore';
-import { getCredits, getGenerations, updateSubscriptionStatus } from '../src/services/api';
+import { getCredits, getGenerations, updateSubscriptionStatus, waitForBackendReady } from '../src/services/api';
 import { signOut } from '../src/services/supabase';
 import { CreditsDisplay, BottomNav } from '../src/components';
 import { syncSubscriptionStatus } from '../src/services/purchases';
@@ -90,21 +90,20 @@ export default function HomeScreen() {
         setIsLoadingFresh(true);
       }
       
+      // 🔥 FIX 1: On first load, ensure backend is ready before making API calls
+      if (retryCount === 0 && !hasInitialLoad) {
+        console.log('🔍 First load: Warming up backend...');
+        await waitForBackendReady(15000);
+      }
+      
       // Small delay to ensure auth state is updated after signup
       await new Promise(resolve => setTimeout(resolve, 100));
       
-      // Add timeout to API calls to prevent infinite loading
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('API timeout')), 15000) // 15 second timeout (increased from 10)
-      );
-      
-      const [creditsData, generationsData] = await Promise.race([
-        Promise.all([
-          getCredits(),
-          getGenerations(),
-        ]),
-        timeoutPromise
-      ]) as [any, any];
+      // 🔥 FIX 2: getCredits() and getGenerations() now have built-in retry logic
+      const [creditsData, generationsData] = await Promise.all([
+        getCredits(),
+        getGenerations(),
+      ]);
       
       // Ensure freeCredits is a number
       const normalizedCredits = {
@@ -125,22 +124,39 @@ export default function HomeScreen() {
       ]);
       
       console.log('✅ Fresh data loaded and cached');
-    } catch (error) {
+    } catch (error: any) {
       console.error(`Failed to load fresh data (attempt ${retryCount + 1}/${maxRetries}):`, error);
       
-      // Retry if we haven't exceeded max retries
+      // 🔥 FIX 3: Never downgrade auth state on transient failures
+      // Only reset to 0 if server explicitly says user not found (401/404)
+      const isRealFailure = error?.status === 401 || error?.status === 404;
+      
+      if (isRealFailure) {
+        console.error('❌ Real auth failure detected (401/404). User not found.');
+        // Only in this case, reset to empty state
+        setCredits({ 
+          freeCredits: 0, 
+          hasCredits: false, 
+          isSubscribed: false 
+        });
+        setGenerations([]);
+        return;
+      }
+      
+      // For timeouts, 5xx errors, network errors: NEVER downgrade, keep retrying
       if (retryCount < maxRetries) {
-        console.log(`🔄 Retrying in ${(retryCount + 1) * 2} seconds...`);
+        console.log(`🔄 Transient error. Retrying in ${(retryCount + 1) * 2} seconds...`);
         await new Promise(resolve => setTimeout(resolve, (retryCount + 1) * 2000)); // Exponential backoff: 2s, 4s, 6s
         return loadFreshData(showAsRefreshing, retryCount + 1);
       }
       
-      // After all retries failed, keep existing data (don't reset to 0)
-      console.warn('⚠️ All retries failed. Keeping cached/existing data.');
+      // 🔥 After all retries failed due to transient errors: KEEP existing/cached data
+      console.warn('⚠️ All retries exhausted due to transient errors. Preserving cached state.');
+      console.warn('⚠️ User can pull-to-refresh to retry manually.');
       
-      // Only set defaults if we have absolutely nothing
+      // Only set defaults if we have absolutely nothing (first time user with network issues)
       if (!credits && !generations.length) {
-        console.warn('⚠️ No cached data available, showing empty state');
+        console.warn('⚠️ No cached data available for first-time user. Showing placeholder.');
         setCredits({ 
           freeCredits: 0, 
           hasCredits: false, 

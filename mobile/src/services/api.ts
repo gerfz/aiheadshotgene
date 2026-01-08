@@ -4,6 +4,61 @@ import { getAccessToken } from './supabase';
 import { CreditsInfo, Generation, GenerationResult } from '../types';
 
 /**
+ * Check if backend is ready (warm) by polling /health endpoint
+ * This prevents making real API calls while backend is cold starting
+ */
+export async function waitForBackendReady(
+  maxWaitMs: number = 30000,
+  onProgress?: (progress: number, attempt: number) => void
+): Promise<boolean> {
+  const startTime = Date.now();
+  const pollInterval = 1000; // Poll every 1 second
+  let attempts = 0;
+  const maxAttempts = Math.ceil(maxWaitMs / pollInterval);
+  
+  console.log('🔍 Checking if backend is ready...');
+  
+  while (Date.now() - startTime < maxWaitMs) {
+    attempts++;
+    
+    // Calculate progress (0-90% during health checks, reserve 90-100% for actual loading)
+    const progress = Math.min((attempts / maxAttempts) * 90, 90);
+    onProgress?.(progress, attempts);
+    
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 3000); // 3s timeout per attempt
+      
+      const response = await fetch(`${API_URL}/health`, {
+        method: 'GET',
+        signal: controller.signal,
+      });
+      
+      clearTimeout(timeoutId);
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data.status === 'ready') {
+          console.log(`✅ Backend ready after ${attempts} attempts (${Date.now() - startTime}ms)`);
+          onProgress?.(90, attempts); // Health check complete
+          return true;
+        }
+      }
+    } catch (error) {
+      // Backend not ready yet, continue polling
+      console.log(`⏳ Backend not ready (attempt ${attempts}/${maxAttempts}), retrying...`);
+    }
+    
+    // Wait before next attempt
+    await new Promise(resolve => setTimeout(resolve, pollInterval));
+  }
+  
+  console.warn('⚠️ Backend health check timed out, proceeding anyway');
+  onProgress?.(90, attempts); // Proceed anyway
+  return false;
+}
+
+/**
  * Helper to add timeout to fetch requests
  */
 async function fetchWithTimeout(url: string, options: RequestInit, timeoutMs: number = 10000): Promise<Response> {
@@ -24,6 +79,61 @@ async function fetchWithTimeout(url: string, options: RequestInit, timeoutMs: nu
     }
     throw error;
   }
+}
+
+/**
+ * Retry wrapper for API calls with exponential backoff
+ * Distinguishes between real failures (401, 404) and transient errors (timeout, 5xx)
+ */
+async function fetchWithRetry<T>(
+  fetchFn: () => Promise<T>,
+  options: {
+    maxRetries?: number;
+    retryDelays?: number[];
+    shouldRetry?: (error: any) => boolean;
+  } = {}
+): Promise<T> {
+  const { 
+    maxRetries = 3, 
+    retryDelays = [1000, 2000, 3000], // 1s, 2s, 3s
+    shouldRetry = (error: any) => {
+      // Don't retry on auth errors or not found
+      if (error?.status === 401 || error?.status === 404) {
+        return false;
+      }
+      // Retry on timeouts, 5xx errors, network errors
+      return true;
+    }
+  } = options;
+  
+  let lastError: any;
+  
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      return await fetchFn();
+    } catch (error: any) {
+      lastError = error;
+      
+      // Don't retry if we shouldn't
+      if (!shouldRetry(error)) {
+        console.log(`❌ Non-retryable error: ${error.message}`);
+        throw error;
+      }
+      
+      // If this was the last attempt, throw
+      if (attempt === maxRetries - 1) {
+        console.log(`❌ All ${maxRetries} retry attempts exhausted`);
+        throw error;
+      }
+      
+      // Wait before retrying
+      const delay = retryDelays[attempt] || retryDelays[retryDelays.length - 1];
+      console.log(`🔄 Retry attempt ${attempt + 1}/${maxRetries} after ${delay}ms: ${error.message}`);
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
+  }
+  
+  throw lastError;
 }
 
 /**
@@ -70,36 +180,44 @@ export async function getMostUsedStyles(): Promise<{ mostUsedStyles: Array<{ sty
 
 // Get user credits (requires authentication)
 export async function getUserCredits(): Promise<CreditsInfo> {
-  const headers = await getAuthHeaders();
-  
-  const response = await fetchWithTimeout(`${API_URL}/api/user/credits`, {
-    method: 'GET',
-    headers,
-  }, 10000); // 10 second timeout
-  
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.message || 'Failed to get credits');
-  }
-  
-  return response.json();
+  return fetchWithRetry(async () => {
+    const headers = await getAuthHeaders();
+    
+    const response = await fetchWithTimeout(`${API_URL}/api/user/credits`, {
+      method: 'GET',
+      headers,
+    }, 15000); // 15 second timeout (increased for cold starts)
+    
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ message: 'Failed to get credits' }));
+      const err: any = new Error(error.message || 'Failed to get credits');
+      err.status = response.status;
+      throw err;
+    }
+    
+    return response.json();
+  });
 }
 
 // Get user's generation history (requires authentication)
 export async function getUserGenerations(): Promise<{ generations: Generation[] }> {
-  const headers = await getAuthHeaders();
-  
-  const response = await fetchWithTimeout(`${API_URL}/api/user/generations`, {
-    method: 'GET',
-    headers,
-  }, 10000); // 10 second timeout
-  
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.message || 'Failed to get generations');
-  }
-  
-  return response.json();
+  return fetchWithRetry(async () => {
+    const headers = await getAuthHeaders();
+    
+    const response = await fetchWithTimeout(`${API_URL}/api/user/generations`, {
+      method: 'GET',
+      headers,
+    }, 15000); // 15 second timeout (increased for cold starts)
+    
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ message: 'Failed to get generations' }));
+      const err: any = new Error(error.message || 'Failed to get generations');
+      err.status = response.status;
+      throw err;
+    }
+    
+    return response.json();
+  });
 }
 
 // =============================================
@@ -214,6 +332,7 @@ async function pollGenerationStatus(generationId: string, maxAttempts: number = 
       
       const data = await response.json();
       const status = data.generation?.status;
+      const errorMessage = data.generation?.errorMessage;
       
       console.log(`📊 Generation status (attempt ${attempts}): ${status}`);
       
@@ -223,7 +342,9 @@ async function pollGenerationStatus(generationId: string, maxAttempts: number = 
           generation: data.generation
         };
       } else if (status === 'failed') {
-        throw new Error('Generation failed');
+        // Use the error message from the backend if available
+        const error = errorMessage || 'Generation failed';
+        throw new Error(error);
       }
       
       // Wait 2 seconds before next poll

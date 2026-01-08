@@ -180,3 +180,4 @@ GRANT EXECUTE ON FUNCTION fail_generation_job TO service_role;
 COMMENT ON TABLE generation_jobs IS 'Queue for async image generation jobs';
 
 
+
