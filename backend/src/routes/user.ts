@@ -71,7 +71,7 @@ router.get(
           const deviceId = authUser?.user?.user_metadata?.device_id;
           
           // Check if this device has already been used
-          let freeCredits = 5; // Default for new devices
+          let freeCredits = 2; // Default for new devices (changed from 5 to 2)
           let isSubscribed = false;
           
           if (deviceId) {
@@ -187,6 +187,42 @@ router.post(
         isSubscribed: data.is_subscribed
       });
     } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  }
+);
+
+// Award credits for rating the app
+router.post(
+  '/rate-reward',
+  verifyToken,
+  async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const userId = req.userId!;
+      
+      // Get current profile
+      const profile = await getUserProfile(userId);
+      
+      // Award 2 credits for rating
+      const { data, error } = await supabaseAdmin
+        .from('profiles')
+        .update({
+          free_credits: profile.free_credits + 2
+        })
+        .eq('id', userId)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      
+      console.log(`✅ Awarded 2 rating credits to user ${userId}`);
+      
+      res.json({
+        success: true,
+        freeCredits: data.free_credits
+      });
+    } catch (error: any) {
+      console.error('Error awarding rating credits:', error);
       res.status(500).json({ error: error.message });
     }
   }

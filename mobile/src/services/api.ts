@@ -229,6 +229,22 @@ export async function getCredits(): Promise<CreditsInfo> {
   return getUserCredits();
 }
 
+// Award credits for rating the app
+export async function awardRatingCredits(): Promise<{ success: boolean; freeCredits: number }> {
+  const headers = await getHeaders();
+  
+  const response = await fetch(`${API_URL}/api/user/rate-reward`, {
+    method: 'POST',
+    headers,
+  });
+
+  if (!response.ok) {
+    throw new Error('Failed to award rating credits');
+  }
+
+  return response.json();
+}
+
 // Get generations (authenticated users only)
 export async function getGenerations(): Promise<{ generations: Generation[] }> {
   return getUserGenerations();

@@ -35,9 +35,20 @@ export async function initializePurchases(userId?: string) {
     if (Platform.OS === 'android') {
       Purchases.configure({ apiKey: REVENUECAT_API_KEY });
       
-      // Enable debug logs in development
+      // Enable debug logs in development with custom handler to avoid errors
       if (__DEV__) {
-        Purchases.setLogLevel(LOG_LEVEL.DEBUG);
+        Purchases.setLogLevel(LOG_LEVEL.VERBOSE);
+        // Set custom log handler to prevent "customLogHandler is not a function" error
+        try {
+          Purchases.setLogHandler((logLevel: string, message: string) => {
+            // Only log errors and warnings in console
+            if (logLevel === 'ERROR' || logLevel === 'WARN') {
+              console.log(`[RevenueCat] ${logLevel}: ${message}`);
+            }
+          });
+        } catch (e) {
+          // Ignore if setLogHandler is not available
+        }
       }
       
       // Login user if provided

@@ -59,6 +59,15 @@ export const RateUsModal: React.FC<RateUsModalProps> = ({ visible, onClose }) =>
     
     // Small delay to show the selection
     setTimeout(async () => {
+      // Award 2 credits for ANY rating
+      try {
+        const { awardRatingCredits } = await import('../services/api');
+        await awardRatingCredits();
+        console.log('✅ Awarded 2 credits for rating');
+      } catch (error) {
+        console.log('Error awarding credits:', error);
+      }
+      
       if (rating >= 4) {
         // Good rating - trigger native store review
         try {
@@ -81,7 +90,7 @@ export const RateUsModal: React.FC<RateUsModalProps> = ({ visible, onClose }) =>
           onClose();
         }, 1500);
       } else {
-        // Low rating - just close and maybe show feedback option
+        // Low rating - don't send to Play Store, but still give credits (already awarded above)
         setShowThankYou(true);
         setTimeout(() => {
           onClose();
@@ -156,7 +165,7 @@ export const RateUsModal: React.FC<RateUsModalProps> = ({ visible, onClose }) =>
               
               {/* Subtitle */}
               <Text style={styles.subtitle}>
-                We'd love to hear your feedback!{'\n'}
+                Rate us and earn 2 free credits!{'\n'}
                 Tap a star to rate us
               </Text>
 
@@ -182,8 +191,8 @@ export const RateUsModal: React.FC<RateUsModalProps> = ({ visible, onClose }) =>
               </Text>
               <Text style={styles.thankYouSubtitle}>
                 {selectedRating >= 4 
-                  ? 'Your support means everything to us!' 
-                  : 'We\'ll work hard to improve!'}
+                  ? 'You earned 2 free credits! 🎁' 
+                  : 'You earned 2 free credits! We\'ll work hard to improve! 🎁'}
               </Text>
             </>
           )}
