@@ -10,6 +10,7 @@ interface TikTokConfig {
   appId: string;
   tiktokAppId: string;
   accessToken?: string;
+  debugMode?: boolean;
 }
 
 interface TikTokEvent {
@@ -39,13 +40,31 @@ class TikTokSDK {
       await NativeTikTokSDK.initialize(
         config.appId,
         config.tiktokAppId,
-        config.accessToken || ''
+        config.accessToken || '',
+        config.debugMode || false
       );
       this.initialized = true;
       console.log('TikTok SDK initialized successfully');
     } catch (error) {
       console.error('Failed to initialize TikTok SDK:', error);
       throw error;
+    }
+  }
+
+  /**
+   * Set test event code for debug mode
+   * @param code - Test event code from TikTok dashboard
+   */
+  async setTestEventCode(code: string): Promise<void> {
+    if (Platform.OS !== 'android' || !NativeTikTokSDK) {
+      return;
+    }
+
+    try {
+      await NativeTikTokSDK.setTestEventCode(code);
+      console.log('TikTok test event code set:', code);
+    } catch (error) {
+      console.error('Failed to set test event code:', error);
     }
   }
 

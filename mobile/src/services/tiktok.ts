@@ -14,7 +14,13 @@ const TIKTOK_CONFIG = {
   appId: 'com.aiportrait.studio',
   tiktokAppId: '7596076889249218568',
   accessToken: 'TTY6OCuPwnlefc2VSlanM2a0Yg0vxDH7', // App Secret
+  debugMode: false, // FALSE = Production mode (real events for verification)
 };
+
+// Debug mode info:
+// When debugMode = true: Events appear in "Test Events" tab (for testing only)
+// When debugMode = false: Events are REAL and used for app verification and reporting
+// Status will change from "Pending Verification" to "Verified" once real events are received
 
 class TikTokService {
   private isInitialized = false;
@@ -37,6 +43,11 @@ class TikTokService {
     try {
       console.log('TikTok SDK: Initializing...');
       await tiktokSDK.initialize(TIKTOK_CONFIG);
+      
+      if (TIKTOK_CONFIG.debugMode) {
+        console.log('TikTok SDK: Debug mode enabled - events will appear in Test Events tab');
+      }
+      
       this.isInitialized = true;
       console.log('TikTok SDK: Initialized successfully');
       
