@@ -17,6 +17,7 @@ import { STYLE_PRESETS } from '../src/constants/styles';
 import { analytics } from '../src/services/posthog';
 import { incrementGenerationCount } from '../src/components/RateUsModal';
 import { cacheCredits } from '../src/services/cache';
+import tiktokService from '../src/services/tiktok';
 
 const LOADING_MESSAGES = [
   'Analyzing your photo...',
@@ -121,6 +122,10 @@ export default function GeneratingScreen() {
         // Track generation completed
         const duration = (Date.now() - startTime) / 1000;
         analytics.generationCompleted(selectedStyle, duration);
+        
+        // Track in TikTok
+        const imageCount = result.generation?.images?.length || 4;
+        await tiktokService.trackPortraitGeneration(selectedStyle, imageCount);
         
         // Increment generation count for Rate Us popup logic
         const genCount = await incrementGenerationCount();

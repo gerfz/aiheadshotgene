@@ -13,6 +13,7 @@ import { router, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAppStore } from '../src/store/useAppStore';
 import { STYLE_PRESETS } from '../src/constants/styles';
+import tiktokService from '../src/services/tiktok';
 
 const { width } = Dimensions.get('window');
 const cardWidth = (width - 60) / 2; // 2 columns with padding
@@ -53,8 +54,10 @@ export default function StyleSelectScreen() {
     setSelectedStyle(styleKey);
   };
 
-  const handleContinue = () => {
+  const handleContinue = async () => {
     if (selectedStyle) {
+      // Track style selection in TikTok
+      await tiktokService.trackStyleSelection(selectedStyle);
       router.push('/generating');
     }
   };

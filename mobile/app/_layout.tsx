@@ -11,6 +11,7 @@ import { ErrorBoundary } from '../src/components/ErrorBoundary';
 import { Toast, LoadingScreen } from '../src/components';
 import { posthog, identifyUser, analytics } from '../src/services/posthog';
 import { clearCache } from '../src/services/cache';
+import tiktokService from '../src/services/tiktok';
 
 const FIRST_TIME_KEY = 'has_seen_welcome';
 
@@ -28,6 +29,9 @@ export default function RootLayout() {
       try {
         // Track app opened
         analytics.appOpened();
+        
+        // Initialize TikTok SDK
+        await tiktokService.initialize();
         
         // Get device ID
         const deviceId = await getHardwareDeviceId();
@@ -84,6 +88,10 @@ export default function RootLayout() {
                 email: `device-${deviceId}@anonymous.local`,
               });
               
+              // Identify user in TikTok
+              await tiktokService.identifyUser(newData.user.id, `device-${deviceId}@anonymous.local`);
+              await tiktokService.trackRegistration();
+              
               // 🔥 FIX 1: Wait for backend to be ready
               console.log('🔍 Warming up backend...');
               setLoadingProgress(10);
@@ -122,6 +130,12 @@ export default function RootLayout() {
             id: session.user.id,
             email: session.user.email || `device-${deviceId}@anonymous.local`,
           });
+          
+          // Identify user in TikTok
+          await tiktokService.identifyUser(
+            session.user.id,
+            session.user.email || `device-${deviceId}@anonymous.local`
+          );
           
           // 🔥 FIX 1: Wait for backend to be ready before making API calls
           console.log('🔍 Warming up backend...');
@@ -185,6 +199,10 @@ export default function RootLayout() {
               id: data.user.id,
               email: `device-${deviceId}@anonymous.local`,
             });
+            
+            // Identify user in TikTok
+            await tiktokService.identifyUser(data.user.id, `device-${deviceId}@anonymous.local`);
+            await tiktokService.trackRegistration();
             
             // 🔥 FIX 1: Wait for backend to be ready
             console.log('🔍 Warming up backend...');

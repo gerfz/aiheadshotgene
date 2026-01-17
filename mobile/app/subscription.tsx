@@ -29,6 +29,7 @@ import { useAppStore } from '../src/store/useAppStore';
 import { supabase } from '../src/services/supabase';
 import { API_URL } from '../src/constants/config';
 import { analytics } from '../src/services/posthog';
+import tiktokService from '../src/services/tiktok';
 
 const { width, height } = Dimensions.get('window');
 const SHOW_SUBSCRIPTION_KEY = 'show_subscription_after_onboarding';
@@ -61,6 +62,7 @@ export default function SubscriptionScreen() {
     loadOfferings();
     // Track subscription screen view
     analytics.subscriptionScreenViewed();
+    tiktokService.trackSubscriptionView();
   }, []);
 
   // Auto-scroll background images
@@ -130,6 +132,11 @@ export default function SubscriptionScreen() {
             hasCredits: true, 
             isSubscribed: true 
           });
+          
+          // Track subscription purchase in TikTok
+          const price = pkg.product.price;
+          const productId = pkg.identifier;
+          await tiktokService.trackSubscriptionPurchase(productId, price, pkg.product.currencyCode);
           
           // Clear the subscription flag
           await SecureStore.deleteItemAsync(SHOW_SUBSCRIPTION_KEY);

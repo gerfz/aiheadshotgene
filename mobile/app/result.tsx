@@ -20,6 +20,7 @@ import { STYLE_PRESETS } from '../src/constants/styles';
 import { deleteGeneration, getUserGenerations } from '../src/services/api';
 import { analytics } from '../src/services/posthog';
 import { RateUsModal, shouldShowRateUs } from '../src/components/RateUsModal';
+import tiktokService from '../src/services/tiktok';
 
 export default function ResultScreen() {
   const { setSelectedImage, setSelectedStyle, setGenerations } = useAppStore();
@@ -40,6 +41,11 @@ export default function ResultScreen() {
   // Check if we should show the Rate Us modal
   useEffect(() => {
     const checkRateUs = async () => {
+      // Track portrait view in TikTok
+      if (id && styleKey) {
+        await tiktokService.trackPortraitView(id, styleKey);
+      }
+      
       // If param says show rate us, or check the stored count
       if (showRateUs === 'true') {
         const shouldShow = await shouldShowRateUs();
@@ -52,7 +58,7 @@ export default function ResultScreen() {
       }
     };
     checkRateUs();
-  }, [showRateUs]);
+  }, [showRateUs, id, styleKey]);
 
   if (!generatedUrl) {
     return (
@@ -137,6 +143,11 @@ export default function ResultScreen() {
       // Track download
       analytics.photoDownloaded(styleKey || 'unknown');
       
+      // Track in TikTok
+      if (id) {
+        await tiktokService.trackPortraitDownload(id);
+      }
+      
       Alert.alert(
         'Success! 🎉',
         'Portrait saved to your gallery',
@@ -165,6 +176,11 @@ export default function ResultScreen() {
       
       // Track share
       analytics.photoShared(styleKey || 'unknown');
+      
+      // Track in TikTok
+      if (id) {
+        await tiktokService.trackPortraitShare(id, 'native_share');
+      }
     } catch (error) {
       console.error('Share error:', error);
       Alert.alert('Error', 'Failed to share image');
