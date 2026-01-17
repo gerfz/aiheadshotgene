@@ -72,9 +72,12 @@ export const RateUsModal: React.FC<RateUsModalProps> = ({ visible, onClose }) =>
         // Good rating - trigger native store review
         try {
           const isAvailable = await StoreReview.isAvailableAsync();
+          console.log('📱 Store review available:', isAvailable);
           if (isAvailable) {
+            console.log('✅ Requesting store review...');
             await StoreReview.requestReview();
           } else {
+            console.log('⚠️ Store review not available (emulator or no Play Store)');
             // Fallback: open store page directly
             if (Platform.OS === 'android') {
               // You can add your Play Store link here
@@ -82,7 +85,7 @@ export const RateUsModal: React.FC<RateUsModalProps> = ({ visible, onClose }) =>
             }
           }
         } catch (error) {
-          console.log('Store review error:', error);
+          console.log('❌ Store review error:', error);
         }
         
         setShowThankYou(true);
