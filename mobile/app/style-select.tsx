@@ -79,13 +79,13 @@ const STATIC_CATEGORIES = [
     id: 'business',
     name: 'Business',
     icon: '💼',
-    styles: ['business', 'tight_portrait', 'luxury_fashion', 'professional_headshot'],
+    styles: ['executive_portrait', 'corporate_headshot', 'startup_founder', 'business_casual', 'conference_speaker', 'business', 'tight_portrait', 'luxury_fashion', 'professional_headshot'],
   },
   {
     id: 'dating',
     name: 'Dating',
     icon: '💕',
-    styles: ['wine_bar', 'emotional_film', 'with_puppy', 'nineties_camera'],
+    styles: ['candlelit_dinner', 'sunset_walk', 'cozy_date_night', 'romantic_picnic', 'jazz_club_date', 'wine_bar', 'emotional_film', 'with_puppy', 'nineties_camera'],
   },
   {
     id: 'social_lifestyle',

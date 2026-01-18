@@ -329,16 +329,16 @@ export default function HomeScreen() {
                 </View>
               </View>
               
-              <Text style={styles.updateHeadline}>3 New Styles Added</Text>
+              <Text style={styles.updateHeadline}>16 New Styles Added</Text>
               <Text style={styles.updateDescription}>
-                Social, Lifestyle & Creative categories now available
+                Business, Dating & Social/Lifestyle categories expanded with amazing new styles
               </Text>
               
               <View style={styles.updateDivider} />
               
               <View style={styles.nextUpdateRow}>
                 <Text style={styles.nextUpdateLabel}>Next Update:</Text>
-                <Text style={styles.nextUpdateDate}>Jan 15, 2025</Text>
+                <Text style={styles.nextUpdateDate}>Feb 15, 2026</Text>
               </View>
             </View>
           </View>

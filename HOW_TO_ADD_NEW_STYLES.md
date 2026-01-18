@@ -36,7 +36,10 @@ The AI:
    - Users see that the style works for everyone
    - Prevents gender bias in style previews
 4. Generates a preview image using the Nano Banana model
-5. Receives the image URL from Replicate
+5. **Receives binary image data** (not URL) via async iterator
+   - Replicate streams the JPEG data as chunks
+   - Must collect all chunks and combine into Buffer
+   - This is the current API behavior (as of Jan 2026)
 
 **Gender Alternation Strategy:**
 - Check the last added style's preview gender
@@ -44,12 +47,20 @@ The AI:
 - Maintains balanced representation across all styles
 - Example sequence: Wine Bar (male) → Coffee Date (female) → Beach Sunset (male)
 
+**⚠️ Critical: Replicate API Output Handling**
+- Replicate's `nano-banana` model returns **binary data as async iterator**
+- NOT a URL string (this changed from earlier versions)
+- Must handle: `for await (const chunk of output)` to collect binary chunks
+- Combine chunks: `Buffer.concat(chunks, totalLength)`
+- Then upload the Buffer directly to Supabase
+
 ### Step 3: Upload Preview to Supabase Storage
 The AI automatically:
-1. Downloads the generated image from Replicate
-2. Uploads it to Supabase Storage bucket: `style-previews`
-3. Gets the public URL for use in the app
-4. **No local assets stored** - everything uses Supabase URLs
+1. **Receives binary JPEG data** from Replicate (as async iterator chunks)
+2. Combines all chunks into a single Buffer
+3. Uploads the Buffer directly to Supabase Storage bucket: `style-previews`
+4. Gets the public URL for use in the app
+5. **No local assets stored** - everything uses Supabase URLs
 
 ### Step 4: Review & Approval
 The AI presents:
@@ -319,13 +330,20 @@ Supabase Storage:
 
 ### API Integration
 - **Replicate API**: `google/nano-banana` model for image generation
+  - **Output Format**: Binary JPEG data via async iterator (NOT URL)
+  - **Must handle**: `for await (const chunk of output)` pattern
+  - **Combine chunks**: `Buffer.concat(chunks)` before upload
+  - **API Token**: Stored in `.env` as `REPLICATE_API_TOKEN`
 - **Supabase Storage**: `style-previews` bucket for preview hosting
+  - **Upload**: Direct Buffer upload with `contentType: 'image/jpeg'`
+  - **Upsert**: Set to `true` to allow overwriting
+  - **Public URLs**: Generated via `getPublicUrl(filePath)`
 - **Backend Endpoint**: `/api/generate` uses prompts from `nanoBanana.ts`
 - **Preview Generation**: Uses generic reference face (alternates gender)
 - **User Generation**: Uses uploaded user face
 - **Reference Images**: Unsplash provides diverse, high-quality reference faces
-  - Male references: Professional, diverse, clear facial features
-  - Female references: Professional, diverse, clear facial features
+  - Male: `https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=800&q=80`
+  - Female: `https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=800&q=80`
   - Alternates between genders for each new style
 
 ---
@@ -405,11 +423,23 @@ If the preview isn't quite right:
 3. Clear cache: `npx expo start --clear`
 4. Full rebuild: `npx expo run:android`
 
-### "Preview image doesn't load"
+### "Preview image doesn't load (404 error)"
 **Solution:**
-1. Check Supabase URL is correct and accessible
-2. Verify image was uploaded successfully
-3. Check bucket permissions (should be public)
+1. **Most Common**: Image wasn't actually uploaded to Supabase
+   - Replicate API output handling failed
+   - Must handle binary data as async iterator, not URL
+   - Check generation script properly collects chunks
+2. Check Supabase URL is correct and accessible
+3. Verify image was uploaded successfully (check Supabase dashboard)
+4. Check bucket permissions (should be public)
+
+### "Invalid image URL received" error
+**Solution:**
+- Replicate is returning binary data, not URL
+- Script must handle async iterator: `for await (const chunk of output)`
+- Combine chunks: `Buffer.concat(chunks)`
+- Upload Buffer directly to Supabase
+- **Do NOT** try to parse binary data as string/URL
 
 ### "Preview image doesn't match my vision"
 **Solution:**
@@ -425,6 +455,45 @@ If the preview isn't quite right:
 **Solution:**
 → This is expected - styles are manually assigned to categories
 → Request to add the style to additional categories if needed
+
+### "Generation script completes but images return 404"
+**Root Cause:**
+- First attempt used incorrect output handling
+- Script tried to parse binary JPEG data as URL string
+- Result: Script "succeeded" but didn't actually upload anything
+
+**Solution:**
+```javascript
+// ❌ WRONG - Tries to parse binary as string
+let imageUrl;
+if (output && Symbol.asyncIterator in Object(output)) {
+  const chunks = [];
+  for await (const chunk of output) {
+    if (typeof chunk === 'string') {  // ❌ Binary data is NOT string
+      chunks.push(chunk);
+    }
+  }
+  imageUrl = chunks.join('').trim();  // ❌ Results in garbage
+}
+
+// ✅ CORRECT - Handles binary data properly
+let imageBuffer;
+if (output && Symbol.asyncIterator in Object(output)) {
+  const chunks = [];
+  for await (const chunk of output) {
+    chunks.push(chunk);  // ✅ Keep as Buffer/Uint8Array
+  }
+  const totalLength = chunks.reduce((acc, chunk) => acc + chunk.length, 0);
+  imageBuffer = Buffer.concat(chunks, totalLength);  // ✅ Combine binary
+}
+// Then upload imageBuffer directly to Supabase
+```
+
+**Key Lesson:**
+- Replicate's `nano-banana` model returns **binary JPEG data**
+- Must handle as Buffer, not string
+- Upload Buffer directly to Supabase Storage
+- This is the correct behavior as of January 2026
 
 ---
 

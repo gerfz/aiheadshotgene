@@ -32,6 +32,20 @@ const LUXURY_YACHT_PHOTO_1 = { uri: 'https://pyziuothzjdijkvdryht.supabase.co/st
 const CITY_ROOFTOP_PHOTO_1 = { uri: 'https://pyziuothzjdijkvdryht.supabase.co/storage/v1/object/public/style-previews/city_rooftop/preview.jpg' };
 const BEACH_SUNSET_PHOTO_1 = { uri: 'https://pyziuothzjdijkvdryht.supabase.co/storage/v1/object/public/style-previews/beach_sunset/preview.jpg' };
 
+// Business photos
+const EXECUTIVE_PORTRAIT_PHOTO_1 = { uri: 'https://pyziuothzjdijkvdryht.supabase.co/storage/v1/object/public/style-previews/executive_portrait/preview.jpg' };
+const CORPORATE_HEADSHOT_PHOTO_1 = { uri: 'https://pyziuothzjdijkvdryht.supabase.co/storage/v1/object/public/style-previews/corporate_headshot/preview.jpg' };
+const STARTUP_FOUNDER_PHOTO_1 = { uri: 'https://pyziuothzjdijkvdryht.supabase.co/storage/v1/object/public/style-previews/startup_founder/preview.jpg' };
+const BUSINESS_CASUAL_PHOTO_1 = { uri: 'https://pyziuothzjdijkvdryht.supabase.co/storage/v1/object/public/style-previews/business_casual/preview.jpg' };
+const CONFERENCE_SPEAKER_PHOTO_1 = { uri: 'https://pyziuothzjdijkvdryht.supabase.co/storage/v1/object/public/style-previews/conference_speaker/preview.jpg' };
+
+// Dating photos
+const CANDLELIT_DINNER_PHOTO_1 = { uri: 'https://pyziuothzjdijkvdryht.supabase.co/storage/v1/object/public/style-previews/candlelit_dinner/preview.jpg' };
+const SUNSET_WALK_PHOTO_1 = { uri: 'https://pyziuothzjdijkvdryht.supabase.co/storage/v1/object/public/style-previews/sunset_walk/preview.jpg' };
+const COZY_DATE_NIGHT_PHOTO_1 = { uri: 'https://pyziuothzjdijkvdryht.supabase.co/storage/v1/object/public/style-previews/cozy_date_night/preview.jpg' };
+const ROMANTIC_PICNIC_PHOTO_1 = { uri: 'https://pyziuothzjdijkvdryht.supabase.co/storage/v1/object/public/style-previews/romantic_picnic/preview.jpg' };
+const JAZZ_CLUB_DATE_PHOTO_1 = { uri: 'https://pyziuothzjdijkvdryht.supabase.co/storage/v1/object/public/style-previews/jazz_club_date/preview.jpg' };
+
 // Childhood Character photos
 const PIKACHU_PHOTO_1 = { uri: 'https://pyziuothzjdijkvdryht.supabase.co/storage/v1/object/public/style-previews/Childhood/pika.jpg' };
 const TOM_AND_JERRY_PHOTO_1 = { uri: 'https://pyziuothzjdijkvdryht.supabase.co/storage/v1/object/public/style-previews/Childhood/tomnjerry.jpg' };
@@ -460,6 +474,86 @@ export const STYLE_PRESETS: Record<string, StylePreset> = {
     thumbnail: BEACH_SUNSET_PHOTO_1,
     thumbnails: [BEACH_SUNSET_PHOTO_1],
     prompt: `Keep the facial features of the person in the uploaded image exactly consistent. Preserve 100% accuracy of the face from the reference image. Important: do not change the face. Create a serene, magical beach sunset portrait. The person stands on a sandy beach with ocean waves and sunset in background. The person wears a flowing white or cream sundress, barefoot, minimal jewelry, hair naturally flowing in ocean breeze. Expression: Peaceful, joyful, free with a genuine smile. Eyes show serenity and happiness. Carefree beach energy. Pose: Standing with arms slightly spread or one hand touching hair. Natural, flowing movement. Dress and hair gently blowing in breeze. Relaxed beach posture. Setting: Beautiful sandy beach with gentle waves. Dramatic sunset with orange, pink, and purple sky. Ocean stretching to horizon. Wet sand reflecting sunset colors. Tropical or coastal paradise setting. Lighting: Golden hour sunset creating warm, magical glow. Backlit silhouette effect with rim lighting. Sunset reflecting off ocean and wet sand. Dreamy beach photography aesthetic. Composition: Medium to full portrait showing beach and sunset. Shallow depth of field with ocean and sunset creating stunning background. Color palette: Warm sunset oranges and pinks, cream dress, golden sand, ocean blues, purple sky. Photography style: Beach lifestyle editorial. Shot on 50mm lens with golden hour sunset lighting. High-detail fabric flow and hair movement. Mood: Peaceful, magical, free. The perfect beach sunset moment.`,
+  },
+  executive_portrait: {
+    key: 'executive_portrait',
+    name: 'Executive Portrait',
+    description: 'Modern executive portrait with confident leadership presence',
+    thumbnail: EXECUTIVE_PORTRAIT_PHOTO_1,
+    thumbnails: [EXECUTIVE_PORTRAIT_PHOTO_1],
+    prompt: `Keep the facial features of the person in the uploaded image exactly consistent. Preserve 100% accuracy of the face from the reference image. Important: do not change the face. Create a powerful, modern executive portrait. The person wears a sharp charcoal grey three-piece suit with subtle pinstripes, crisp white dress shirt, silk tie in deep burgundy, pocket square, luxury watch, polished black leather shoes. Expression: Confident, authoritative, approachable with a subtle knowing smile. Eyes show leadership and vision. Executive presence energy. Pose: Standing with arms crossed confidently, or one hand in pocket with the other adjusting cufflink. Strong, commanding posture. Body slightly angled. Setting: Modern executive office with floor-to-ceiling windows showing city skyline. Minimalist contemporary furniture. Dark wood desk. Leather executive chair. Modern art on walls. Professional corporate environment. Lighting: Soft directional window light creating depth. Subtle rim light for separation. Professional corporate photography lighting. Clean, crisp aesthetic. Composition: Medium to full portrait showing executive presence and office environment. Shallow depth of field with office softly blurred. Color palette: Charcoal suit, white shirt, burgundy tie, warm wood tones, city skyline blues, professional greys. Photography style: High-end corporate editorial. Shot on 85mm f/1.8 lens with professional lighting. High-detail suit texture and fabric weave. Mood: Powerful, confident, successful. The modern business leader.`,
+  },
+  corporate_headshot: {
+    key: 'corporate_headshot',
+    name: 'Corporate Headshot',
+    description: 'Professional corporate headshot with polished business style',
+    thumbnail: CORPORATE_HEADSHOT_PHOTO_1,
+    thumbnails: [CORPORATE_HEADSHOT_PHOTO_1],
+    prompt: `Keep the facial features of the person in the uploaded image exactly consistent. Preserve 100% accuracy of the face from the reference image. Important: do not change the face. Create a polished, professional corporate headshot. The person wears a tailored navy blue blazer over a crisp white blouse, minimal elegant jewelry (small earrings, delicate necklace), professional makeup, hair styled in elegant updo or sleek professional style. Expression: Confident, professional, approachable with a warm genuine smile. Eyes show competence and friendliness. Corporate professional energy. Pose: Shoulders angled slightly, facing camera directly. Arms not visible (tight headshot). Professional posture with excellent presence. Setting: Clean corporate studio backdrop in neutral grey or soft blue. Professional photography studio setup. Simple, distraction-free background. Lighting: Classic three-point lighting creating soft, flattering illumination. Catchlights in eyes. No harsh shadows. Professional headshot lighting. Composition: Tight headshot from shoulders up with ample headroom. Sharp focus on eyes. Professional corporate photography framing. Color palette: Navy blazer, crisp white, neutral background, warm skin tones, professional polish. Photography style: Corporate headshot photography. Shot on 85mm f/2.0 lens with studio lighting. High-detail fabric texture and professional finish. Mood: Professional, competent, approachable. The perfect corporate headshot.`,
+  },
+  startup_founder: {
+    key: 'startup_founder',
+    name: 'Startup Founder',
+    description: 'Modern tech entrepreneur with innovative startup energy',
+    thumbnail: STARTUP_FOUNDER_PHOTO_1,
+    thumbnails: [STARTUP_FOUNDER_PHOTO_1],
+    prompt: `Keep the facial features of the person in the uploaded image exactly consistent. Preserve 100% accuracy of the face from the reference image. Important: do not change the face. Create a modern, innovative startup founder portrait. The person wears smart casual attire - tailored blazer in navy or charcoal over a premium t-shirt or casual button-up, dark fitted jeans, minimalist sneakers or casual leather shoes, modern watch or tech accessories. Expression: Visionary, innovative, energetic with a confident smile. Eyes show passion and determination. Startup founder energy. Pose: Leaning casually against modern desk or standing with hands in pockets. Relaxed yet confident posture. Modern professional stance. Setting: Modern startup office with exposed brick, industrial elements, standing desks, monitors with code or designs, whiteboard with ideas, plants, contemporary furniture. Tech startup aesthetic. Lighting: Natural window light mixed with modern office lighting. Bright, energetic atmosphere. Contemporary photography style. Composition: Medium portrait showing startup environment. Shallow depth of field with office creating modern bokeh. Color palette: Smart casual blazer, premium basics, modern office colors, tech aesthetic, natural light tones. Photography style: Modern business editorial. Shot on 35mm lens with natural lighting. High-detail casual professional texture. Mood: Innovative, energetic, visionary. The modern tech entrepreneur.`,
+  },
+  business_casual: {
+    key: 'business_casual',
+    name: 'Business Casual',
+    description: 'Smart casual professional with modern workplace style',
+    thumbnail: BUSINESS_CASUAL_PHOTO_1,
+    thumbnails: [BUSINESS_CASUAL_PHOTO_1],
+    prompt: `Keep the facial features of the person in the uploaded image exactly consistent. Preserve 100% accuracy of the face from the reference image. Important: do not change the face. Create a smart casual professional portrait. The person wears modern business casual - tailored blazer in camel or soft grey over a silk camisole or quality t-shirt, tailored trousers or dark jeans, minimal elegant jewelry, professional yet relaxed styling. Expression: Confident, modern, approachable with a natural smile. Eyes show professionalism and warmth. Smart casual energy. Pose: Standing with one hand on hip, other holding tablet or coffee. Or sitting on desk edge. Relaxed professional posture. Setting: Modern open office with natural light, contemporary furniture, plants, collaborative workspace. Bright, airy professional environment. Lighting: Abundant natural window light creating bright, fresh atmosphere. Soft shadows. Modern workplace photography aesthetic. Composition: Medium portrait showing modern workplace. Shallow depth of field with office softly blurred. Color palette: Soft blazer tones, quality basics, modern office whites and greys, natural light, fresh professional aesthetic. Photography style: Modern workplace editorial. Shot on 50mm f/1.8 lens with natural lighting. High-detail smart casual texture. Mood: Modern, professional, approachable. The contemporary workplace professional.`,
+  },
+  conference_speaker: {
+    key: 'conference_speaker',
+    name: 'Conference Speaker',
+    description: 'Professional speaker presenting at business conference',
+    thumbnail: CONFERENCE_SPEAKER_PHOTO_1,
+    thumbnails: [CONFERENCE_SPEAKER_PHOTO_1],
+    prompt: `Keep the facial features of the person in the uploaded image exactly consistent. Preserve 100% accuracy of the face from the reference image. Important: do not change the face. Create a dynamic conference speaker portrait. The person wears professional presentation attire - well-fitted suit in navy or charcoal, or smart blazer with dress shirt (no tie for modern look), lapel microphone visible, professional watch. Expression: Engaging, confident, passionate with animated expression. Eyes show expertise and enthusiasm. Speaker energy. Pose: Mid-gesture while presenting - hand raised making a point, or holding presentation clicker. Dynamic, engaging posture. Body language shows confidence. Setting: Professional conference stage with presentation screen or backdrop behind. Soft stage lighting. Professional conference environment. Audience slightly visible and blurred in background. Lighting: Professional stage lighting with key light on speaker. Soft fill light. Rim light for separation. Conference photography aesthetic. Composition: Medium portrait showing speaker in action. Shallow depth of field with conference environment softly blurred. Color palette: Professional suit, stage lighting, conference blues and greys, professional presentation aesthetic. Photography style: Conference photography. Shot on 50mm lens with stage lighting. High-detail capturing speaker in action. Mood: Engaging, authoritative, dynamic. The professional thought leader.`,
+  },
+  candlelit_dinner: {
+    key: 'candlelit_dinner',
+    name: 'Candlelit Dinner',
+    description: 'Romantic candlelit dinner with intimate restaurant ambiance',
+    thumbnail: CANDLELIT_DINNER_PHOTO_1,
+    thumbnails: [CANDLELIT_DINNER_PHOTO_1],
+    prompt: `Keep the facial features of the person in the uploaded image exactly consistent. Preserve 100% accuracy of the face from the reference image. Important: do not change the face. Create a romantic, intimate candlelit dinner portrait. The person wears an elegant dress in deep red or burgundy with sophisticated neckline, delicate gold jewelry (necklace, earrings), elegant updo or soft romantic waves, subtle makeup with emphasis on eyes. Expression: Romantic, warm, inviting with a soft genuine smile. Eyes show warmth and connection. Intimate dinner date energy. Pose: Sitting at intimate table for two, leaning forward slightly with one hand near wine glass, other hand resting elegantly. Engaged, romantic posture. Setting: Upscale romantic restaurant with dim ambient lighting. White tablecloth, elegant place settings, wine glasses, small floral centerpiece. Candles on table creating warm glow. Soft bokeh of other diners and restaurant ambiance in background. Lighting: Warm candlelight as primary light source creating intimate glow on face. Soft ambient restaurant lighting. Romantic golden tones. Cinematic dinner date photography aesthetic. Composition: Medium portrait from waist up showing romantic dinner setting. Shallow depth of field with restaurant softly blurred into beautiful bokeh. Color palette: Deep red or burgundy dress, warm candlelight, gold jewelry, white tablecloth, rich restaurant ambiance. Photography style: Romantic lifestyle editorial. Shot on 50mm f/1.8 lens with candlelight and ambient lighting. High-detail fabric texture and jewelry sparkle. Mood: Romantic, intimate, elegant. The perfect candlelit dinner date.`,
+  },
+  sunset_walk: {
+    key: 'sunset_walk',
+    name: 'Sunset Walk',
+    description: 'Romantic walk during golden hour with warm sunset glow',
+    thumbnail: SUNSET_WALK_PHOTO_1,
+    thumbnails: [SUNSET_WALK_PHOTO_1],
+    prompt: `Keep the facial features of the person in the uploaded image exactly consistent. Preserve 100% accuracy of the face from the reference image. Important: do not change the face. Create a romantic golden hour walk portrait. The person wears casual romantic attire - fitted henley shirt or casual button-up in earth tones (olive, tan, navy), dark jeans, casual watch, relaxed styling. Expression: Warm, genuine, romantic with a natural smile. Eyes show happiness and connection. Romantic walk energy. Pose: Walking casually with hands in pockets or one hand running through hair. Natural, candid movement. Relaxed, approachable posture. Setting: Beautiful outdoor setting during golden hour - tree-lined path, park, or waterfront. Warm sunset light filtering through trees or reflecting off water. Natural romantic environment. Lighting: Golden hour sunlight creating warm, romantic glow. Backlit with rim lighting creating halo effect. Soft shadows. Dreamy romantic photography aesthetic. Composition: Medium to full portrait showing romantic outdoor setting. Shallow depth of field with background creating golden bokeh. Color palette: Warm earth tones, golden sunset light, natural greens, soft romantic colors. Photography style: Romantic lifestyle editorial. Shot on 50mm lens with golden hour natural lighting. High-detail fabric texture and natural light. Mood: Romantic, natural, warm. The perfect sunset walk moment.`,
+  },
+  cozy_date_night: {
+    key: 'cozy_date_night',
+    name: 'Cozy Date Night',
+    description: 'Intimate cozy home date with warm comfortable atmosphere',
+    thumbnail: COZY_DATE_NIGHT_PHOTO_1,
+    thumbnails: [COZY_DATE_NIGHT_PHOTO_1],
+    prompt: `Keep the facial features of the person in the uploaded image exactly consistent. Preserve 100% accuracy of the face from the reference image. Important: do not change the face. Create a cozy, intimate home date night portrait. The person wears comfortable yet stylish attire - soft cashmere sweater in cream or blush pink, comfortable jeans or lounge pants, minimal jewelry, natural relaxed styling with soft waves. Expression: Warm, comfortable, intimate with a genuine smile. Eyes show contentment and connection. Cozy date night energy. Pose: Sitting on couch with legs tucked, holding mug of hot chocolate or tea with both hands. Relaxed, comfortable, intimate posture. Setting: Cozy living room with soft throw blankets, cushions, warm lighting. Fireplace or candles visible. String lights or soft lamps. Books, plants, comfortable home atmosphere. Lighting: Warm ambient lighting from lamps and candles. Soft, diffused light creating cozy atmosphere. Golden warm tones. Intimate home photography aesthetic. Composition: Medium portrait showing cozy home environment. Shallow depth of field with living room softly blurred. Color palette: Soft cream and blush tones, warm lighting, natural wood, cozy home colors. Photography style: Lifestyle editorial. Shot on 50mm f/1.8 lens with warm ambient lighting. High-detail soft fabric texture. Mood: Cozy, intimate, comfortable. The perfect home date night.`,
+  },
+  romantic_picnic: {
+    key: 'romantic_picnic',
+    name: 'Romantic Picnic',
+    description: 'Outdoor romantic picnic in beautiful park setting',
+    thumbnail: ROMANTIC_PICNIC_PHOTO_1,
+    thumbnails: [ROMANTIC_PICNIC_PHOTO_1],
+    prompt: `Keep the facial features of the person in the uploaded image exactly consistent. Preserve 100% accuracy of the face from the reference image. Important: do not change the face. Create a romantic outdoor picnic portrait. The person wears casual romantic attire - light blue or white linen shirt (sleeves rolled up), khaki or tan chinos, casual watch, relaxed summer styling. Expression: Happy, carefree, romantic with a bright genuine smile. Eyes show joy and warmth. Romantic picnic energy. Pose: Sitting on picnic blanket, leaning back on one hand, other hand holding wine glass or reaching for food. Relaxed, happy posture. Setting: Beautiful park or meadow with lush green grass. Picnic blanket with basket, wine, cheese, fruits. Trees in background. Bright sunny day. Natural romantic outdoor setting. Lighting: Bright natural sunlight with soft shadows. Dappled light through trees. Fresh, bright outdoor photography aesthetic. Composition: Medium portrait showing picnic setting and natural environment. Shallow depth of field with park softly blurred. Color palette: Light blue or white shirt, natural greens, picnic basket browns, bright outdoor colors. Photography style: Romantic lifestyle editorial. Shot on 35mm lens with natural outdoor lighting. High-detail fabric texture and natural setting. Mood: Happy, romantic, carefree. The perfect romantic picnic.`,
+  },
+  jazz_club_date: {
+    key: 'jazz_club_date',
+    name: 'Jazz Club Date',
+    description: 'Sophisticated jazz club evening with elegant ambiance',
+    thumbnail: JAZZ_CLUB_DATE_PHOTO_1,
+    thumbnails: [JAZZ_CLUB_DATE_PHOTO_1],
+    prompt: `Keep the facial features of the person in the uploaded image exactly consistent. Preserve 100% accuracy of the face from the reference image. Important: do not change the face. Create a sophisticated jazz club date portrait. The person wears elegant evening attire - sleek black dress or satin blouse with tailored trousers, statement jewelry (gold or pearl earrings), elegant styling with vintage-inspired waves or sleek updo, classic makeup. Expression: Sophisticated, confident, romantic with a knowing smile. Eyes show elegance and allure. Jazz club sophistication energy. Pose: Sitting at intimate jazz club table, leaning forward with one elbow on table, hand near cocktail glass. Elegant, sophisticated posture. Setting: Intimate jazz club with dim moody lighting. Small round table with cocktail glass, candle. Stage with musicians softly visible in background. Vintage jazz club aesthetic with dark wood and leather. Lighting: Moody low-key lighting with warm amber tones. Spotlight creating dramatic shadows. Candlelight on table. Cinematic jazz club photography aesthetic. Composition: Medium portrait showing jazz club atmosphere. Shallow depth of field with club and stage softly blurred. Color palette: Black dress, warm amber lighting, gold jewelry, dark rich jazz club tones. Photography style: Cinematic lifestyle editorial. Shot on 50mm f/1.8 lens with moody club lighting. High-detail fabric texture and jewelry. Mood: Sophisticated, elegant, romantic. The perfect jazz club date night.`,
   }
 };
 
