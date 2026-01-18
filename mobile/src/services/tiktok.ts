@@ -50,9 +50,6 @@ class TikTokService {
       
       this.isInitialized = true;
       console.log('TikTok SDK: Initialized successfully');
-      
-      // Track app launch
-      await this.trackAppLaunch();
     } catch (error) {
       console.error('TikTok SDK: Initialization failed:', error);
     }
@@ -77,6 +74,18 @@ class TikTokService {
       console.log('TikTok SDK: User identified');
     } catch (error) {
       console.error('TikTok SDK: Failed to identify user:', error);
+    }
+  }
+
+  /**
+   * Track app install event (first launch only)
+   */
+  async trackAppInstall(): Promise<void> {
+    try {
+      await tiktokSDK.trackInstall();
+      console.log('TikTok SDK: App install tracked');
+    } catch (error) {
+      console.error('TikTok SDK: Failed to track app install:', error);
     }
   }
 

@@ -14,6 +14,7 @@ import { clearCache } from '../src/services/cache';
 import tiktokService from '../src/services/tiktok';
 
 const FIRST_TIME_KEY = 'has_seen_welcome';
+const TIKTOK_INSTALL_TRACKED_KEY = 'tiktok_install_tracked';
 
 export default function RootLayout() {
   const { setUser, setIsLoading } = useAppStore();
@@ -32,6 +33,17 @@ export default function RootLayout() {
         
         // Initialize TikTok SDK
         await tiktokService.initialize();
+        
+        // Track InstallApp event (only on first launch)
+        const hasTrackedInstall = await SecureStore.getItemAsync(TIKTOK_INSTALL_TRACKED_KEY);
+        if (!hasTrackedInstall) {
+          console.log('🎯 First app install - tracking InstallApp event');
+          await tiktokService.trackAppInstall();
+          await SecureStore.setItemAsync(TIKTOK_INSTALL_TRACKED_KEY, 'true');
+        } else {
+          console.log('🔄 Returning user - tracking LaunchApp event');
+          await tiktokService.trackAppLaunch();
+        }
         
         // Get device ID
         const deviceId = await getHardwareDeviceId();
