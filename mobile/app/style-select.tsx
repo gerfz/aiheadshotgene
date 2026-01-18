@@ -85,13 +85,13 @@ const STATIC_CATEGORIES = [
     id: 'dating',
     name: 'Dating',
     icon: '💕',
-    styles: ['emotional_film', 'with_puppy', 'nineties_camera'],
+    styles: ['wine_bar', 'emotional_film', 'with_puppy', 'nineties_camera'],
   },
   {
     id: 'social_lifestyle',
     name: 'Social / Lifestyle',
     icon: '📸',
-    styles: ['nineties_camera', 'with_puppy', 'emotional_film'],
+    styles: ['with_supercar', 'coffee_shop', 'luxury_yacht', 'city_rooftop', 'beach_sunset', 'nineties_camera', 'with_puppy', 'emotional_film'],
   },
   {
     id: 'creative',
@@ -141,20 +141,20 @@ export default function StyleSelectScreen() {
     try {
       const { mostUsedStyles } = await getMostUsedStyles();
       
-      // Custom is always first, then top 4 most used
+      // Custom is always first, then top 9 most used
       const mostUsedStyleKeys = ['custom'];
       
-      // Add top 4 most used styles (excluding custom)
-      mostUsedStyles.slice(0, 4).forEach((item) => {
+      // Add top 9 most used styles (excluding custom)
+      mostUsedStyles.slice(0, 9).forEach((item) => {
         if (item.style_key !== 'custom' && STYLE_PRESETS[item.style_key]) {
           mostUsedStyleKeys.push(item.style_key);
         }
       });
       
-      // If we don't have 5 styles yet, fill with defaults
-      const defaultStyles = ['business', 'emotional_film', 'victoria_secret', 'professional_headshot'];
+      // If we don't have 10 styles yet, fill with defaults
+      const defaultStyles = ['business', 'emotional_film', 'victoria_secret', 'professional_headshot', 'wine_bar', 'with_puppy', 'nineties_camera', 'tight_portrait', 'luxury_fashion'];
       for (const styleKey of defaultStyles) {
-        if (mostUsedStyleKeys.length >= 5) break;
+        if (mostUsedStyleKeys.length >= 10) break;
         if (!mostUsedStyleKeys.includes(styleKey)) {
           mostUsedStyleKeys.push(styleKey);
         }
