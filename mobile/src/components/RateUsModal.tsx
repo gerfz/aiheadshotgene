@@ -30,6 +30,17 @@ export const RateUsModal: React.FC<RateUsModalProps> = ({ visible, onClose }) =>
 
   useEffect(() => {
     if (visible) {
+      // Track modal shown
+      (async () => {
+        try {
+          const countStr = await SecureStore.getItemAsync(GENERATION_COUNT_KEY);
+          const count = countStr ? parseInt(countStr, 10) : 0;
+          analytics.rateUsModalShown(count);
+        } catch (error) {
+          console.log('Error tracking modal shown:', error);
+        }
+      })();
+      
       Animated.parallel([
         Animated.spring(scaleAnim, {
           toValue: 1,
@@ -54,8 +65,10 @@ export const RateUsModal: React.FC<RateUsModalProps> = ({ visible, onClose }) =>
   const handleStarPress = async (rating: number) => {
     setSelectedRating(rating);
     
-    // Track the rating
-    analytics.appRated(rating);
+    const willOpenPlayStore = rating >= 4;
+    
+    // Track the star rating selection
+    analytics.starRatingSelected(rating, willOpenPlayStore);
     
     // Small delay to show the selection
     setTimeout(async () => {
@@ -64,6 +77,9 @@ export const RateUsModal: React.FC<RateUsModalProps> = ({ visible, onClose }) =>
         const { awardRatingCredits } = await import('../services/api');
         await awardRatingCredits();
         console.log('✅ Awarded 2 credits for rating');
+        
+        // Track credits awarded
+        analytics.creditsAwardedForRating(rating, 2);
       } catch (error) {
         console.log('Error awarding credits:', error);
       }
@@ -90,12 +106,14 @@ export const RateUsModal: React.FC<RateUsModalProps> = ({ visible, onClose }) =>
         
         setShowThankYou(true);
         setTimeout(() => {
+          analytics.rateUsModalClosed(true);
           onClose();
         }, 1500);
       } else {
         // Low rating - don't send to Play Store, but still give credits (already awarded above)
         setShowThankYou(true);
         setTimeout(() => {
+          analytics.rateUsModalClosed(true);
           onClose();
         }, 1500);
       }
@@ -156,7 +174,13 @@ export const RateUsModal: React.FC<RateUsModalProps> = ({ visible, onClose }) =>
           {!showThankYou ? (
             <>
               {/* Close button */}
-              <TouchableOpacity style={styles.closeButton} onPress={onClose}>
+              <TouchableOpacity 
+                style={styles.closeButton} 
+                onPress={() => {
+                  analytics.rateUsModalClosed(false);
+                  onClose();
+                }}
+              >
                 <Ionicons name="close" size={24} color="#94A3B8" />
               </TouchableOpacity>
 

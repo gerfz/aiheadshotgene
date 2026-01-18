@@ -96,12 +96,22 @@ export const analytics = {
   screenViewed: (screenName: string) => 
     trackEvent('screen_viewed', { screen_name: screenName }),
   
-  // App rating
-  rateUsShown: () => 
-    trackEvent('rate_us_shown'),
+  // App rating (after 2 generations)
+  rateUsModalShown: (generationCount: number) => 
+    trackEvent('rate_us_modal_shown', { generation_count: generationCount }),
   
-  appRated: (rating: number) => 
-    trackEvent('app_rated', { rating }),
+  rateUsModalClosed: (didRate: boolean) => 
+    trackEvent('rate_us_modal_closed', { did_rate: didRate }),
+  
+  starRatingSelected: (stars: number, willOpenPlayStore: boolean) => 
+    trackEvent('star_rating_selected', { 
+      stars, 
+      will_open_play_store: willOpenPlayStore,
+      rating_category: stars >= 4 ? 'positive' : 'negative'
+    }),
+  
+  creditsAwardedForRating: (stars: number, creditsAwarded: number) => 
+    trackEvent('credits_awarded_for_rating', { stars, credits_awarded: creditsAwarded }),
   
   // Feedback
   feedbackRequested: (source: string) => 
