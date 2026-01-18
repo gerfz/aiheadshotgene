@@ -20,12 +20,12 @@ router.get(
     try {
       const userId = req.userId!;
       
-      // First, check if email is verified in auth.users
+      // Get profile first (fastest query)
+      const profile = await getUserProfile(userId);
+      
+      // Check if email is verified in auth.users (only if needed)
       const { data: authUser } = await supabaseAdmin.auth.admin.getUserById(userId);
       const isEmailVerified = authUser?.user?.email_confirmed_at !== null;
-      
-      // Get profile
-      const profile = await getUserProfile(userId);
       
       // If email is verified in auth but not in profile, sync it
       if (isEmailVerified && !profile.email_verified && !profile.credits_awarded) {

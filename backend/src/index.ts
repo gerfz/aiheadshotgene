@@ -27,14 +27,25 @@ app.use((req, res, next) => {
   next();
 });
 
-// Health check - lightweight endpoint for cold start detection
+// Health check - ultra-lightweight endpoint for cold start detection
+// This endpoint is optimized to respond as fast as possible during cold starts
 app.get('/health', (req, res) => {
+  // Return minimal response immediately - don't check worker status on cold start
+  res.json({ 
+    status: 'ready',
+    timestamp: Date.now() // Use timestamp instead of ISO string for speed
+  });
+});
+
+// Detailed health check for monitoring/debugging
+app.get('/health/detailed', (req, res) => {
   const workerStatus = getWorkerStatus();
   res.json({ 
-    status: 'ready', // Changed from 'ok' to 'ready' for clarity
+    status: 'ready',
     timestamp: new Date().toISOString(),
     worker: workerStatus,
-    uptime: process.uptime()
+    uptime: process.uptime(),
+    memory: process.memoryUsage()
   });
 });
 

@@ -4,7 +4,7 @@ import { getAccessToken } from './supabase';
 import { CreditsInfo, Generation, GenerationResult } from '../types';
 
 /**
- * Check if backend is ready (warm) by polling /health endpoint
+ * Check if backend is ready (warm) by polling /health endpoint with exponential backoff
  * This prevents making real API calls while backend is cold starting
  */
 export async function waitForBackendReady(
@@ -12,22 +12,23 @@ export async function waitForBackendReady(
   onProgress?: (progress: number, attempt: number) => void
 ): Promise<boolean> {
   const startTime = Date.now();
-  const pollInterval = 1000; // Poll every 1 second
   let attempts = 0;
-  const maxAttempts = Math.ceil(maxWaitMs / pollInterval);
+  let delay = 500; // Start with 500ms
+  const maxDelay = 3000; // Cap at 3 seconds
   
   console.log('🔍 Checking if backend is ready...');
   
   while (Date.now() - startTime < maxWaitMs) {
     attempts++;
     
-    // Calculate progress (0-90% during health checks, reserve 90-100% for actual loading)
-    const progress = Math.min((attempts / maxAttempts) * 90, 90);
+    // Calculate progress based on time elapsed (0-90%)
+    const elapsed = Date.now() - startTime;
+    const progress = Math.min((elapsed / maxWaitMs) * 90, 90);
     onProgress?.(progress, attempts);
     
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 3000); // 3s timeout per attempt
+      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5s timeout per attempt
       
       const response = await fetch(`${API_URL}/health`, {
         method: 'GET',
@@ -46,11 +47,14 @@ export async function waitForBackendReady(
       }
     } catch (error) {
       // Backend not ready yet, continue polling
-      console.log(`⏳ Backend not ready (attempt ${attempts}/${maxAttempts}), retrying...`);
+      console.log(`⏳ Backend not ready (attempt ${attempts}), retrying in ${delay}ms...`);
     }
     
-    // Wait before next attempt
-    await new Promise(resolve => setTimeout(resolve, pollInterval));
+    // Wait with exponential backoff before next attempt
+    await new Promise(resolve => setTimeout(resolve, delay));
+    
+    // Increase delay exponentially: 500ms -> 1s -> 2s -> 3s (capped)
+    delay = Math.min(delay * 2, maxDelay);
   }
   
   console.warn('⚠️ Backend health check timed out, proceeding anyway');

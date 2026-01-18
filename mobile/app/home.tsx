@@ -11,7 +11,7 @@ import {
 import { router, Stack, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAppStore } from '../src/store/useAppStore';
-import { getCredits, getGenerations, updateSubscriptionStatus, waitForBackendReady } from '../src/services/api';
+import { getCredits, getGenerations, updateSubscriptionStatus } from '../src/services/api';
 import { signOut } from '../src/services/supabase';
 import { CreditsDisplay, BottomNav } from '../src/components';
 import { syncSubscriptionStatus } from '../src/services/purchases';
@@ -88,12 +88,6 @@ export default function HomeScreen() {
     try {
       if (!showAsRefreshing) {
         setIsLoadingFresh(true);
-      }
-      
-      // 🔥 FIX 1: On first load, ensure backend is ready before making API calls
-      if (retryCount === 0 && !hasInitialLoad) {
-        console.log('🔍 First load: Warming up backend...');
-        await waitForBackendReady(15000);
       }
       
       // Small delay to ensure auth state is updated after signup

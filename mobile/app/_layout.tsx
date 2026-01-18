@@ -107,11 +107,12 @@ export default function RootLayout() {
               // 🔥 FIX 1: Wait for backend to be ready
               console.log('🔍 Warming up backend...');
               setLoadingProgress(10);
-              await waitForBackendReady(15000, (progress) => {
-                setLoadingProgress(10 + progress * 0.8); // 10% to 82%
+              await waitForBackendReady(25000, (progress) => {
+                setLoadingProgress(10 + progress * 0.7); // 10% to 80%
               });
               
               // Initialize with new user
+              setLoadingProgress(82);
               try {
               await Promise.race([
                 Promise.all([
@@ -119,17 +120,26 @@ export default function RootLayout() {
                   loginUser(newData.user.id)
                 ]),
                 new Promise((_, reject) => 
-                  setTimeout(() => reject(new Error('Initialization timeout')), 8000)
+                  setTimeout(() => reject(new Error('Initialization timeout')), 12000)
                 )
               ]);
+              
+              setLoadingProgress(95);
               
               // Sync subscription status in background (non-blocking)
               syncSubscriptionStatus()
                 .then(isSubscribed => updateSubscriptionStatus(isSubscribed))
-                .then(() => console.log('✅ Subscription status synced in background'))
-                .catch(syncError => console.warn('⚠️ Background sync failed:', syncError));
+                .then(() => {
+                  console.log('✅ Subscription status synced in background');
+                  setLoadingProgress(100);
+                })
+                .catch(syncError => {
+                  console.warn('⚠️ Background sync failed:', syncError);
+                  setLoadingProgress(100);
+                });
             } catch (timeoutError) {
               console.warn('⚠️ Initialization timeout, continuing anyway:', timeoutError);
+              setLoadingProgress(100);
             }
               
               return; // Exit early
@@ -152,24 +162,26 @@ export default function RootLayout() {
           // 🔥 FIX 1: Wait for backend to be ready before making API calls
           console.log('🔍 Warming up backend...');
           setLoadingProgress(10); // Starting
-          await waitForBackendReady(15000, (progress) => {
-            setLoadingProgress(10 + progress * 0.8); // 10% to 82%
+          await waitForBackendReady(25000, (progress) => {
+            setLoadingProgress(10 + progress * 0.7); // 10% to 80%
           });
           
             // Initialize purchases and login with timeout
             try {
-              setLoadingProgress(85); // Starting initialization
+              setLoadingProgress(82); // Starting initialization
               await Promise.race([
                 Promise.all([
                   initializePurchases(session.user.id),
                   loginUser(session.user.id)
                 ]),
                 new Promise((_, reject) => 
-                  setTimeout(() => reject(new Error('Initialization timeout')), 8000)
+                  setTimeout(() => reject(new Error('Initialization timeout')), 12000)
                 )
               ]);
               
-              setLoadingProgress(95); // Initialization complete
+              setLoadingProgress(92); // Initialization complete
+              
+              setLoadingProgress(95); // Almost done
               
               // Sync subscription status in background (non-blocking)
               syncSubscriptionStatus()
@@ -219,11 +231,12 @@ export default function RootLayout() {
             // 🔥 FIX 1: Wait for backend to be ready
             console.log('🔍 Warming up backend...');
             setLoadingProgress(10);
-            await waitForBackendReady(15000, (progress) => {
-              setLoadingProgress(10 + progress * 0.8); // 10% to 82%
+            await waitForBackendReady(25000, (progress) => {
+              setLoadingProgress(10 + progress * 0.7); // 10% to 80%
             });
             
             // Initialize purchases and login with timeout
+            setLoadingProgress(82);
             try {
               await Promise.race([
                 Promise.all([
@@ -231,17 +244,26 @@ export default function RootLayout() {
                   loginUser(data.user.id)
                 ]),
                 new Promise((_, reject) => 
-                  setTimeout(() => reject(new Error('Initialization timeout')), 8000)
+                  setTimeout(() => reject(new Error('Initialization timeout')), 12000)
                 )
               ]);
+              
+              setLoadingProgress(95);
               
               // Sync subscription status in background (non-blocking)
               syncSubscriptionStatus()
                 .then(isSubscribed => updateSubscriptionStatus(isSubscribed))
-                .then(() => console.log('✅ Subscription status synced in background'))
-                .catch(syncError => console.warn('⚠️ Background sync failed:', syncError));
+                .then(() => {
+                  console.log('✅ Subscription status synced in background');
+                  setLoadingProgress(100);
+                })
+                .catch(syncError => {
+                  console.warn('⚠️ Background sync failed:', syncError);
+                  setLoadingProgress(100);
+                });
             } catch (timeoutError) {
               console.warn('⚠️ Initialization timeout, continuing anyway:', timeoutError);
+              setLoadingProgress(100);
               // Continue even if backend is slow/sleeping
             }
           }
@@ -257,12 +279,14 @@ export default function RootLayout() {
     };
 
     // Set a maximum timeout for the entire initialization
+    // Increased to 30 seconds to handle cold starts properly
     initTimeout = setTimeout(() => {
-      console.warn('⚠️ Maximum initialization time exceeded, forcing continue');
+      console.warn('⚠️ Maximum initialization time exceeded (30s), forcing continue');
       isInitializing = false;
       setInitializing(false);
       setIsLoading(false);
-    }, 10000); // 10 second max
+      setLoadingProgress(100);
+    }, 30000); // 30 second max for cold starts
 
     initApp();
 
