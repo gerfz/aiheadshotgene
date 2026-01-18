@@ -1,347 +1,322 @@
 # How to Add New Styles to AI Headshot Generator
 
-This guide provides a step-by-step process for adding new portrait styles to the app. Follow these steps in order to ensure everything works on the first try.
+This guide explains the automated workflow for adding new portrait styles to the app.
 
 ---
 
-## 📋 Prerequisites
+## 🎯 Quick Start (For User)
 
-Before adding a new style, prepare:
-- **Style Key**: A unique identifier (e.g., `pikachu`, `business_casual`)
-- **Style Name**: Display name for users (e.g., "With Pikachu")
-- **Description**: Brief description of the style
-- **AI Prompt**: Detailed prompt for image generation
-- **Preview Image(s)**: Example photo(s) showing the style result
+To add a new style, simply provide:
+1. **Category name** (e.g., `lifestyle`, `creative`, `professional`)
+2. **Style name** (e.g., "With Supercar", "Business Casual")
+
+**Example:**
+```
+Add new style to lifestyle category called "With Supercar"
+```
+
+That's it! The AI assistant will handle the rest.
 
 ---
 
-## 🎨 Step 1: Add Assets (Frontend)
+## 🤖 Automated Workflow (What Happens Behind the Scenes)
 
-### 1.1 Create Asset Folder
+### Step 1: AI Generates the Prompt
+Based on the style name and category, the AI creates a detailed generation prompt following best practices:
+- Starts with face preservation instructions
+- Includes detailed clothing, environment, lighting descriptions
+- Optimized for high-quality, realistic results
+
+### Step 2: Generate Preview Image
+The AI calls the Replicate API (Nano Banana model) to generate a preview image using:
+- A random reference face (not the user's face)
+- The generated prompt
+- Standard generation parameters
+
+### Step 3: Review & Approval
+The AI presents:
+- 🖼️ **Preview image URL** for review
+- 📝 **Generated prompt** for verification
+
+**User responds:**
+- ✅ "yes" / "approve" / "looks good" → Proceed to Step 4
+- ❌ "no" / "regenerate" → AI adjusts prompt and regenerates
+- 🔧 "change [aspect]" → AI modifies specific parts and regenerates
+
+### Step 4: Automated Integration
+Once approved, the AI automatically:
+
+#### A. Create Asset Folder
 ```bash
-cd mobile/assets
-mkdir YourStyleFolder  # Use PascalCase (e.g., Childhood, Business)
+mobile/assets/[StyleName]/
+  └── preview.jpg
 ```
 
-### 1.2 Add Preview Images
-- Place your preview image(s) in the folder
-- Supported formats: `.jpg`, `.png`
-- Recommended naming: `example1.jpg`, `preview.jpg`, etc.
+#### B. Download & Place Image
+- Downloads the approved preview image
+- Saves it to the asset folder
 
-**Example:**
-```
-mobile/assets/
-  └── Childhood/
-      ├── pika.jpg
-      ├── tomnjerry.jpg
-      ├── benten.jpg
-      └── pinkpanther.jpg
-```
+#### C. Update Frontend Constants
+File: `mobile/src/constants/styles.ts`
 
-> ⚠️ **Important**: Folder names are case-sensitive! Use the exact casing in your imports.
-
----
-
-## 🔧 Step 2: Update Frontend Constants
-
-### 2.1 Edit `mobile/src/constants/styles.ts`
-
-#### A. Import the Images
-Add your image imports at the top of the file:
-
+Adds:
 ```typescript
-// Your Style Category photos
-const YOUR_STYLE_PHOTO_1 = require('../../assets/YourStyleFolder/image1.jpg');
-const YOUR_STYLE_PHOTO_2 = require('../../assets/YourStyleFolder/image2.jpg');
-```
+// Import
+const [STYLE]_PHOTO_1 = require('../../assets/[StyleName]/preview.jpg');
 
-**Example:**
-```typescript
-// Childhood Character photos
-const PIKACHU_PHOTO_1 = require('../../assets/Childhood/pika.jpg');
-```
-
-#### B. Add Style Definition
-Add your style to the `STYLE_PRESETS` object:
-
-```typescript
-export const STYLE_PRESETS: Record<string, StylePreset> = {
-  // ... existing styles ...
-  
-  your_style_key: {
-    key: 'your_style_key',
-    name: 'Your Style Name',
-    description: 'Brief description of your style',
-    thumbnail: YOUR_STYLE_PHOTO_1,
-    thumbnails: [YOUR_STYLE_PHOTO_1, YOUR_STYLE_PHOTO_2],
-    prompt: `Your detailed AI generation prompt here. 
-    Always start with: Keep the facial features of the person in the uploaded image exactly consistent. 
-    Preserve 100% accuracy of the face from the reference image. Important: do not change the face.
-    Then describe the style, clothing, environment, lighting, camera details, etc.`,
-    badge: {  // Optional
-      label: 'Badge Text',
-      type: 'info', // 'info' | 'female' | other custom types
-    },
-  },
-};
-```
-
-**Example:**
-```typescript
-pikachu: {
-  key: 'pikachu',
-  name: 'With Pikachu',
-  description: 'Energetic portrait with giant 3D Pikachu character',
-  thumbnail: PIKACHU_PHOTO_1,
-  thumbnails: [PIKACHU_PHOTO_1],
-  prompt: `Keep the facial features of the person in the uploaded image exactly consistent. Preserve 100% accuracy of the face from the reference image. Important: do not change the face. Create a hyper-realistic, professional fashion photoshoot. The person is wearing an electric yellow knitted sweater, black high-waisted jeans, and white high-top sneakers with black accents...`,
+// Style definition
+[style_key]: {
+  key: '[style_key]',
+  name: '[Style Name]',
+  description: '[Auto-generated description]',
+  thumbnail: [STYLE]_PHOTO_1,
+  thumbnails: [[STYLE]_PHOTO_1],
+  prompt: `[Generated prompt with face preservation]`,
 },
 ```
 
----
+#### D. Update Backend Service
+File: `backend/src/services/nanoBanana.ts`
 
-## 🖥️ Step 3: Update Backend Service
-
-### 3.1 Edit `backend/src/services/nanoBanana.ts`
-
-Add your style prompt to the `STYLE_PROMPTS` object:
-
+Adds:
 ```typescript
-export const STYLE_PROMPTS: Record<string, string> = {
-  // ... existing styles ...
-  
-  your_style_key: `Keep the facial features of the person in the uploaded image exactly consistent. Preserve 100% accuracy of the face from the reference image. Important: do not change the face. [Your detailed prompt matching the frontend exactly]`,
-};
+[style_key]: `[Same prompt as frontend]`,
 ```
 
-**Example:**
-```typescript
-export const STYLE_PROMPTS: Record<string, string> = {
-  // ... existing styles ...
-  
-  pikachu: `Keep the facial features of the person in the uploaded image exactly consistent. Preserve 100% accuracy of the face from the reference image. Important: do not change the face. Create a hyper-realistic, professional fashion photoshoot. The person is wearing an electric yellow knitted sweater...`,
-};
-```
+#### E. Add to Category
+Files: 
+- `mobile/app/style-select-new.tsx`
+- `mobile/src/screens/StyleSelectScreen.tsx`
 
-> ⚠️ **Critical**: The `key` in both frontend and backend MUST match exactly!
-
----
-
-## 📱 Step 4: Add to Category (Optional)
-
-### 4.1 Update `mobile/app/style-select.tsx`
-
-Add your style to an existing category or create a new one:
-
-```typescript
-const STATIC_CATEGORIES = [
-  {
-    id: 'creative',
-    name: 'Creative',
-    icon: '🎭',
-    styles: ['your_style_key', 'victoria_secret', 'custom'],
-  },
-  // ... other categories
-];
-```
-
-### 4.2 Update `mobile/src/screens/StyleSelectScreen.tsx`
-
-Mirror the same changes:
-
-```typescript
-const CATEGORIES = [
-  {
-    id: 'creative',
-    name: 'Creative',
-    icon: '🎭',
-    styles: ['your_style_key', 'victoria_secret', 'custom'],
-  },
-  // ... other categories
-];
-```
-
-**Example:**
+Updates the specified category's `styles` array:
 ```typescript
 {
-  id: 'creative',
-  name: 'Creative',
-  icon: '🎭',
-  styles: ['pikachu', 'tom_and_jerry', 'ben_ten', 'pink_panther', 'victoria_secret', 'custom'],
+  id: 'lifestyle',
+  name: 'Lifestyle',
+  icon: '🌟',
+  styles: ['existing_style', '[new_style_key]'], // ✅ Added here
 },
+```
+
+### Step 5: Confirmation
+The AI confirms completion with:
+- ✅ Files modified
+- ✅ Style key used
+- ✅ Category updated
+- 📱 Reminder to rebuild the app
+
+---
+
+## 📋 Available Categories
+
+Current categories in the app:
+- `lifestyle` - Social & Lifestyle (🌟)
+- `creative` - Creative & Artistic (🎭)
+- `professional` - Professional & Business (💼)
+- `fashion` - Fashion & Style (👗)
+- `seasonal` - Seasonal & Events (🎄)
+
+---
+
+## 🎨 Prompt Generation Best Practices (Automated)
+
+The AI automatically includes:
+
+### 1. Face Preservation (Always First)
+```
+Keep the facial features of the person in the uploaded image exactly consistent. 
+Preserve 100% accuracy of the face from the reference image. 
+Important: do not change the face.
+```
+
+### 2. Scene Description
+- Clothing details (colors, materials, style)
+- Environment/background
+- Props or special elements
+- Pose and expression
+
+### 3. Technical Details
+- Lighting setup
+- Camera specifications
+- Photo quality requirements
+- Artistic style notes
+
+### 4. Context-Aware Generation
+The AI considers:
+- Category theme (lifestyle vs professional vs creative)
+- Style name implications
+- Current trends and popular styles
+- Consistency with existing styles
+
+---
+
+## 🔄 Example Workflow
+
+**User Request:**
+```
+Add new style to lifestyle category called "With Supercar"
+```
+
+**AI Response:**
+```
+🎨 Generating style "With Supercar" for lifestyle category...
+
+📝 Generated Prompt:
+Keep the facial features of the person in the uploaded image exactly consistent. 
+Preserve 100% accuracy of the face from the reference image. Important: do not 
+change the face. Create a hyper-realistic, professional fashion photoshoot. The 
+person is standing next to a sleek, futuristic Lamborghini in a vibrant, neon-lit 
+cityscape at dusk...
+
+🖼️ Generating preview image...
+
+Preview Image: https://replicate.delivery/pbxt/abc123.jpg
+
+Please review and respond:
+- Type "yes" to approve and proceed
+- Type "no" to regenerate with adjustments
+- Type "change [aspect]" to modify specific elements
+```
+
+**User:**
+```
+yes
+```
+
+**AI:**
+```
+✅ Approved! Integrating style into the app...
+
+✅ Created: mobile/assets/WithSupercar/preview.jpg
+✅ Updated: mobile/src/constants/styles.ts
+✅ Updated: backend/src/services/nanoBanana.ts
+✅ Updated: mobile/app/style-select-new.tsx
+✅ Updated: mobile/src/screens/StyleSelectScreen.tsx
+
+Style Key: with_supercar
+Category: lifestyle (Social & Lifestyle)
+
+📱 Next Step: Rebuild your app to see the new style!
 ```
 
 ---
 
-## ✅ Step 5: Testing Checklist
+## 🛠️ Technical Details (For Reference)
 
-Before deploying, verify:
+### File Structure
+```
+mobile/
+├── assets/
+│   └── [StyleName]/
+│       └── preview.jpg
+├── src/
+│   └── constants/
+│       └── styles.ts
+├── app/
+│   └── style-select-new.tsx
+└── src/
+    └── screens/
+        └── StyleSelectScreen.tsx
 
-- [ ] **Asset Import**: Images load without errors
-- [ ] **Frontend Preview**: Style appears in the selection screen
-- [ ] **Category Display**: Style shows in correct category
-- [ ] **Backend Recognition**: No "Unknown style" error
-- [ ] **Generation Works**: Test image generation completes successfully
-- [ ] **Prompt Quality**: Generated image matches expected style
-- [ ] **Face Consistency**: Original face is preserved in output
-- [ ] **Mobile Build**: App builds without bundling errors
+backend/
+└── src/
+    └── services/
+        └── nanoBanana.ts
+```
+
+### Naming Conventions
+- **Style Key**: `snake_case` (e.g., `with_supercar`)
+- **Constant Name**: `SCREAMING_SNAKE_CASE` (e.g., `WITH_SUPERCAR_PHOTO_1`)
+- **Folder Name**: `PascalCase` (e.g., `WithSupercar`)
+- **Display Name**: `Title Case` (e.g., "With Supercar")
+
+### API Integration
+- **Endpoint**: Backend `/api/generate` (Nano Banana via Replicate)
+- **Model**: `nano-banana` (face-preserving portrait generation)
+- **Preview Generation**: Uses random reference face
+- **User Generation**: Uses uploaded user face
+
+---
+
+## ✅ Quality Checks (Automated)
+
+Before finalizing, the AI verifies:
+- [ ] Style key is unique (no conflicts)
+- [ ] Prompt includes face preservation
+- [ ] Preview image generated successfully
+- [ ] All files updated correctly
+- [ ] Category exists and is valid
+- [ ] Frontend and backend keys match
+- [ ] No syntax errors in code
+
+---
+
+## 🚫 What You DON'T Need to Do
+
+- ❌ Write prompts manually
+- ❌ Generate preview images yourself
+- ❌ Edit code files
+- ❌ Create asset folders
+- ❌ Download or place images
+- ❌ Update multiple files
+- ❌ Worry about naming conventions
+- ❌ Check for syntax errors
+
+---
+
+## 💡 Tips for Best Results
+
+### Style Naming
+- Be descriptive: "With Supercar" > "Car"
+- Avoid generic names: "Business Casual" > "Casual"
+- Consider searchability: "Luxury Yacht" > "Boat"
+
+### Category Selection
+Choose the category that best fits:
+- **Lifestyle**: Social situations, hobbies, luxury items
+- **Creative**: Artistic, fantasy, character-based
+- **Professional**: Business, corporate, formal
+- **Fashion**: Clothing-focused, runway, editorial
+- **Seasonal**: Holidays, events, seasonal themes
+
+### Requesting Changes
+If the preview isn't quite right:
+- Be specific: "Make the lighting warmer"
+- Reference elements: "Change the car to red"
+- Suggest alternatives: "Try a different background"
 
 ---
 
 ## 🔍 Troubleshooting
 
-### Error: "Unable to resolve asset"
-- Check folder name casing (case-sensitive!)
-- Verify file exists in the specified path
-- Ensure file extension matches (`.jpg` vs `.png`)
+### "Preview image doesn't match my vision"
+→ Request regeneration with specific changes
 
-### Error: "Unknown style: your_style_key"
-- Verify backend `STYLE_PROMPTS` includes your style key
-- Ensure frontend and backend keys match exactly
-- Restart backend server after changes
+### "Style not appearing after rebuild"
+→ AI will verify all files were updated correctly
 
-### Style not appearing in app
-- Check if style is added to a category in both `style-select.tsx` files
-- Verify `STYLE_PRESETS` export is correct
-- Clear app cache and rebuild
-
-### Generated image doesn't match prompt
-- Review prompt wording for clarity
-- Add more specific details (clothing, lighting, camera settings)
-- Test prompt variations
-- Ensure face consistency prefix is included
+### "Generated images don't preserve user's face"
+→ This is normal for preview generation; user generation uses their actual face
 
 ---
 
-## 📝 Prompt Writing Best Practices
+## 📝 Summary
 
-### Essential Components
+**Old Workflow (Manual):**
+1. Create folders
+2. Find/create preview images
+3. Write prompts
+4. Edit 5 different files
+5. Test and debug
+⏱️ Time: 30-60 minutes
 
-1. **Face Preservation** (Always start with this):
-   ```
-   Keep the facial features of the person in the uploaded image exactly consistent. 
-   Preserve 100% accuracy of the face from the reference image. 
-   Important: do not change the face.
-   ```
-
-2. **Clothing Details**:
-   - Be specific: colors, materials, style
-   - Example: "electric yellow knitted sweater, black high-waisted jeans"
-
-3. **Environment**:
-   - Background color/setting
-   - Lighting conditions
-   - Mood/atmosphere
-
-4. **Photography Details**:
-   - Camera type (if relevant)
-   - Lens specifications
-   - Depth of field
-
-5. **Character/Element Details** (if applicable):
-   - Describe 3D characters/props accurately
-   - Specify positioning and interaction
-   - Include iconic features
-
-### Example Template
-
-```
-Keep the facial features of the person in the uploaded image exactly consistent. 
-Preserve 100% accuracy of the face from the reference image. 
-Important: do not change the face.
-
-Create a [style type] photoshoot. 
-
-CLOTHING: [detailed clothing description]
-
-POSE: [how person is positioned]
-
-EXPRESSION: [facial expression/mood]
-
-SPECIAL ELEMENTS: [any characters, props, or unique elements]
-
-ENVIRONMENT: [background, setting, atmosphere]
-
-LIGHTING: [lighting setup and mood]
-
-CAMERA: [technical camera details]
-
-FINAL NOTES: [any additional quality requirements]
-```
-
----
-
-## 🚀 Quick Reference: Files to Update
-
-| File | Action | Purpose |
-|------|--------|---------|
-| `mobile/assets/YourFolder/` | Create + Add images | Store preview images |
-| `mobile/src/constants/styles.ts` | Import + Define style | Frontend style definition |
-| `backend/src/services/nanoBanana.ts` | Add prompt | Backend generation logic |
-| `mobile/app/style-select.tsx` | Add to category | Category organization (Expo Router) |
-| `mobile/src/screens/StyleSelectScreen.tsx` | Add to category | Category organization (React Navigation) |
-
----
-
-## 📚 Example: Adding "With Pikachu" Style
-
-### 1. Assets
-```
-mobile/assets/Childhood/pika.jpg ✓
-```
-
-### 2. Frontend Constants
-```typescript
-// Import
-const PIKACHU_PHOTO_1 = require('../../assets/Childhood/pika.jpg');
-
-// Definition
-pikachu: {
-  key: 'pikachu',
-  name: 'With Pikachu',
-  description: 'Energetic portrait with giant 3D Pikachu character',
-  thumbnail: PIKACHU_PHOTO_1,
-  thumbnails: [PIKACHU_PHOTO_1],
-  prompt: `Keep the facial features...`,
-},
-```
-
-### 3. Backend Service
-```typescript
-pikachu: `Keep the facial features of the person in the uploaded image exactly consistent...`,
-```
-
-### 4. Categories
-```typescript
-{
-  id: 'creative',
-  name: 'Creative',
-  icon: '🎭',
-  styles: ['pikachu', 'victoria_secret', 'custom'],
-},
-```
-
-### 5. Test ✓
-- App builds successfully
-- Style appears in Creative category
-- Generation works without errors
-- Face consistency maintained
-
----
-
-## 🎯 Summary
-
-To add a new style successfully:
-1. ✅ Add preview images to `mobile/assets/YourFolder/`
-2. ✅ Import images in `mobile/src/constants/styles.ts`
-3. ✅ Define style in `STYLE_PRESETS` (frontend)
-4. ✅ Add prompt to `STYLE_PROMPTS` (backend)
-5. ✅ Add to category in both style-select files
-6. ✅ Test thoroughly before deployment
-
-**Key Rule**: Frontend and backend style keys must match EXACTLY!
+**New Workflow (Automated):**
+1. Tell AI: "Add [style] to [category]"
+2. Review preview
+3. Approve
+⏱️ Time: 2-3 minutes
 
 ---
 
 *Last Updated: January 2026*
-
+*Automated workflow powered by AI assistant*

@@ -39,6 +39,12 @@ const CATEGORIES = [
     styles: ['business', 'professional_headshot', 'nineties_camera'],
   },
   {
+    id: 'dating',
+    name: 'Dating',
+    icon: '💕',
+    styles: ['wine_bar', 'emotional_film', 'with_puppy', 'nineties_camera'],
+  },
+  {
     id: 'creative',
     name: 'Creative',
     icon: '🎨',

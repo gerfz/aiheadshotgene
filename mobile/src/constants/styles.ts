@@ -22,6 +22,9 @@ const PROFESSIONAL_HEADSHOT_1 = { uri: 'https://pyziuothzjdijkvdryht.supabase.co
 // With Puppy photos
 const PUPPY_PHOTO_1 = { uri: 'https://pyziuothzjdijkvdryht.supabase.co/storage/v1/object/public/style-previews/withpuppy/example1.png' };
 
+// Wine Bar photos
+const WINE_BAR_PHOTO_1 = { uri: 'https://pyziuothzjdijkvdryht.supabase.co/storage/v1/object/public/style-previews/winebar/preview.jpg' };
+
 // Childhood Character photos
 const PIKACHU_PHOTO_1 = { uri: 'https://pyziuothzjdijkvdryht.supabase.co/storage/v1/object/public/style-previews/Childhood/pika.jpg' };
 const TOM_AND_JERRY_PHOTO_1 = { uri: 'https://pyziuothzjdijkvdryht.supabase.co/storage/v1/object/public/style-previews/Childhood/tomnjerry.jpg' };
@@ -402,6 +405,14 @@ export const STYLE_PRESETS: Record<string, StylePreset> = {
     thumbnail: ADVENTURE_DESERT_PHOTO_1,
     thumbnails: [ADVENTURE_DESERT_PHOTO_1],
     prompt: `Keep the facial features of the person in the uploaded image exactly consistent. Preserve 100% accuracy of the face from the reference image. Important: do not change the face. Create a mystical desert wanderer portrait. The person wears flowing adventure clothing - light linen shirt or tunic, comfortable adventure pants, desert scarf draped around shoulders or head, sturdy boots. Backpack visible. Expression: Peaceful, contemplative, free with serene smile. Eyes show desert wisdom and freedom. Nomad wanderer energy. Pose: Standing on sand dune with wind blowing clothing gently. Hand shielding eyes from sun. Or walking through dunes. Nomadic posture. Setting: Endless rolling sand dunes stretching to horizon. Pristine golden sand. Clear sky - either bright blue or warm sunset. Rippled sand patterns. Vast emptiness and beauty. Lighting: Golden hour desert light creating warm magical glow. Long shadows on dunes. Soft warm tones. Or bright midday creating strong contrast. Cinematic desert photography. Composition: Medium to wide shot showing wanderer and endless dunes. Sharp focus with dunes creating beautiful layers behind. Color palette: Golden sand, warm sunset colors, light adventure clothing, rich blue sky. Photography style: Cinematic adventure editorial. Shot on 35mm lens with golden hour light. Mood: Peaceful, mystical, free. The serenity of endless desert.`
+  },
+  wine_bar: {
+    key: 'wine_bar',
+    name: 'Wine Bar',
+    description: 'Sophisticated wine bar date night with romantic ambiance',
+    thumbnail: WINE_BAR_PHOTO_1,
+    thumbnails: [WINE_BAR_PHOTO_1],
+    prompt: `Keep the facial features of the person in the uploaded image exactly consistent. Preserve 100% accuracy of the face from the reference image. Important: do not change the face. Create a sophisticated, romantic wine bar portrait. The person wears elegant casual attire - a stylish burgundy or deep plum button-up shirt or silk blouse, dark fitted jeans or tailored trousers, minimal elegant jewelry. Expression: Warm, inviting, romantic with a genuine smile and engaging eye contact. Eyes show warmth and connection. Sophisticated date night energy. Pose: Sitting at a wine bar counter or intimate table, holding a glass of red wine elegantly. One elbow resting on bar, body turned slightly toward camera. Relaxed yet refined posture. Setting: Upscale wine bar with warm ambient lighting. Wooden bar counter with wine bottles artistically displayed on shelves behind. Soft bokeh of hanging Edison bulbs or pendant lights. Warm brick wall or dark wood paneling. Wine glasses and bottles creating elegant atmosphere. Lighting: Warm golden ambient lighting from bar and pendant lights creating intimate glow. Soft key light on face. Rim light separating subject from background. Romantic candlelight possible. Cinematic date night photography aesthetic. Composition: Medium portrait from waist up showing wine bar environment. Shallow depth of field with wine bar softly blurred into beautiful bokeh. Color palette: Deep burgundy and plum tones, rich wood browns, warm golden lighting, deep red wine, soft amber glows. Photography style: Romantic lifestyle editorial. Shot on 50mm f/1.8 lens with warm intimate lighting. High-detail fabric texture and wine glass reflections. Mood: Romantic, sophisticated, intimate. The perfect wine bar date night moment.`,
   }
 };
 

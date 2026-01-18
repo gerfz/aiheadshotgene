@@ -85,7 +85,7 @@ const CATEGORIES = [
     id: 'dating',
     name: 'Dating',
     icon: '💕',
-    styles: ['emotional_film', 'with_puppy', 'nineties_camera'],
+    styles: ['wine_bar', 'emotional_film', 'with_puppy', 'nineties_camera'],
   },
   {
     id: 'social_lifestyle',
