@@ -176,22 +176,24 @@ export async function generatePortrait(
     }
   }
 
-  try {
-    // Convert base64 to data URI for Replicate
-    const imageDataUri = `data:${mimeType};base64,${imageBase64}`;
+  // Convert base64 to data URI for Replicate
+  const imageDataUri = `data:${mimeType};base64,${imageBase64}`;
 
+  // Prepare input for Replicate (defined outside try block for retry access)
+  const replicateInput = {
+    prompt: prompt,
+    image_input: [imageDataUri], // nano-banana expects image_input as array
+    aspect_ratio: "match_input_image",
+    output_format: "jpg"
+  };
+
+  try {
     console.log('Starting Replicate generation with nano-banana...');
     console.log('Style:', styleKey);
 
     // Run the Nano Banana model on Replicate
-    // Using the correct parameters for nano-banana
     const output = await replicate.run(MODEL_ID as `${string}/${string}`, {
-      input: {
-        prompt: prompt,
-        image_input: [imageDataUri], // nano-banana expects image_input as array
-        aspect_ratio: "match_input_image",
-        output_format: "jpg"
-      }
+      input: replicateInput
     });
 
     console.log('Replicate output type:', typeof output);
