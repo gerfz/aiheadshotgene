@@ -33,14 +33,14 @@ export default function WelcomeScreen() {
     } else {
       // Mark that user has seen welcome screen
       await SecureStore.setItemAsync(FIRST_TIME_KEY, 'true');
-      // Set flag to show subscription screen
+      // Set flag to show subscription after first generation
       await SecureStore.setItemAsync(SHOW_SUBSCRIPTION_KEY, 'true');
       
       // Track onboarding completion
       analytics.onboardingCompleted();
       
-      // Navigate to subscription page
-      router.replace('/subscription');
+      // Navigate to upload page to let user create their first portrait
+      router.replace('/upload');
     }
   };
 

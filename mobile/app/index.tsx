@@ -32,9 +32,10 @@ export default function Index() {
     return <Redirect href="/welcome" />;
   }
 
-  // User completed onboarding but hasn't seen subscription yet
+  // User completed onboarding - go directly to upload for first photo
+  // (paywall will be shown after they generate their first photo)
   if (shouldShowSubscription) {
-    return <Redirect href="/subscription" />;
+    return <Redirect href="/upload" />;
   }
 
   // Returning user - go to home

@@ -15,6 +15,7 @@ import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import * as MediaLibrary from 'expo-media-library';
 import * as ImagePicker from 'expo-image-picker';
+import * as SecureStore from 'expo-secure-store';
 import { useAppStore } from '../src/store/useAppStore';
 import { STYLE_PRESETS } from '../src/constants/styles';
 import { deleteGeneration, getUserGenerations } from '../src/services/api';
@@ -22,9 +23,12 @@ import { analytics } from '../src/services/posthog';
 import { RateUsModal, shouldShowRateUs } from '../src/components/RateUsModal';
 import tiktokService from '../src/services/tiktok';
 
+const SHOW_SUBSCRIPTION_KEY = 'show_subscription_after_onboarding';
+
 export default function ResultScreen() {
   const { setSelectedImage, setSelectedStyle, setGenerations } = useAppStore();
   const [showRateModal, setShowRateModal] = useState(false);
+  const [isFirstTimeUser, setIsFirstTimeUser] = useState(false);
   
   const params = useLocalSearchParams<{
     id?: string;
@@ -38,9 +42,13 @@ export default function ResultScreen() {
 
   const { id, generatedUrl, originalUrl, styleKey, customPrompt, isEdited, showRateUs } = params;
 
-  // Check if we should show the Rate Us modal
+  // Check if this is a first-time user and if we should show the Rate Us modal
   useEffect(() => {
-    const checkRateUs = async () => {
+    const checkFirstTimeAndRateUs = async () => {
+      // Check if user just completed onboarding (first-time user)
+      const shouldShowSub = await SecureStore.getItemAsync(SHOW_SUBSCRIPTION_KEY);
+      setIsFirstTimeUser(shouldShowSub === 'true');
+      
       // Track portrait view in TikTok
       if (id && styleKey) {
         await tiktokService.trackPortraitView(id, styleKey);
@@ -57,7 +65,7 @@ export default function ResultScreen() {
         }
       }
     };
-    checkRateUs();
+    checkFirstTimeAndRateUs();
   }, [showRateUs, id, styleKey]);
 
   if (!generatedUrl) {
@@ -86,7 +94,20 @@ export default function ResultScreen() {
     styleName = `${styleName} (Edited)`;
   }
 
+  // Helper function to check if we should show paywall for first-time users
+  const shouldShowPaywall = async () => {
+    if (isFirstTimeUser) {
+      // Clear the flag and show subscription
+      await SecureStore.deleteItemAsync(SHOW_SUBSCRIPTION_KEY);
+      router.push('/subscription');
+      return true;
+    }
+    return false;
+  };
+
   const handleDownload = async () => {
+    // Show paywall for first-time users
+    if (await shouldShowPaywall()) return;
     try {
       // On Android, use ImagePicker permissions which only asks for photos
       // On iOS, use MediaLibrary permissions
@@ -160,6 +181,9 @@ export default function ResultScreen() {
   };
 
   const handleShare = async () => {
+    // Show paywall for first-time users
+    if (await shouldShowPaywall()) return;
+    
     try {
       const isAvailable = await Sharing.isAvailableAsync();
       
@@ -187,7 +211,10 @@ export default function ResultScreen() {
     }
   };
 
-  const handleCreateNew = () => {
+  const handleCreateNew = async () => {
+    // Show paywall for first-time users
+    if (await shouldShowPaywall()) return;
+    
     // Keep the selected image so user can reuse it
     // Only clear the selected style
     setSelectedStyle(null);
@@ -196,6 +223,9 @@ export default function ResultScreen() {
   };
 
   const handleDelete = async () => {
+    // Show paywall for first-time users
+    if (await shouldShowPaywall()) return;
+    
     if (!id) {
       Alert.alert('Error', 'Cannot delete this portrait');
       return;
@@ -289,7 +319,10 @@ export default function ResultScreen() {
               <Text style={styles.iconLabel}>Share</Text>
             </TouchableOpacity>
             
-            <TouchableOpacity style={styles.iconButton} onPress={() => {
+            <TouchableOpacity style={styles.iconButton} onPress={async () => {
+              // Show paywall for first-time users
+              if (await shouldShowPaywall()) return;
+              
               analytics.photoEdited(styleKey || 'unknown');
               router.push({
                 pathname: '/edit-portrait',

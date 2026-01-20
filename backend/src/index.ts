@@ -74,11 +74,59 @@ app.use((err: Error, req: express.Request, res: express.Response, next: express.
   res.status(500).json({ error: 'Internal server error', message: err.message });
 });
 
+// Self-warming mechanism - keeps backend warm by making periodic calls
+const WARMUP_DEVICE_ID = '67ef9dc6f662ee57'; // Your device ID
+const WARMUP_INTERVAL = 10 * 60 * 1000; // 10 minutes
+
+async function warmupBackend() {
+  try {
+    console.log('🔥 Running backend warmup...');
+    
+    const baseUrl = process.env.BACKEND_URL || 'https://aiheadshotgene-1.onrender.com';
+    
+    // Make the same calls that a real user would make
+    const headers = {
+      'Content-Type': 'application/json',
+      'x-guest-device-id': WARMUP_DEVICE_ID,
+    };
+    
+    // Call 1: Get credits
+    await fetch(`${baseUrl}/api/user/credits`, { 
+      method: 'GET',
+      headers 
+    }).catch(err => console.log('Warmup credits call failed:', err.message));
+    
+    // Call 2: Get generations
+    await fetch(`${baseUrl}/api/user/generations`, { 
+      method: 'GET',
+      headers 
+    }).catch(err => console.log('Warmup generations call failed:', err.message));
+    
+    // Call 3: Sync subscription status
+    await fetch(`${baseUrl}/api/user/subscription`, { 
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ isSubscribed: false })
+    }).catch(err => console.log('Warmup subscription call failed:', err.message));
+    
+    console.log('✅ Backend warmup completed');
+  } catch (error) {
+    console.error('❌ Warmup error:', error);
+  }
+}
+
 app.listen(PORT, () => {
   console.log(`🚀 Server running on http://localhost:${PORT}`);
   
   // Start background worker for processing generation jobs
   startWorker();
+  
+  // Start self-warming mechanism
+  console.log('🔥 Starting self-warming mechanism (every 10 minutes)');
+  setInterval(warmupBackend, WARMUP_INTERVAL);
+  
+  // Run initial warmup after 30 seconds (let server fully start first)
+  setTimeout(warmupBackend, 30000);
 });
 
 export default app;
