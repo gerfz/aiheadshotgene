@@ -255,6 +255,57 @@ export async function generatePortrait(
       console.error('Replicate API Status:', error.response.status, error.response.statusText);
     }
     
+    // Check for rate limiting (429 status)
+    if (error.message && error.message.includes('429')) {
+      // Extract retry_after value from error message if available
+      const retryMatch = error.message.match(/retry_after[":]+\s*(\d+)/);
+      const retryAfter = retryMatch ? parseInt(retryMatch[1]) : 3; // Default to 3 seconds
+      
+      console.log(`⏳ Rate limited by Replicate. Waiting ${retryAfter} seconds before retry...`);
+      
+      // Wait for the specified retry_after duration
+      await new Promise(resolve => setTimeout(resolve, retryAfter * 1000));
+      
+      // Retry the request once after waiting
+      console.log('🔄 Retrying after rate limit wait...');
+      try {
+        const retryPrediction = await replicate.run(MODEL_ID, { input: replicateInput });
+        
+        // Process the retry output (same logic as above)
+        if (retryPrediction && Symbol.asyncIterator in Object(retryPrediction)) {
+          const chunks: Uint8Array[] = [];
+          for await (const chunk of retryPrediction as AsyncIterable<Uint8Array>) {
+            chunks.push(chunk);
+          }
+          const totalLength = chunks.reduce((acc, chunk) => acc + chunk.length, 0);
+          const combined = new Uint8Array(totalLength);
+          let offset = 0;
+          for (const chunk of chunks) {
+            combined.set(chunk, offset);
+            offset += chunk.length;
+          }
+          return Buffer.from(combined).toString('base64');
+        }
+        
+        if (Array.isArray(retryPrediction) && retryPrediction.length > 0) {
+          const response = await fetch(retryPrediction[0]);
+          const arrayBuffer = await response.arrayBuffer();
+          return Buffer.from(arrayBuffer).toString('base64');
+        }
+        
+        if (typeof retryPrediction === 'string') {
+          const response = await fetch(retryPrediction);
+          const arrayBuffer = await response.arrayBuffer();
+          return Buffer.from(arrayBuffer).toString('base64');
+        }
+        
+        throw new Error('Unexpected output format from Replicate after retry');
+      } catch (retryError: any) {
+        console.error('❌ Retry failed:', retryError.message);
+        throw new Error(`Image generation failed after retry: ${retryError.message}`);
+      }
+    }
+    
     // Check for content moderation errors (E005 - sensitive content)
     if (error.message && error.message.includes('E005')) {
       throw new Error('CONTENT_POLICY_VIOLATION: Your prompt was flagged by our content filter. Please ensure your request follows community guidelines and does not include inappropriate, explicit, or sensitive content.');

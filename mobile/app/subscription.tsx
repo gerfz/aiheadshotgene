@@ -261,7 +261,6 @@ export default function SubscriptionScreen() {
   };
 
   const weeklyPkg = resolvePackage('weekly', 0);
-  const monthlyPkg = resolvePackage('monthly', 1);
   const yearlyPkg = resolvePackage('annual', 2) || resolvePackage('yearly', 2);
 
   // Auto-select weekly if not set
@@ -355,9 +354,6 @@ export default function SubscriptionScreen() {
     if (selectedPackage.includes('weekly')) {
       selectedPkg = weeklyPkg;
       period = 'week';
-    } else if (selectedPackage.includes('monthly')) {
-      selectedPkg = monthlyPkg;
-      period = 'month';
     } else if (selectedPackage.includes('annual') || selectedPackage.includes('yearly')) {
       selectedPkg = yearlyPkg;
       period = 'year';
@@ -480,7 +476,6 @@ export default function SubscriptionScreen() {
           {/* Plans */}
           <View style={styles.plansContainer}>
             {renderPackage(weeklyPkg, 'Weekly')}
-            {renderPackage(monthlyPkg, 'Monthly')}
             {renderPackage(yearlyPkg, 'Yearly', 'Best Value')}
           </View>
 
@@ -489,7 +484,7 @@ export default function SubscriptionScreen() {
             <TouchableOpacity
               style={[styles.ctaButton, purchasing && styles.ctaButtonDisabled]}
               onPress={() => {
-                const pkg = [weeklyPkg, monthlyPkg, yearlyPkg].find(p => p.identifier === selectedPackage);
+                const pkg = [weeklyPkg, yearlyPkg].find(p => p.identifier === selectedPackage);
                 if (pkg) handlePurchase(pkg as PurchasesPackage);
               }}
               disabled={purchasing}
@@ -499,7 +494,7 @@ export default function SubscriptionScreen() {
               ) : (
                 <Text style={styles.ctaText}>
                   {(() => {
-                    const pkg = [weeklyPkg, monthlyPkg, yearlyPkg].find(p => p.identifier === selectedPackage);
+                    const pkg = [weeklyPkg, yearlyPkg].find(p => p.identifier === selectedPackage);
                     if (pkg && hasIntroOffer(pkg)) {
                       return 'Start Trial';
                     }
