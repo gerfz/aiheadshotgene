@@ -9,7 +9,7 @@ import {
   Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { router, Stack, useLocalSearchParams } from 'expo-router';
+import { router, Stack, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
@@ -68,6 +68,18 @@ export default function ResultScreen() {
     checkFirstTimeAndRateUs();
   }, [showRateUs, id, styleKey]);
 
+  // Re-check first-time user status when screen comes into focus
+  // This ensures the flag is updated if user closed the paywall
+  useFocusEffect(
+    React.useCallback(() => {
+      const recheckFirstTimeStatus = async () => {
+        const shouldShowSub = await SecureStore.getItemAsync(SHOW_SUBSCRIPTION_KEY);
+        setIsFirstTimeUser(shouldShowSub === 'true');
+      };
+      recheckFirstTimeStatus();
+    }, [])
+  );
+
   if (!generatedUrl) {
     return (
       <>
@@ -97,8 +109,9 @@ export default function ResultScreen() {
   // Helper function to check if we should show paywall for first-time users
   const shouldShowPaywall = async () => {
     if (isFirstTimeUser) {
-      // Clear the flag and show subscription
+      // Clear the flag and update state immediately
       await SecureStore.deleteItemAsync(SHOW_SUBSCRIPTION_KEY);
+      setIsFirstTimeUser(false); // Update state so we don't loop
       router.push('/subscription');
       return true;
     }
