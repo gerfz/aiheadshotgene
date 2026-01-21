@@ -16,6 +16,16 @@ import tiktokService from '../src/services/tiktok';
 const FIRST_TIME_KEY = 'has_seen_welcome';
 const TIKTOK_INSTALL_TRACKED_KEY = 'tiktok_install_tracked';
 
+// Helper to wrap promises with timeout
+function withTimeout<T>(promise: Promise<T>, ms: number, errorMessage: string): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) => 
+      setTimeout(() => reject(new Error(errorMessage)), ms)
+    )
+  ]);
+}
+
 export default function RootLayout() {
   const { setUser, setIsLoading } = useAppStore();
   const [initializing, setInitializing] = useState(true);
@@ -28,68 +38,139 @@ export default function RootLayout() {
     
     const initApp = async () => {
       try {
-        // Track app opened
+        // 🔥 FIX: Set progress immediately so user sees something
+        setLoadingProgress(2);
+        console.log('🚀 Starting app initialization...');
+        
+        // Track app opened (non-blocking)
         analytics.appOpened();
         
-        // Initialize TikTok SDK
-        await tiktokService.initialize();
+        // 🔥 FIX: Start backend warmup IMMEDIATELY in parallel (don't await)
+        // This warms the backend while we do other initialization
+        const backendWarmupPromise = waitForBackendReady(20000, (progress) => {
+          // Only update if we're still in early stages
+          if (progress < 50) {
+            setLoadingProgress(5 + progress * 0.3); // 5% to 20%
+          }
+        }).catch(err => {
+          console.warn('⚠️ Backend warmup failed:', err);
+          return false;
+        });
         
-        // Track InstallApp event (only on first launch)
-        const hasTrackedInstall = await SecureStore.getItemAsync(TIKTOK_INSTALL_TRACKED_KEY);
-        if (!hasTrackedInstall) {
-          console.log('🎯 First app install - tracking InstallApp event');
-          await tiktokService.trackAppInstall();
-          await SecureStore.setItemAsync(TIKTOK_INSTALL_TRACKED_KEY, 'true');
-        } else {
-          console.log('🔄 Returning user - tracking LaunchApp event');
-          await tiktokService.trackAppLaunch();
+        setLoadingProgress(5);
+        
+        // Initialize TikTok SDK with timeout (non-critical, don't block)
+        try {
+          await withTimeout(tiktokService.initialize(), 3000, 'TikTok SDK timeout');
+        } catch (e) {
+          console.warn('⚠️ TikTok SDK init failed, continuing:', e);
         }
         
-        // Get device ID
-        const deviceId = await getHardwareDeviceId();
+        setLoadingProgress(8);
+        
+        // Track InstallApp event (non-blocking, with timeout)
+        try {
+          const hasTrackedInstall = await withTimeout(
+            SecureStore.getItemAsync(TIKTOK_INSTALL_TRACKED_KEY),
+            2000,
+            'SecureStore timeout'
+          );
+          if (!hasTrackedInstall) {
+            console.log('🎯 First app install - tracking InstallApp event');
+            tiktokService.trackAppInstall().catch(() => {}); // Fire and forget
+            SecureStore.setItemAsync(TIKTOK_INSTALL_TRACKED_KEY, 'true').catch(() => {});
+          } else {
+            console.log('🔄 Returning user - tracking LaunchApp event');
+            tiktokService.trackAppLaunch().catch(() => {}); // Fire and forget
+          }
+        } catch (e) {
+          console.warn('⚠️ Install tracking failed, continuing:', e);
+        }
+        
+        setLoadingProgress(12);
+        
+        // Get device ID with timeout
+        let deviceId: string;
+        try {
+          deviceId = await withTimeout(getHardwareDeviceId(), 3000, 'Device ID timeout');
+        } catch (e) {
+          console.warn('⚠️ Device ID fetch failed, using fallback');
+          deviceId = `fallback-${Date.now()}`;
+        }
         console.log('📱 Device ID:', deviceId);
         
-        // Check for existing auth session
+        setLoadingProgress(18);
+        
+        // 🔥 FIX: Check for existing auth session WITH TIMEOUT
         let session = null;
         try {
-          const { data: { session: existingSession }, error } = await supabase.auth.getSession();
+          console.log('🔍 Checking Supabase session...');
+          const sessionResult = await withTimeout(
+            supabase.auth.getSession(),
+            8000, // 8 second timeout for session
+            'Session fetch timeout'
+          );
           
           // If there's an error getting session (e.g., invalid refresh token), clear it
-          if (error) {
-            console.warn('⚠️ Error getting session, clearing:', error.message);
-            await supabase.auth.signOut();
+          if (sessionResult.error) {
+            console.warn('⚠️ Error getting session, clearing:', sessionResult.error.message);
+            supabase.auth.signOut().catch(() => {}); // Non-blocking signout
             session = null;
           } else {
-            session = existingSession;
+            session = sessionResult.data.session;
           }
-        } catch (sessionError) {
-          console.warn('⚠️ Session error, clearing:', sessionError);
-          await supabase.auth.signOut();
+        } catch (sessionError: any) {
+          console.warn('⚠️ Session timeout or error, will create new user:', sessionError.message);
+          // Try to sign out (non-blocking) to clear any stale state
+          supabase.auth.signOut().catch(() => {});
           session = null;
         }
+        
+        setLoadingProgress(25);
         
         if (session?.user) {
           // User already has an anonymous session
           console.log('✅ Existing anonymous user:', session.user.id);
           
-          // Verify the session is still valid by trying to get user
+          setLoadingProgress(30);
+          
+          // 🔥 FIX: Verify session with timeout
+          let validUser = null;
           try {
-            const { data: { user }, error } = await supabase.auth.getUser();
+            const userResult = await withTimeout(
+              supabase.auth.getUser(),
+              5000, // 5 second timeout
+              'User verification timeout'
+            );
             
-            if (error || !user) {
-              // Session is invalid, sign out and create new anonymous user
-              console.warn('⚠️ Invalid session detected, creating new anonymous user');
-              await supabase.auth.signOut();
-              
-              // Create new anonymous user
-              const { data: newData, error: newError } = await supabase.auth.signInAnonymously({
-                options: {
-                  data: {
-                    device_id: deviceId,
-                    is_anonymous: true,
+            if (!userResult.error && userResult.data.user) {
+              validUser = userResult.data.user;
+            }
+          } catch (verifyError) {
+            console.warn('⚠️ User verification timeout, will create new user');
+          }
+          
+          if (!validUser) {
+            // Session is invalid, sign out and create new anonymous user
+            console.warn('⚠️ Invalid session detected, creating new anonymous user');
+            supabase.auth.signOut().catch(() => {}); // Non-blocking
+            
+            setLoadingProgress(35);
+            
+            // Create new anonymous user with timeout
+            try {
+              const { data: newData, error: newError } = await withTimeout(
+                supabase.auth.signInAnonymously({
+                  options: {
+                    data: {
+                      device_id: deviceId,
+                      is_anonymous: true,
+                    }
                   }
-                }
-              });
+                }),
+                8000,
+                'Anonymous sign-in timeout'
+              );
               
               if (newError || !newData.user) {
                 throw new Error('Failed to create new anonymous user');
@@ -100,172 +181,168 @@ export default function RootLayout() {
                 email: `device-${deviceId}@anonymous.local`,
               });
               
-              // Identify user in TikTok
-              await tiktokService.identifyUser(newData.user.id, `device-${deviceId}@anonymous.local`);
-              await tiktokService.trackRegistration();
+              // Identify user in TikTok (non-blocking)
+              tiktokService.identifyUser(newData.user.id, `device-${deviceId}@anonymous.local`).catch(() => {});
+              tiktokService.trackRegistration().catch(() => {});
               
-              // 🔥 FIX 1: Wait for backend to be ready
-              console.log('🔍 Warming up backend...');
-              setLoadingProgress(10);
-              await waitForBackendReady(25000, (progress) => {
-                setLoadingProgress(10 + progress * 0.7); // 10% to 80%
-              });
+              setLoadingProgress(50);
+              
+              // 🔥 FIX: Wait for backend warmup to complete (it started earlier)
+              console.log('🔍 Waiting for backend warmup...');
+              await backendWarmupPromise;
+              
+              setLoadingProgress(70);
               
               // Initialize with new user
-              setLoadingProgress(82);
               try {
-              await Promise.race([
-                Promise.all([
-                  initializePurchases(newData.user.id),
-                  loginUser(newData.user.id)
-                ]),
-                new Promise((_, reject) => 
-                  setTimeout(() => reject(new Error('Initialization timeout')), 12000)
-                )
-              ]);
+                await Promise.race([
+                  Promise.all([
+                    initializePurchases(newData.user.id),
+                    loginUser(newData.user.id)
+                  ]),
+                  new Promise((_, reject) => 
+                    setTimeout(() => reject(new Error('Initialization timeout')), 10000)
+                  )
+                ]);
+              } catch (timeoutError) {
+                console.warn('⚠️ Initialization timeout, continuing anyway:', timeoutError);
+              }
               
-              setLoadingProgress(95);
+              setLoadingProgress(90);
               
               // Sync subscription status in background (non-blocking)
               syncSubscriptionStatus()
                 .then(isSubscribed => updateSubscriptionStatus(isSubscribed))
-                .then(() => {
-                  console.log('✅ Subscription status synced in background');
-                  setLoadingProgress(100);
-                })
-                .catch(syncError => {
-                  console.warn('⚠️ Background sync failed:', syncError);
-                  setLoadingProgress(100);
-                });
-            } catch (timeoutError) {
-              console.warn('⚠️ Initialization timeout, continuing anyway:', timeoutError);
-              setLoadingProgress(100);
-            }
+                .then(() => console.log('✅ Subscription status synced'))
+                .catch(syncError => console.warn('⚠️ Background sync failed:', syncError));
               
+              setLoadingProgress(100);
               return; // Exit early
+            } catch (createError) {
+              console.error('❌ Failed to create user:', createError);
+              // Continue anyway - app might work with cached data
+              setLoadingProgress(100);
+              return;
             }
-          } catch (verifyError) {
-            console.error('❌ Error verifying session:', verifyError);
           }
           
+          // Valid session found
           setUser({
             id: session.user.id,
             email: session.user.email || `device-${deviceId}@anonymous.local`,
           });
           
-          // Identify user in TikTok
-          await tiktokService.identifyUser(
+          setLoadingProgress(40);
+          
+          // Identify user in TikTok (non-blocking)
+          tiktokService.identifyUser(
             session.user.id,
             session.user.email || `device-${deviceId}@anonymous.local`
-          );
+          ).catch(() => {});
           
-          // 🔥 FIX 1: Wait for backend to be ready before making API calls
-          console.log('🔍 Warming up backend...');
-          setLoadingProgress(10); // Starting
-          await waitForBackendReady(25000, (progress) => {
-            setLoadingProgress(10 + progress * 0.7); // 10% to 80%
-          });
+          // 🔥 FIX: Wait for backend warmup to complete (it started earlier in parallel)
+          console.log('🔍 Waiting for backend warmup...');
+          await backendWarmupPromise;
           
-            // Initialize purchases and login with timeout
-            try {
-              setLoadingProgress(82); // Starting initialization
-              await Promise.race([
-                Promise.all([
-                  initializePurchases(session.user.id),
-                  loginUser(session.user.id)
-                ]),
-                new Promise((_, reject) => 
-                  setTimeout(() => reject(new Error('Initialization timeout')), 12000)
-                )
-              ]);
-              
-              setLoadingProgress(92); // Initialization complete
-              
-              setLoadingProgress(95); // Almost done
-              
-              // Sync subscription status in background (non-blocking)
-              syncSubscriptionStatus()
-                .then(isSubscribed => updateSubscriptionStatus(isSubscribed))
-                .then(() => {
-                  console.log('✅ Subscription status synced in background');
-                  setLoadingProgress(100); // All done
-                })
-                .catch(syncError => {
-                  console.warn('⚠️ Background sync failed:', syncError);
-                  setLoadingProgress(100); // Continue anyway
-                });
-            } catch (timeoutError) {
-              console.warn('⚠️ Initialization timeout, continuing anyway:', timeoutError);
-              setLoadingProgress(100); // Continue anyway
-              // 🔥 FIX 3: Never downgrade auth state on timeout - keep user logged in
-            }
+          setLoadingProgress(60);
+          
+          // Initialize purchases and login with timeout
+          try {
+            await Promise.race([
+              Promise.all([
+                initializePurchases(session.user.id),
+                loginUser(session.user.id)
+              ]),
+              new Promise((_, reject) => 
+                setTimeout(() => reject(new Error('Initialization timeout')), 10000)
+              )
+            ]);
+          } catch (timeoutError) {
+            console.warn('⚠️ Initialization timeout, continuing anyway:', timeoutError);
+          }
+          
+          setLoadingProgress(85);
+          
+          // Sync subscription status in background (non-blocking)
+          syncSubscriptionStatus()
+            .then(isSubscribed => updateSubscriptionStatus(isSubscribed))
+            .then(() => console.log('✅ Subscription status synced'))
+            .catch(syncError => console.warn('⚠️ Background sync failed:', syncError));
+          
+          setLoadingProgress(100);
         } else {
           // No session - create anonymous user (backend will handle credit merging)
           console.log('🔄 Creating anonymous user for device:', deviceId);
           
-          const { data, error } = await supabase.auth.signInAnonymously({
-            options: {
-              data: {
-                device_id: deviceId,
-                is_anonymous: true,
-              }
+          setLoadingProgress(30);
+          
+          try {
+            const { data, error } = await withTimeout(
+              supabase.auth.signInAnonymously({
+                options: {
+                  data: {
+                    device_id: deviceId,
+                    is_anonymous: true,
+                  }
+                }
+              }),
+              8000, // 8 second timeout
+              'Anonymous sign-in timeout'
+            );
+            
+            if (error) {
+              console.error('❌ Failed to create anonymous user:', error);
+              throw error;
             }
-          });
-          
-          if (error) {
-            console.error('❌ Failed to create anonymous user:', error);
-            throw error;
-          }
-          
-          if (data.user) {
-            console.log('✅ Anonymous user created:', data.user.id);
-            setUser({
-              id: data.user.id,
-              email: `device-${deviceId}@anonymous.local`,
-            });
             
-            // Identify user in TikTok
-            await tiktokService.identifyUser(data.user.id, `device-${deviceId}@anonymous.local`);
-            await tiktokService.trackRegistration();
-            
-            // 🔥 FIX 1: Wait for backend to be ready
-            console.log('🔍 Warming up backend...');
-            setLoadingProgress(10);
-            await waitForBackendReady(25000, (progress) => {
-              setLoadingProgress(10 + progress * 0.7); // 10% to 80%
-            });
-            
-            // Initialize purchases and login with timeout
-            setLoadingProgress(82);
-            try {
-              await Promise.race([
-                Promise.all([
-                  initializePurchases(data.user.id),
-                  loginUser(data.user.id)
-                ]),
-                new Promise((_, reject) => 
-                  setTimeout(() => reject(new Error('Initialization timeout')), 12000)
-                )
-              ]);
+            if (data.user) {
+              console.log('✅ Anonymous user created:', data.user.id);
+              setUser({
+                id: data.user.id,
+                email: `device-${deviceId}@anonymous.local`,
+              });
               
-              setLoadingProgress(95);
+              setLoadingProgress(45);
+              
+              // Identify user in TikTok (non-blocking)
+              tiktokService.identifyUser(data.user.id, `device-${deviceId}@anonymous.local`).catch(() => {});
+              tiktokService.trackRegistration().catch(() => {});
+              
+              // 🔥 FIX: Wait for backend warmup to complete (it started earlier in parallel)
+              console.log('🔍 Waiting for backend warmup...');
+              await backendWarmupPromise;
+              
+              setLoadingProgress(65);
+              
+              // Initialize purchases and login with timeout
+              try {
+                await Promise.race([
+                  Promise.all([
+                    initializePurchases(data.user.id),
+                    loginUser(data.user.id)
+                  ]),
+                  new Promise((_, reject) => 
+                    setTimeout(() => reject(new Error('Initialization timeout')), 10000)
+                  )
+                ]);
+              } catch (timeoutError) {
+                console.warn('⚠️ Initialization timeout, continuing anyway:', timeoutError);
+              }
+              
+              setLoadingProgress(88);
               
               // Sync subscription status in background (non-blocking)
               syncSubscriptionStatus()
                 .then(isSubscribed => updateSubscriptionStatus(isSubscribed))
-                .then(() => {
-                  console.log('✅ Subscription status synced in background');
-                  setLoadingProgress(100);
-                })
-                .catch(syncError => {
-                  console.warn('⚠️ Background sync failed:', syncError);
-                  setLoadingProgress(100);
-                });
-            } catch (timeoutError) {
-              console.warn('⚠️ Initialization timeout, continuing anyway:', timeoutError);
+                .then(() => console.log('✅ Subscription status synced'))
+                .catch(syncError => console.warn('⚠️ Background sync failed:', syncError));
+              
               setLoadingProgress(100);
-              // Continue even if backend is slow/sleeping
             }
+          } catch (createError) {
+            console.error('❌ Failed to create anonymous user:', createError);
+            // Continue anyway - user might see limited functionality
+            setLoadingProgress(100);
           }
         }
       } catch (error) {
@@ -279,14 +356,14 @@ export default function RootLayout() {
     };
 
     // Set a maximum timeout for the entire initialization
-    // Increased to 30 seconds to handle cold starts properly
+    // 20 seconds should be enough now with parallel warmup
     initTimeout = setTimeout(() => {
-      console.warn('⚠️ Maximum initialization time exceeded (30s), forcing continue');
+      console.warn('⚠️ Maximum initialization time exceeded (20s), forcing continue');
       isInitializing = false;
       setInitializing(false);
       setIsLoading(false);
       setLoadingProgress(100);
-    }, 30000); // 30 second max for cold starts
+    }, 20000); // 20 second max
 
     initApp();
 
@@ -303,17 +380,25 @@ export default function RootLayout() {
         
         if (session?.user) {
           // User session exists (anonymous or authenticated)
-          const deviceId = await getHardwareDeviceId();
-          setUser({
-            id: session.user.id,
-            email: session.user.email || `device-${deviceId}@anonymous.local`,
-          });
-          
           try {
-            await loginUser(session.user.id);
+            const deviceId = await withTimeout(getHardwareDeviceId(), 2000, 'Device ID timeout');
+            setUser({
+              id: session.user.id,
+              email: session.user.email || `device-${deviceId}@anonymous.local`,
+            });
             
-            // Refresh credits
-            const creditsData = await getCredits();
+            // Login and refresh credits with timeout
+            await withTimeout(
+              loginUser(session.user.id),
+              5000,
+              'Login timeout'
+            );
+            
+            const creditsData = await withTimeout(
+              getCredits(),
+              5000,
+              'Credits fetch timeout'
+            );
             useAppStore.setState({ credits: creditsData });
             console.log('✅ Credits refreshed:', creditsData);
           } catch (error) {
@@ -323,22 +408,26 @@ export default function RootLayout() {
           // Session expired - recreate anonymous user (only if not initializing)
           console.log('⚠️ Session expired, recreating anonymous user');
           try {
-            const deviceId = await getHardwareDeviceId();
-            const { data, error } = await supabase.auth.signInAnonymously({
-              options: {
-                data: {
-                  device_id: deviceId,
-                  is_anonymous: true,
+            const deviceId = await withTimeout(getHardwareDeviceId(), 2000, 'Device ID timeout');
+            const { data, error } = await withTimeout(
+              supabase.auth.signInAnonymously({
+                options: {
+                  data: {
+                    device_id: deviceId,
+                    is_anonymous: true,
+                  }
                 }
-              }
-            });
+              }),
+              8000,
+              'Anonymous sign-in timeout'
+            );
             
             if (data?.user) {
               setUser({
                 id: data.user.id,
                 email: `device-${deviceId}@anonymous.local`,
               });
-              await loginUser(data.user.id);
+              await withTimeout(loginUser(data.user.id), 5000, 'Login timeout');
             }
           } catch (error) {
             console.error('❌ Failed to recreate anonymous user:', error);
