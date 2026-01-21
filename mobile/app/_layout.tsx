@@ -15,6 +15,7 @@ import tiktokService from '../src/services/tiktok';
 
 const FIRST_TIME_KEY = 'has_seen_welcome';
 const TIKTOK_INSTALL_TRACKED_KEY = 'tiktok_install_tracked';
+const DEVICE_USER_ID_KEY = 'device_user_id'; // Store the user ID for this device
 
 // Helper to wrap promises with timeout
 function withTimeout<T>(promise: Promise<T>, ms: number, errorMessage: string): Promise<T> {
@@ -101,6 +102,21 @@ export default function RootLayout() {
         
         setLoadingProgress(18);
         
+        // 🔥 FIX: Check if this device has a stored user ID
+        let storedUserId: string | null = null;
+        try {
+          storedUserId = await withTimeout(
+            SecureStore.getItemAsync(DEVICE_USER_ID_KEY),
+            2000,
+            'Stored user ID timeout'
+          );
+          if (storedUserId) {
+            console.log('📱 Found stored user ID for this device:', storedUserId);
+          }
+        } catch (e) {
+          console.warn('⚠️ Could not read stored user ID');
+        }
+        
         // 🔥 FIX: Check for existing auth session WITH TIMEOUT
         let session = null;
         try {
@@ -120,7 +136,7 @@ export default function RootLayout() {
             session = sessionResult.data.session;
           }
         } catch (sessionError: any) {
-          console.warn('⚠️ Session timeout or error, will create new user:', sessionError.message);
+          console.warn('⚠️ Session timeout or error:', sessionError.message);
           // Try to sign out (non-blocking) to clear any stale state
           supabase.auth.signOut().catch(() => {});
           session = null;
@@ -151,13 +167,13 @@ export default function RootLayout() {
           }
           
           if (!validUser) {
-            // Session is invalid, sign out and create new anonymous user
-            console.warn('⚠️ Invalid session detected, creating new anonymous user');
+            // Session is invalid, sign out and recreate user
+            console.warn('⚠️ Invalid session detected, will recreate user for this device');
             supabase.auth.signOut().catch(() => {}); // Non-blocking
             
             setLoadingProgress(35);
             
-            // Create new anonymous user with timeout
+            // 🔥 DEVICE-BASED USER: Recreate anonymous user with same device binding
             try {
               const { data: newData, error: newError } = await withTimeout(
                 supabase.auth.signInAnonymously({
@@ -165,6 +181,7 @@ export default function RootLayout() {
                     data: {
                       device_id: deviceId,
                       is_anonymous: true,
+                      previous_user_id: storedUserId || undefined, // Include previous user ID if exists
                     }
                   }
                 }),
@@ -173,8 +190,12 @@ export default function RootLayout() {
               );
               
               if (newError || !newData.user) {
-                throw new Error('Failed to create new anonymous user');
+                throw new Error('Failed to create anonymous user');
               }
+              
+              // 🔥 IMPORTANT: Store this user ID for this device
+              await SecureStore.setItemAsync(DEVICE_USER_ID_KEY, newData.user.id);
+              console.log('💾 Stored user ID for device:', newData.user.id);
               
               setUser({
                 id: newData.user.id,
@@ -183,7 +204,10 @@ export default function RootLayout() {
               
               // Identify user in TikTok (non-blocking)
               tiktokService.identifyUser(newData.user.id, `device-${deviceId}@anonymous.local`).catch(() => {});
-              tiktokService.trackRegistration().catch(() => {});
+              // Don't track registration for returning devices
+              if (!storedUserId) {
+                tiktokService.trackRegistration().catch(() => {});
+              }
               
               setLoadingProgress(50);
               
@@ -224,6 +248,12 @@ export default function RootLayout() {
               setLoadingProgress(100);
               return;
             }
+          }
+          
+          // 🔥 DEVICE-BASED USER: Store this user ID for the device if not already stored
+          if (!storedUserId || storedUserId !== session.user.id) {
+            await SecureStore.setItemAsync(DEVICE_USER_ID_KEY, session.user.id).catch(() => {});
+            console.log('💾 Updated stored user ID for device:', session.user.id);
           }
           
           // Valid session found
@@ -271,8 +301,9 @@ export default function RootLayout() {
           
           setLoadingProgress(100);
         } else {
-          // No session - create anonymous user (backend will handle credit merging)
-          console.log('🔄 Creating anonymous user for device:', deviceId);
+          // No session - create anonymous user for this device
+          const isReturningDevice = !!storedUserId;
+          console.log(isReturningDevice ? '🔄 Recreating user for returning device' : '🆕 Creating new user for first-time device');
           
           setLoadingProgress(30);
           
@@ -283,6 +314,7 @@ export default function RootLayout() {
                   data: {
                     device_id: deviceId,
                     is_anonymous: true,
+                    previous_user_id: storedUserId || undefined, // Include previous user ID if exists
                   }
                 }
               }),
@@ -297,6 +329,11 @@ export default function RootLayout() {
             
             if (data.user) {
               console.log('✅ Anonymous user created:', data.user.id);
+              
+              // 🔥 IMPORTANT: Store this user ID for this device
+              await SecureStore.setItemAsync(DEVICE_USER_ID_KEY, data.user.id);
+              console.log('💾 Stored user ID for device:', data.user.id);
+              
               setUser({
                 id: data.user.id,
                 email: `device-${deviceId}@anonymous.local`,
@@ -306,7 +343,10 @@ export default function RootLayout() {
               
               // Identify user in TikTok (non-blocking)
               tiktokService.identifyUser(data.user.id, `device-${deviceId}@anonymous.local`).catch(() => {});
-              tiktokService.trackRegistration().catch(() => {});
+              // Only track registration for truly new devices
+              if (!isReturningDevice) {
+                tiktokService.trackRegistration().catch(() => {});
+              }
               
               // 🔥 FIX: Wait for backend warmup to complete (it started earlier in parallel)
               console.log('🔍 Waiting for backend warmup...');
@@ -406,15 +446,24 @@ export default function RootLayout() {
           }
         } else if (!isInitializing) {
           // Session expired - recreate anonymous user (only if not initializing)
-          console.log('⚠️ Session expired, recreating anonymous user');
+          console.log('⚠️ Session expired, recreating anonymous user for device');
           try {
             const deviceId = await withTimeout(getHardwareDeviceId(), 2000, 'Device ID timeout');
+            
+            // 🔥 DEVICE-BASED USER: Check stored user ID
+            const storedUserId = await withTimeout(
+              SecureStore.getItemAsync(DEVICE_USER_ID_KEY),
+              2000,
+              'Stored user ID timeout'
+            ).catch(() => null);
+            
             const { data, error } = await withTimeout(
               supabase.auth.signInAnonymously({
                 options: {
                   data: {
                     device_id: deviceId,
                     is_anonymous: true,
+                    previous_user_id: storedUserId || undefined,
                   }
                 }
               }),
@@ -423,6 +472,9 @@ export default function RootLayout() {
             );
             
             if (data?.user) {
+              // 🔥 Store the new user ID for this device
+              await SecureStore.setItemAsync(DEVICE_USER_ID_KEY, data.user.id).catch(() => {});
+              
               setUser({
                 id: data.user.id,
                 email: `device-${deviceId}@anonymous.local`,

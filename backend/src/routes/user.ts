@@ -66,15 +66,31 @@ router.get(
       // If profile doesn't exist, create it with device tracking
       if (error.code === 'PGRST116') {
         try {
-          // Get device_id from auth metadata
+          // Get device_id and previous_user_id from auth metadata
           const { data: authUser } = await supabaseAdmin.auth.admin.getUserById(req.userId!);
           const deviceId = authUser?.user?.user_metadata?.device_id;
+          const previousUserId = authUser?.user?.user_metadata?.previous_user_id;
           
           // Check if this device has already been used
           let freeCredits = 2; // Default for new devices (changed from 5 to 2)
           let isSubscribed = false;
           
-          if (deviceId) {
+          // 🔥 PRIORITY 1: Try to get data from previous_user_id (most accurate)
+          if (previousUserId) {
+            const { data: previousProfile } = await supabaseAdmin
+              .from('profiles')
+              .select('free_credits, is_subscribed')
+              .eq('id', previousUserId)
+              .single();
+            
+            if (previousProfile) {
+              freeCredits = previousProfile.free_credits;
+              isSubscribed = previousProfile.is_subscribed;
+              console.log(`✅ Restored state from previous user ${previousUserId}: ${freeCredits} credits, subscribed: ${isSubscribed}`);
+            }
+          }
+          // 🔥 FALLBACK: If no previous_user_id, check by device_id
+          else if (deviceId) {
             const { data: existingProfile } = await supabaseAdmin
               .from('profiles')
               .select('id, free_credits, is_subscribed')
