@@ -39,8 +39,8 @@ export default function WelcomeScreen() {
       // Track onboarding completion
       analytics.onboardingCompleted();
       
-      // Navigate to upload page to let user create their first portrait
-      router.replace('/upload');
+      // Navigate to home page
+      router.replace('/home');
     }
   };
 
