@@ -76,7 +76,7 @@ app.use((err: Error, req: express.Request, res: express.Response, next: express.
 
 // Self-warming mechanism - keeps backend warm by making periodic calls
 const WARMUP_DEVICE_ID = '67ef9dc6f662ee57'; // Your device ID
-const WARMUP_INTERVAL = 10 * 60 * 1000; // 10 minutes
+const WARMUP_INTERVAL = 5 * 60 * 1000; // 5 minutes
 
 async function warmupBackend() {
   try {
@@ -122,7 +122,7 @@ app.listen(PORT, () => {
   startWorker();
   
   // Start self-warming mechanism
-  console.log('🔥 Starting self-warming mechanism (every 10 minutes)');
+  console.log('🔥 Starting self-warming mechanism (every 5 minutes)');
   setInterval(warmupBackend, WARMUP_INTERVAL);
   
   // Run initial warmup after 30 seconds (let server fully start first)
