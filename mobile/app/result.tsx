@@ -280,7 +280,10 @@ export default function ResultScreen() {
         options={{ 
           title: 'Your Portrait',
           headerLeft: () => (
-            <TouchableOpacity onPress={() => {
+            <TouchableOpacity onPress={async () => {
+              // Show paywall for first-time users
+              if (await shouldShowPaywall()) return;
+              
               // Navigate to home - will work from any depth
               router.push('/home');
             }} style={{ marginRight: 15 }}>
