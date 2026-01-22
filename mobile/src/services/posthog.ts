@@ -53,8 +53,21 @@ export const analytics = {
   generationCompleted: (styleKey: string, duration: number) => 
     trackEvent('generation_completed', { style_key: styleKey, duration_seconds: duration }),
   
-  generationFailed: (styleKey: string, error: string) => 
-    trackEvent('generation_failed', { style_key: styleKey, error }),
+  generationFailed: (styleKey: string, error: string, errorContext?: { 
+    noCredits?: boolean, 
+    contentViolation?: boolean, 
+    networkError?: boolean, 
+    timeout?: boolean 
+  }) => 
+    trackEvent('generation_failed', { 
+      style_key: styleKey, 
+      error,
+      error_type: errorContext?.noCredits ? 'no_credits' : 
+                  errorContext?.contentViolation ? 'content_violation' :
+                  errorContext?.networkError ? 'network_error' :
+                  errorContext?.timeout ? 'timeout' : 'unknown',
+      ...errorContext
+    }),
   
   // Photo actions
   photoDownloaded: (styleKey: string) => 

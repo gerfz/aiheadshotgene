@@ -163,12 +163,28 @@ export default function GeneratingScreen() {
     } catch (err: any) {
       console.error('❌ Generation error:', err);
       
-      // Track generation failed
-      analytics.generationFailed(selectedStyle, err.message || 'Unknown error');
+      const errorMessage = err.message || 'Unknown error';
+      
+      // Determine error type for better analytics
+      const isNoCredits = errorMessage.includes('No credits remaining') || errorMessage.includes('403');
+      const isContentViolation = errorMessage.includes('CONTENT_POLICY_VIOLATION') || 
+                                  errorMessage.includes('E005') || 
+                                  errorMessage.includes('flagged as sensitive');
+      const isTimeout = errorMessage.includes('timed out') || errorMessage.includes('timeout');
+      const isNetworkError = errorMessage.includes('network') || errorMessage.includes('fetch');
+      
+      // Track generation failed with context
+      analytics.generationFailed(selectedStyle, errorMessage, {
+        noCredits: isNoCredits,
+        contentViolation: isContentViolation,
+        timeout: isTimeout,
+        networkError: isNetworkError
+      });
+      
       console.error('Error details:', JSON.stringify(err, null, 2));
       
       // Check if error is about no credits (403)
-      if (err.message && (err.message.includes('No credits remaining') || err.message.includes('403'))) {
+      if (isNoCredits) {
         // Redirect to subscription page
         console.log('⚠️ No credits, redirecting to subscription...');
         setIsGenerating(false);
@@ -176,7 +192,7 @@ export default function GeneratingScreen() {
         return;
       }
       
-      setError(err.message || 'Failed to generate portrait. Please try again.');
+      setError(errorMessage);
     } finally {
       console.log('🏁 Generation process finished');
       setIsGenerating(false);

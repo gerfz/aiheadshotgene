@@ -55,22 +55,28 @@ router.post(
   generationRateLimiter, // Rate limiting: max 5 generations per minute
   upload.single('image'),
   async (req: AuthenticatedRequest, res: Response) => {
+    const guestDeviceId = req.headers['x-guest-device-id'] as string;
+    const userId = req.userId!;
+    
     try {
       const { styleKey, customPrompt, editPrompt } = req.body;
       const file = req.file;
 
-      console.log('Generate request - styleKey:', styleKey, 'customPrompt:', customPrompt, 'editPrompt:', editPrompt);
+      console.log(`📝 [GENERATE REQUEST] User: ${userId.slice(0, 8)}... | Device: ${guestDeviceId} | Style: ${styleKey}`);
 
       if (!file) {
+        console.log(`❌ [GENERATE FAILED] User: ${userId.slice(0, 8)}... | Reason: No image uploaded`);
         return res.status(400).json({ error: 'No image uploaded' });
       }
 
       if (!styleKey) {
+        console.log(`❌ [GENERATE FAILED] User: ${userId.slice(0, 8)}... | Reason: No style key`);
         return res.status(400).json({ error: 'Style key is required' });
       }
 
       // Validate custom style requires custom prompt
       if (styleKey === 'custom' && (!customPrompt || customPrompt.trim().length === 0)) {
+        console.log(`❌ [GENERATE FAILED] User: ${userId.slice(0, 8)}... | Reason: Custom style missing prompt`);
         return res.status(400).json({ 
           error: 'Custom prompt is required',
           message: 'Please provide a description for your custom style'
@@ -79,6 +85,7 @@ router.post(
 
       // Validate edit style requires edit prompt
       if (styleKey === 'edit' && (!editPrompt || editPrompt.trim().length === 0)) {
+        console.log(`❌ [GENERATE FAILED] User: ${userId.slice(0, 8)}... | Reason: Edit style missing prompt`);
         return res.status(400).json({ 
           error: 'Edit prompt is required',
           message: 'Please describe what you want to change'
@@ -86,10 +93,12 @@ router.post(
       }
 
       // Authenticated user flow
-      const userId = req.userId!;
       const profile = await getUserProfile(userId);
       
+      console.log(`💳 [CREDITS CHECK] User: ${userId.slice(0, 8)}... | Subscribed: ${profile.is_subscribed} | Credits: ${profile.free_credits}`);
+      
       if (!profile.is_subscribed && profile.free_credits <= 0) {
+        console.log(`❌ [GENERATE FAILED] User: ${userId.slice(0, 8)}... | Reason: No credits (sub: ${profile.is_subscribed}, credits: ${profile.free_credits})`);
         return res.status(403).json({ 
           error: 'No credits remaining',
           message: 'Please subscribe to continue generating portraits'
@@ -122,7 +131,10 @@ router.post(
       if (!isSubscribed) {
         try {
           await decrementCredits(userId);
+          console.log(`💰 [CREDIT USED] User: ${userId.slice(0, 8)}... | Remaining: ${profile.free_credits - 1}`);
         } catch (creditError: any) {
+          console.log(`❌ [GENERATE FAILED] User: ${userId.slice(0, 8)}... | Reason: Credit decrement failed - ${creditError.message}`);
+          
           // If credit decrement fails, delete the generation and fail
           await require('../services/supabase').supabaseAdmin
             .from('generations')
@@ -152,7 +164,7 @@ router.post(
         .single();
 
       if (jobError) {
-        console.error('Failed to create job:', jobError);
+        console.log(`❌ [GENERATE FAILED] User: ${userId.slice(0, 8)}... | Reason: Failed to create job - ${jobError.message}`);
         await updateGeneration(generation.id, { status: 'failed' });
         throw new Error('Failed to queue generation job');
       }
@@ -160,7 +172,7 @@ router.post(
       // Track style usage
       await incrementStyleUsage(styleKey);
 
-      console.log(`✅ Job created: ${job.id}, triggering worker...`);
+      console.log(`✅ [JOB QUEUED] User: ${userId.slice(0, 8)}... | Job ID: ${job.id} | Gen ID: ${generation.id} | Style: ${styleKey}`);
 
       // Immediately trigger worker to pick up this job (don't wait for 2s interval)
       try {
@@ -183,7 +195,7 @@ router.post(
       });
 
     } catch (error: any) {
-      console.error('Generation error:', error);
+      console.log(`❌ [GENERATE FAILED] User: ${userId.slice(0, 8)}... | Device: ${guestDeviceId} | Error: ${error.message}`);
       res.status(500).json({ 
         error: 'Generation failed', 
         message: error.message 

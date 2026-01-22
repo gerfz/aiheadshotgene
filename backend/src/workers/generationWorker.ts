@@ -56,7 +56,8 @@ async function processNextJob(): Promise<boolean> {
     }
 
     const job = jobs[0];
-    console.log(`🔄 Processing job ${job.job_id} for generation ${job.generation_id}`);
+    const userIdShort = job.user_id ? job.user_id.slice(0, 8) : 'unknown';
+    console.log(`🔄 [WORKER START] User: ${userIdShort}... | Job: ${job.job_id} | Gen: ${job.generation_id} | Style: ${job.style_key}`);
 
     // Update generation status to processing
     await supabaseAdmin
@@ -68,12 +69,19 @@ async function processNextJob(): Promise<boolean> {
       // Download original image from Supabase Storage
       const imageUrl = job.original_image_url;
       const imageResponse = await fetch(imageUrl);
+      
+      if (!imageResponse.ok) {
+        throw new Error(`Failed to download image: ${imageResponse.status} ${imageResponse.statusText}`);
+      }
+      
       const imageBuffer = Buffer.from(await imageResponse.arrayBuffer());
       const imageBase64 = imageBuffer.toString('base64');
       const mimeType = imageResponse.headers.get('content-type') || 'image/jpeg';
 
+      console.log(`📥 [IMAGE DOWNLOADED] User: ${userIdShort}... | Size: ${imageBuffer.length} bytes`);
+
       // Generate portrait
-      console.log(`🎨 Generating portrait with style: ${job.style_key}`);
+      console.log(`🎨 [AI GENERATION] User: ${userIdShort}... | Style: ${job.style_key}`);
       const generatedImageBase64 = await generatePortrait(
         imageBase64,
         job.style_key,
@@ -98,11 +106,11 @@ async function processNextJob(): Promise<boolean> {
         p_generated_image_url: generatedImageUrl
       });
 
-      console.log(`✅ Job ${job.job_id} completed successfully`);
+      console.log(`✅ [JOB COMPLETED] User: ${userIdShort}... | Job: ${job.job_id} | Generated URL: ${generatedImageUrl.slice(0, 50)}...`);
       return true;
 
     } catch (genError: any) {
-      console.error(`❌ Generation failed for job ${job.job_id}:`, genError.message);
+      console.log(`❌ [JOB FAILED] User: ${userIdShort}... | Job: ${job.job_id} | Error: ${genError.message}`);
 
       // Check if this is a content policy violation - these should NOT be retried
       const isContentViolation = genError.message && (
@@ -112,7 +120,7 @@ async function processNextJob(): Promise<boolean> {
       );
 
       if (isContentViolation) {
-        console.log('🚫 Content policy violation detected - marking as permanent failure (no retries)');
+        console.log(`🚫 [CONTENT VIOLATION] User: ${userIdShort}... | Job: ${job.job_id} | No retries - permanent failure`);
         
         // Mark job as permanently failed
         await supabaseAdmin
@@ -134,6 +142,8 @@ async function processNextJob(): Promise<boolean> {
       }
 
       // For other errors, use the retry logic
+      console.log(`🔄 [RETRY QUEUED] User: ${userIdShort}... | Job: ${job.job_id} | Will retry after backoff`);
+      
       await supabaseAdmin.rpc('fail_generation_job', {
         p_job_id: job.job_id,
         p_error_message: genError.message || 'Generation failed'
