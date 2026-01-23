@@ -167,6 +167,9 @@ export default function GeneratingScreen() {
       
       // Determine error type for better analytics
       const isNoCredits = errorMessage.includes('No credits remaining') || errorMessage.includes('403');
+      const isAuthError = errorMessage.includes('401') || 
+                          errorMessage.includes('Missing or invalid authorization') ||
+                          errorMessage.includes('Invalid or expired token');
       const isContentViolation = errorMessage.includes('CONTENT_POLICY_VIOLATION') || 
                                   errorMessage.includes('E005') || 
                                   errorMessage.includes('flagged as sensitive');
@@ -182,6 +185,18 @@ export default function GeneratingScreen() {
       });
       
       console.error('Error details:', JSON.stringify(err, null, 2));
+      
+      // Check if error is about authentication (401)
+      if (isAuthError) {
+        console.log('⚠️ Auth error, redirecting to login...');
+        setIsGenerating(false);
+        Alert.alert(
+          'Session Expired',
+          'Your session has expired. Please log in again.',
+          [{ text: 'OK', onPress: () => router.replace('/login') }]
+        );
+        return;
+      }
       
       // Check if error is about no credits (403)
       if (isNoCredits) {

@@ -4,62 +4,35 @@ import { getAccessToken } from './supabase';
 import { CreditsInfo, Generation, GenerationResult } from '../types';
 
 /**
- * Check if backend is ready (warm) by polling /health endpoint with exponential backoff
+ * Check if backend is ready (warm) by making a lightweight API call
  * This prevents making real API calls while backend is cold starting
+ * 
+ * NOTE: We removed the /health endpoint, so we just use a simple delay
+ * to give the backend time to wake up from cold start
  */
 export async function waitForBackendReady(
   maxWaitMs: number = 30000,
   onProgress?: (progress: number, attempt: number) => void
 ): Promise<boolean> {
-  const startTime = Date.now();
-  let attempts = 0;
-  let delay = 500; // Start with 500ms
-  const maxDelay = 3000; // Cap at 3 seconds
+  console.log('🔍 Waiting for backend to be ready...');
   
-  console.log('🔍 Checking if backend is ready...');
+  // Simple progressive wait to give backend time to wake up
+  // Most Render cold starts complete within 10-20 seconds
+  const steps = 10;
+  const stepDelay = Math.min(maxWaitMs / steps, 2000); // Max 2s per step
   
-  while (Date.now() - startTime < maxWaitMs) {
-    attempts++;
+  for (let i = 0; i < steps; i++) {
+    const progress = ((i + 1) / steps) * 90; // 0-90%
+    onProgress?.(progress, i + 1);
     
-    // Calculate progress based on time elapsed (0-90%)
-    const elapsed = Date.now() - startTime;
-    const progress = Math.min((elapsed / maxWaitMs) * 90, 90);
-    onProgress?.(progress, attempts);
-    
-    try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5s timeout per attempt
-      
-      const response = await fetch(`${API_URL}/health`, {
-        method: 'GET',
-        signal: controller.signal,
-      });
-      
-      clearTimeout(timeoutId);
-      
-      if (response.ok) {
-        const data = await response.json();
-        if (data.status === 'ready') {
-          console.log(`✅ Backend ready after ${attempts} attempts (${Date.now() - startTime}ms)`);
-          onProgress?.(90, attempts); // Health check complete
-          return true;
-        }
-      }
-    } catch (error) {
-      // Backend not ready yet, continue polling
-      console.log(`⏳ Backend not ready (attempt ${attempts}), retrying in ${delay}ms...`);
+    if (i < steps - 1) { // Don't wait after last step
+      await new Promise(resolve => setTimeout(resolve, stepDelay));
     }
-    
-    // Wait with exponential backoff before next attempt
-    await new Promise(resolve => setTimeout(resolve, delay));
-    
-    // Increase delay exponentially: 500ms -> 1s -> 2s -> 3s (capped)
-    delay = Math.min(delay * 2, maxDelay);
   }
   
-  console.warn('⚠️ Backend health check timed out, proceeding anyway');
-  onProgress?.(90, attempts); // Proceed anyway
-  return false;
+  console.log('✅ Backend warmup wait complete');
+  onProgress?.(90, steps);
+  return true;
 }
 
 /**
@@ -144,13 +117,20 @@ async function fetchWithRetry<T>(
  * Get headers for authenticated requests
  */
 async function getAuthHeaders(): Promise<Record<string, string>> {
-  const token = await getAccessToken();
-  if (token) {
-    return {
-      'Authorization': `Bearer ${token}`,
-    };
+  try {
+    const token = await getAccessToken();
+    if (token) {
+      return {
+        'Authorization': `Bearer ${token}`,
+      };
+    }
+    console.warn('⚠️ No auth token available - user may not be logged in');
+    return {};
+  } catch (error: any) {
+    console.error('❌ Failed to get auth token:', error.message);
+    // Return empty headers to let the backend handle the auth error
+    return {};
   }
-  return {};
 }
 
 /**
@@ -260,76 +240,86 @@ export async function generatePortrait(
   styleKey: string,
   customPrompt?: string | null
 ): Promise<{ success: boolean; generation: GenerationResult; requiresSignup?: boolean }> {
-  const headers = await getHeaders();
-  
-  // Create form data
-  const formData = new FormData();
-  
-  // Get file info
-  const fileInfo = await FileSystem.getInfoAsync(imageUri);
-  if (!fileInfo.exists) {
-    throw new Error('Image file not found');
-  }
-  
-  // Determine file type
-  const uriParts = imageUri.split('.');
-  const fileType = uriParts[uriParts.length - 1];
-  const mimeType = fileType === 'png' ? 'image/png' : 'image/jpeg';
-  
-  // Append file
-  formData.append('image', {
-    uri: imageUri,
-    name: `photo.${fileType}`,
-    type: mimeType,
-  } as any);
-  
-  formData.append('styleKey', styleKey);
-  
-  // Add custom prompt if provided
-  if (customPrompt) {
-    console.log('Adding customPrompt to request:', customPrompt);
-    formData.append('customPrompt', customPrompt);
-  } else {
-    console.log('No customPrompt provided for styleKey:', styleKey);
-  }
-  
-  const response = await fetch(`${API_URL}/api/generate`, {
-    method: 'POST',
-    headers: {
-      ...headers,
-      'Content-Type': 'multipart/form-data',
-    },
-    body: formData,
-  });
-  
-  if (!response.ok) {
-    const text = await response.text();
-    console.error(`API Error (${response.status}):`, text);
-    try {
-      const error = JSON.parse(text);
-      // Check if this is a "no credits" error that requires signup
-      if (error.requiresSignup) {
-        throw { message: error.message, requiresSignup: true };
-      }
-      throw new Error(error.message || 'Generation failed');
-    } catch (e: any) {
-       if (e.requiresSignup) throw e;
-       throw new Error(`Server Error (${response.status}): ${text.substring(0, 100)}`);
-    }
-  }
-  
-  const result = await response.json();
-  
-  // If status is 202 (job queued), poll for completion
-  if (response.status === 202 || result.generation?.status === 'queued') {
-    const generationId = result.generation.id;
-    console.log(`📋 Job queued, polling for completion: ${generationId}`);
+  try {
+    const headers = await getHeaders();
     
-    // Poll for completion
-    return pollGenerationStatus(generationId);
+    // Create form data
+    const formData = new FormData();
+    
+    // Get file info
+    const fileInfo = await FileSystem.getInfoAsync(imageUri);
+    if (!fileInfo.exists) {
+      throw new Error('Image file not found');
+    }
+    
+    // Determine file type
+    const uriParts = imageUri.split('.');
+    const fileType = uriParts[uriParts.length - 1];
+    const mimeType = fileType === 'png' ? 'image/png' : 'image/jpeg';
+    
+    // Append file
+    formData.append('image', {
+      uri: imageUri,
+      name: `photo.${fileType}`,
+      type: mimeType,
+    } as any);
+    
+    formData.append('styleKey', styleKey);
+    
+    // Add custom prompt if provided
+    if (customPrompt) {
+      console.log('Adding customPrompt to request:', customPrompt);
+      formData.append('customPrompt', customPrompt);
+    } else {
+      console.log('No customPrompt provided for styleKey:', styleKey);
+    }
+    
+    const response = await fetch(`${API_URL}/api/generate`, {
+      method: 'POST',
+      headers: {
+        ...headers,
+        'Content-Type': 'multipart/form-data',
+      },
+      body: formData,
+    });
+    
+    if (!response.ok) {
+      const text = await response.text();
+      console.error(`API Error (${response.status}):`, text);
+      try {
+        const error = JSON.parse(text);
+        // Check if this is a "no credits" error that requires signup
+        if (error.requiresSignup) {
+          throw { message: error.message, requiresSignup: true };
+        }
+        throw new Error(error.message || 'Generation failed');
+      } catch (e: any) {
+         if (e.requiresSignup) throw e;
+         throw new Error(`Server Error (${response.status}): ${text.substring(0, 100)}`);
+      }
+    }
+    
+    const result = await response.json();
+    
+    // If status is 202 (job queued), poll for completion
+    if (response.status === 202 || result.generation?.status === 'queued') {
+      const generationId = result.generation.id;
+      console.log(`📋 Job queued, polling for completion: ${generationId}`);
+      
+      // Poll for completion
+      return pollGenerationStatus(generationId);
+    }
+    
+    return result;
+  } catch (error: any) {
+    // Handle network errors specifically
+    if (error.message === 'Network request failed' || error.message?.includes('fetch')) {
+      console.error('❌ Network error during generation:', error);
+      throw new Error('Network connection failed. Please check your internet connection and try again.');
+    }
+    // Re-throw other errors as-is
+    throw error;
   }
-  
-  return result;
 }
 
 // Poll generation status until complete

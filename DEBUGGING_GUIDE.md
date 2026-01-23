@@ -150,6 +150,56 @@ Shows the complete lifecycle of job processing.
 
 **What to check:** Mobile app image upload logic
 
+### Scenario 9: Missing or Invalid Auth Token (401)
+
+**Logs:**
+```
+❌ [AUTH FAILED] Device: abc123 | Reason: Missing authorization header
+```
+
+**PostHog Event:**
+- Event: `generation_failed`
+- Error: `"Server Error (401): {"error":"Missing or invalid authorization header"}"`
+
+**Root Cause:** User is not logged in or their session expired, but the app still tried to generate.
+
+**What to check:**
+1. Check if user's session expired
+2. Look at device ID in logs to see if it's a guest user
+3. Mobile app should check auth status before allowing generation
+
+### Scenario 10: Rate Limited by Cloudflare (429)
+
+**PostHog Event:**
+- Event: `generation_failed`  
+- Error: `"Server Error (429): <!DOCTYPE html><html lang="en-US"><head><title>Just a moment..."`
+
+**Root Cause:** Backend is being rate-limited or protected by Cloudflare DDoS protection.
+
+**What to check:**
+1. Check Render logs for high request volume
+2. Check if a specific IP is making too many requests
+3. May need to adjust Cloudflare settings or Render rate limits
+
+### Scenario 11: Network Request Failed
+
+**PostHog Event:**
+- Event: `generation_failed`
+- Error: `"Network request failed"` or `"Network connection failed. Please check your internet connection and try again."`
+
+**Root Cause:** 
+- User has poor/no internet connection
+- DNS resolution failed
+- Request timeout due to slow network
+- App trying to make request before network is ready
+
+**What to check:**
+1. Check if errors correlate with specific user locations (poor coverage areas)
+2. Check if errors spike at specific times (network congestion)
+3. User may be in airplane mode or have data disabled
+
+**Fix Applied:** Now shows clearer error message to users about network issues.
+
 ## PostHog Analytics
 
 All generation failures are now tracked with detailed context:

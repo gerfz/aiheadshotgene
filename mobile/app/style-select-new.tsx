@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   Image,
   Dimensions,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, Stack } from 'expo-router';
@@ -14,6 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAppStore } from '../src/store/useAppStore';
 import { STYLE_PRESETS } from '../src/constants/styles';
 import tiktokService from '../src/services/tiktok';
+import { getSession } from '../src/services/supabase';
 
 const { width } = Dimensions.get('window');
 const cardWidth = (width - 60) / 2; // 2 columns with padding
@@ -62,6 +64,27 @@ export default function StyleSelectScreen() {
 
   const handleContinue = async () => {
     if (selectedStyle) {
+      // Check if user is authenticated before proceeding
+      try {
+        const session = await getSession();
+        if (!session) {
+          Alert.alert(
+            'Session Error',
+            'Please restart the app to continue.',
+            [{ text: 'OK' }]
+          );
+          return;
+        }
+      } catch (error) {
+        console.error('❌ Failed to check session:', error);
+        Alert.alert(
+          'Connection Error',
+          'Please check your internet connection and try again.',
+          [{ text: 'OK' }]
+        );
+        return;
+      }
+      
       // Track style selection in TikTok
       await tiktokService.trackStyleSelection(selectedStyle);
       router.push('/generating');

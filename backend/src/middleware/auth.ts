@@ -16,8 +16,10 @@ export async function verifyToken(
 ) {
   try {
     const authHeader = req.headers.authorization;
+    const guestDeviceId = req.headers['x-guest-device-id'] as string;
     
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      console.log(`❌ [AUTH FAILED] Device: ${guestDeviceId} | Reason: Missing authorization header`);
       return res.status(401).json({ error: 'Missing or invalid authorization header' });
     }
 
@@ -27,6 +29,7 @@ export async function verifyToken(
     const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
 
     if (error || !user) {
+      console.log(`❌ [AUTH FAILED] Device: ${guestDeviceId} | Reason: Invalid or expired token - ${error?.message || 'No user found'}`);
       return res.status(401).json({ error: 'Invalid or expired token' });
     }
 
@@ -34,8 +37,8 @@ export async function verifyToken(
     req.userEmail = user.email;
     
     next();
-  } catch (error) {
-    console.error('Auth middleware error:', error);
+  } catch (error: any) {
+    console.log(`❌ [AUTH FAILED] Device: ${guestDeviceId} | Reason: Exception - ${error.message}`);
     return res.status(401).json({ error: 'Authentication failed' });
   }
 }

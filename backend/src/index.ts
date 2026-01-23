@@ -27,6 +27,11 @@ app.use((req, res, next) => {
   next();
 });
 
+// Temporary health endpoint for old app versions (remove after all users update to 1.3.9+)
+app.get('/health', (req, res) => {
+  res.json({ status: 'ready' });
+});
+
 // Routes
 app.use('/api/generate', generateRoutes);
 app.use('/api/user', userRoutes);

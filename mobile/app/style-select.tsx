@@ -10,6 +10,7 @@ import {
   TextInput,
   KeyboardAvoidingView,
   Platform,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
@@ -19,6 +20,7 @@ import { useAppStore } from '../src/store/useAppStore';
 import { STYLE_PRESETS } from '../src/constants/styles';
 import { getMostUsedStyles } from '../src/services/api';
 import { analytics } from '../src/services/posthog';
+import { getSession } from '../src/services/supabase';
 
 const { width } = Dimensions.get('window');
 const cardWidth = (width - 60) / 2; // 2 columns with padding
@@ -202,8 +204,29 @@ export default function StyleSelectScreen() {
     }
   }, [setSelectedStyle, setCustomPrompt, categories]);
 
-  const handleContinue = useCallback(() => {
+  const handleContinue = useCallback(async () => {
     if (selectedStyle) {
+      // Check if user is authenticated before proceeding
+      try {
+        const session = await getSession();
+        if (!session) {
+          Alert.alert(
+            'Session Error',
+            'Please restart the app to continue.',
+            [{ text: 'OK' }]
+          );
+          return;
+        }
+      } catch (error) {
+        console.error('❌ Failed to check session:', error);
+        Alert.alert(
+          'Connection Error',
+          'Please check your internet connection and try again.',
+          [{ text: 'OK' }]
+        );
+        return;
+      }
+      
       router.push('/generating');
     }
   }, [selectedStyle]);
