@@ -14,9 +14,10 @@ export async function verifyToken(
   res: Response,
   next: NextFunction
 ) {
+  const guestDeviceId = req.headers['x-guest-device-id'] as string;
+  
   try {
     const authHeader = req.headers.authorization;
-    const guestDeviceId = req.headers['x-guest-device-id'] as string;
     
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       console.log(`❌ [AUTH FAILED] Device: ${guestDeviceId} | Reason: Missing authorization header`);
