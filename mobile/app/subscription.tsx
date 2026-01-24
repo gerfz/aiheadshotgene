@@ -423,12 +423,8 @@ export default function SubscriptionScreen() {
                 // Clear the subscription flag
                 await SecureStore.deleteItemAsync(SHOW_SUBSCRIPTION_KEY);
                 
-                // Check if we can go back, otherwise go to home
-                if (router.canGoBack()) {
-                  router.back();
-                } else {
-                  router.replace('/home');
-                }
+                // Always navigate to home screen when closing subscription
+                router.replace('/home');
               }}
               hitSlop={{ top: 20, bottom: 20, left: 20, right: 20 }}
             >

@@ -1,14 +1,49 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
 import { router, usePathname } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useAppStore } from '../store/useAppStore';
+import { NoCreditsModal } from './NoCreditsModal';
+import { RateUsModal } from './RateUsModal';
 
 export const BottomNav = () => {
   const pathname = usePathname();
+  const credits = useAppStore((state) => state.credits);
+  const setCredits = useAppStore((state) => state.setCredits);
+  const [showNoCreditsModal, setShowNoCreditsModal] = useState(false);
+  const [showRateUsModal, setShowRateUsModal] = useState(false);
 
   const handleNavigation = (route: string) => {
     if (pathname !== route) {
       router.push(route as any);
+    }
+  };
+
+  const handleCreatePress = () => {
+    // Check if user has credits
+    if (!credits?.hasCredits && !credits?.isSubscribed) {
+      // Show no credits modal instead of navigating
+      setShowNoCreditsModal(true);
+    } else {
+      // User has credits or is subscribed, allow navigation
+      handleNavigation('/upload');
+    }
+  };
+
+  const handleRateUsFromNoCredits = () => {
+    setShowRateUsModal(true);
+  };
+
+  const handleRateUsClose = async () => {
+    setShowRateUsModal(false);
+    // Refresh credits after rating (they get 2 free credits)
+    try {
+      const { getUserCredits } = await import('../services/api');
+      const updatedCredits = await getUserCredits();
+      setCredits(updatedCredits);
+      console.log('✅ Credits refreshed after rating:', updatedCredits);
+    } catch (error) {
+      console.log('Error refreshing credits:', error);
     }
   };
 
@@ -38,7 +73,7 @@ export const BottomNav = () => {
         {/* Create / Plus Button */}
         <TouchableOpacity
           style={styles.centerButtonContainer}
-          onPress={() => handleNavigation('/upload')}
+          onPress={handleCreatePress}
         >
           <View style={styles.plusButtonMain}>
             <Ionicons name="add" size={22} color="#000000" style={styles.plusIcon} />
@@ -59,6 +94,18 @@ export const BottomNav = () => {
           <Text style={[styles.label, isActive('/profile') && styles.labelActive]}>Profile</Text>
         </TouchableOpacity>
       </View>
+
+      {/* Modals */}
+      <NoCreditsModal
+        visible={showNoCreditsModal}
+        onClose={() => setShowNoCreditsModal(false)}
+        onRateUs={handleRateUsFromNoCredits}
+        source="create_button"
+      />
+      <RateUsModal
+        visible={showRateUsModal}
+        onClose={handleRateUsClose}
+      />
     </View>
   );
 };

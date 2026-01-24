@@ -126,6 +126,29 @@ export const analytics = {
   creditsAwardedForRating: (stars: number, creditsAwarded: number) => 
     trackEvent('credits_awarded_for_rating', { stars, credits_awarded: creditsAwarded }),
   
+  // No Credits Modal (when user tries to create without credits)
+  noCreditsModalShown: (hasAlreadyRated: boolean, source: 'create_button' | 'upload' | 'generation') => 
+    trackEvent('no_credits_modal_shown', { 
+      has_already_rated: hasAlreadyRated,
+      source,
+      options_available: hasAlreadyRated ? 'subscribe_only' : 'rate_and_subscribe'
+    }),
+  
+  noCreditsModalClosed: (action: 'dismissed' | 'rate_us' | 'subscribe', hasAlreadyRated: boolean) => 
+    trackEvent('no_credits_modal_closed', { 
+      action,
+      has_already_rated: hasAlreadyRated 
+    }),
+  
+  noCreditsRateUsClicked: () => 
+    trackEvent('no_credits_rate_us_clicked'),
+  
+  noCreditsSubscribeClicked: (hasAlreadyRated: boolean) => 
+    trackEvent('no_credits_subscribe_clicked', { 
+      has_already_rated: hasAlreadyRated,
+      user_type: hasAlreadyRated ? 'previously_rated' : 'new_rater'
+    }),
+  
   // Feedback
   feedbackRequested: (source: string) => 
     trackEvent('feedback_requested', { source }),

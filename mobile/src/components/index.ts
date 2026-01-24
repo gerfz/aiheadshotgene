@@ -6,4 +6,6 @@ export { ErrorBoundary } from './ErrorBoundary';
 export { BottomNav } from './BottomNav';
 export { Toast } from './Toast';
 export { LoadingScreen } from './LoadingScreen';
+export { NoCreditsModal } from './NoCreditsModal';
+export { RateUsModal } from './RateUsModal';
 
