@@ -2,7 +2,7 @@
   "expo": {
     "name": "AI Headshot Generator & Studio",
     "slug": "ai-portrait-studio",
-    "version": "1.4.3",
+    "version": "1.4.4",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
@@ -21,12 +21,9 @@
       "buildNumber": "1"
     },
     "android": {
-      "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#0F172A"
-      },
+      "icon": "./assets/icon.png",
       "package": "com.aiportrait.studio",
-      "versionCode": 66,
+      "versionCode": 68,
       "permissions": [
         "android.permission.READ_EXTERNAL_STORAGE",
         "android.permission.WRITE_EXTERNAL_STORAGE",
