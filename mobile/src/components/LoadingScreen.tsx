@@ -51,10 +51,10 @@ export function LoadingScreen({ isReady = false, onLoadingComplete }: LoadingScr
       ])
     ).start();
 
-    // Smooth fake progress - 0 to 100 over 10 seconds
-    // Updates every 100ms for smooth animation
+    // Smooth fake progress - 0 to 100 over 17 seconds
+    // Updates every 170ms for smooth animation
     intervalRef.current = setInterval(() => {
-      progressRef.current += 1; // Increment by 1% every 100ms = 100% in 10 seconds
+      progressRef.current += 1; // Increment by 1% every 170ms = 100% in 17 seconds
       
       if (progressRef.current >= 100) {
         progressRef.current = 100;
@@ -64,7 +64,7 @@ export function LoadingScreen({ isReady = false, onLoadingComplete }: LoadingScr
       }
       
       setDisplayProgress(progressRef.current);
-    }, 100); // Update every 100ms
+    }, 170); // Update every 170ms (17 seconds total)
 
     return () => {
       if (intervalRef.current) {
@@ -99,7 +99,7 @@ export function LoadingScreen({ isReady = false, onLoadingComplete }: LoadingScr
         
         // Speed up: go to 100% in remaining time
         const speedUpInterval = setInterval(() => {
-          progressRef.current += 5; // 5% every 100ms = fast completion
+          progressRef.current += 5; // 5% every 170ms = fast completion
           
           if (progressRef.current >= 100) {
             progressRef.current = 100;
@@ -112,7 +112,7 @@ export function LoadingScreen({ isReady = false, onLoadingComplete }: LoadingScr
           } else {
             setDisplayProgress(progressRef.current);
           }
-        }, 100);
+        }, 170);
       }
     }
   }, [isReady, onLoadingComplete]);
