@@ -1,22 +1,26 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, Animated, Easing } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 
 interface LoadingScreenProps {
-  progress: number; // 0-100
-  message?: string;
+  isReady?: boolean; // Signal when app is ready to show
+  onLoadingComplete?: () => void; // Callback when loading animation completes
 }
 
 const LOADING_MESSAGES = [
-  'Waking up the backend...',
-  'Connecting to servers...',
-  'Preparing your workspace...',
+  'Initializing AI Studio...',
+  'Loading your workspace...',
+  'Preparing magic...',
   'Almost ready...',
 ];
 
-export function LoadingScreen({ progress, message }: LoadingScreenProps) {
+export function LoadingScreen({ isReady = false, onLoadingComplete }: LoadingScreenProps) {
   const spinAnim = useRef(new Animated.Value(0)).current;
   const pulseAnim = useRef(new Animated.Value(1)).current;
+  const [displayProgress, setDisplayProgress] = useState(0);
+  const progressRef = useRef(0);
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const hasCompletedRef = useRef(false);
   
   useEffect(() => {
     // Spinning animation
@@ -46,7 +50,72 @@ export function LoadingScreen({ progress, message }: LoadingScreenProps) {
         }),
       ])
     ).start();
+
+    // Smooth fake progress - 0 to 100 over 10 seconds
+    // Updates every 100ms for smooth animation
+    intervalRef.current = setInterval(() => {
+      progressRef.current += 1; // Increment by 1% every 100ms = 100% in 10 seconds
+      
+      if (progressRef.current >= 100) {
+        progressRef.current = 100;
+        if (intervalRef.current) {
+          clearInterval(intervalRef.current);
+        }
+      }
+      
+      setDisplayProgress(progressRef.current);
+    }, 100); // Update every 100ms
+
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+      }
+    };
   }, []);
+
+  // When app is ready, speed up to 100% if not already there
+  useEffect(() => {
+    if (isReady && !hasCompletedRef.current) {
+      hasCompletedRef.current = true;
+      
+      // If we're past 50%, jump to 100% immediately
+      if (progressRef.current >= 50) {
+        console.log('⚡ App ready at', progressRef.current, '% - completing immediately');
+        if (intervalRef.current) {
+          clearInterval(intervalRef.current);
+        }
+        setDisplayProgress(100);
+        
+        // Small delay to show 100% before transitioning
+        setTimeout(() => {
+          onLoadingComplete?.();
+        }, 200);
+      } else {
+        // If below 50%, speed up to 100%
+        console.log('⚡ App ready at', progressRef.current, '% - speeding up');
+        if (intervalRef.current) {
+          clearInterval(intervalRef.current);
+        }
+        
+        // Speed up: go to 100% in remaining time
+        const speedUpInterval = setInterval(() => {
+          progressRef.current += 5; // 5% every 100ms = fast completion
+          
+          if (progressRef.current >= 100) {
+            progressRef.current = 100;
+            clearInterval(speedUpInterval);
+            setDisplayProgress(100);
+            
+            setTimeout(() => {
+              onLoadingComplete?.();
+            }, 200);
+          } else {
+            setDisplayProgress(progressRef.current);
+          }
+        }, 100);
+      }
+    }
+  }, [isReady, onLoadingComplete]);
 
   const spin = spinAnim.interpolate({
     inputRange: [0, 1],
@@ -54,7 +123,7 @@ export function LoadingScreen({ progress, message }: LoadingScreenProps) {
   });
 
   // Auto-select message based on progress
-  const autoMessage = message || LOADING_MESSAGES[Math.min(Math.floor(progress / 25), LOADING_MESSAGES.length - 1)];
+  const autoMessage = LOADING_MESSAGES[Math.min(Math.floor(displayProgress / 25), LOADING_MESSAGES.length - 1)];
 
   return (
     <>
@@ -92,19 +161,19 @@ export function LoadingScreen({ progress, message }: LoadingScreenProps) {
                 style={[
                   styles.progressFill,
                   {
-                    width: `${Math.min(progress, 100)}%`,
+                    width: `${Math.min(displayProgress, 100)}%`,
                   },
                 ]}
               />
               <View style={styles.progressShine} />
             </View>
-            <Text style={styles.progressText}>{Math.round(progress)}%</Text>
+            <Text style={styles.progressText}>{Math.round(displayProgress)}%</Text>
           </View>
 
           {/* Helpful tip */}
           <Text style={styles.tip}>
-            {progress < 50 
-              ? 'First load may take up to 30 seconds...'
+            {displayProgress < 50 
+              ? 'Setting up your AI studio...'
               : 'Almost there! Hang tight...'
             }
           </Text>

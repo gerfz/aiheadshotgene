@@ -30,7 +30,7 @@ function withTimeout<T>(promise: Promise<T>, ms: number, errorMessage: string): 
 export default function RootLayout() {
   const { setUser, setIsLoading } = useAppStore();
   const [initializing, setInitializing] = useState(true);
-  const [loadingProgress, setLoadingProgress] = useState(0);
+  const [appReady, setAppReady] = useState(false);
   const [showVerificationToast, setShowVerificationToast] = useState(false);
 
   useEffect(() => {
@@ -39,14 +39,12 @@ export default function RootLayout() {
     
     const initApp = async () => {
       try {
-        // 🔥 CRITICAL: Set progress immediately so user sees something
-        setLoadingProgress(2);
         console.log('🚀 Starting app initialization...');
         
         // ========================================
         // 🎯 STEP 1: Initialize TikTok SDK FIRST (for proper attribution)
         // ========================================
-        console.log('📱 [1/6] Initializing TikTok SDK...');
+        console.log('📱 [1/5] Initializing TikTok SDK...');
         try {
           await withTimeout(tiktokService.initialize(), 5000, 'TikTok SDK timeout');
           console.log('✅ TikTok SDK initialized');
@@ -54,12 +52,10 @@ export default function RootLayout() {
           console.error('❌ TikTok SDK init failed:', e);
         }
         
-        setLoadingProgress(5);
-        
         // ========================================
         // 🎯 STEP 2: Track Install/Launch Event IMMEDIATELY (critical for attribution)
         // ========================================
-        console.log('📱 [2/6] Tracking TikTok install/launch...');
+        console.log('📱 [2/5] Tracking TikTok install/launch...');
         try {
           const hasTrackedInstall = await withTimeout(
             SecureStore.getItemAsync(TIKTOK_INSTALL_TRACKED_KEY),
@@ -92,36 +88,26 @@ export default function RootLayout() {
           console.error('❌ Install/Launch tracking failed:', e);
         }
         
-        setLoadingProgress(10);
-        
         // ========================================
         // 🎯 STEP 3: Initialize PostHog (after TikTok attribution is captured)
         // ========================================
-        console.log('📱 [3/6] Initializing analytics...');
-        // Track app opened (non-blocking)
+        console.log('📱 [3/5] Initializing analytics...');
+        // Track app opened (triggers PostHog lazy init)
         analytics.appOpened();
-        
-        setLoadingProgress(12);
         
         // ========================================
         // 🎯 STEP 4: Start backend warmup in parallel
         // ========================================
-        console.log('📱 [4/6] Starting backend warmup...');
-        const backendWarmupPromise = waitForBackendReady(20000, (progress) => {
-          if (progress < 50) {
-            setLoadingProgress(12 + progress * 0.3);
-          }
-        }).catch(err => {
+        console.log('📱 [4/5] Starting backend warmup...');
+        const backendWarmupPromise = waitForBackendReady(20000).catch(err => {
           console.warn('⚠️ Backend warmup failed:', err);
           return false;
         });
         
-        setLoadingProgress(15);
-        
         // ========================================
         // 🎯 STEP 5: Get device ID
         // ========================================
-        console.log('📱 [5/6] Getting device ID...');
+        console.log('📱 [5/5] Getting device ID...');
         let deviceId: string;
         try {
           deviceId = await withTimeout(getHardwareDeviceId(), 3000, 'Device ID timeout');
@@ -130,8 +116,6 @@ export default function RootLayout() {
           console.warn('⚠️ Device ID fetch failed, using fallback');
           deviceId = `fallback-${Date.now()}`;
         }
-        
-        setLoadingProgress(18);
         
         // 🔥 FIX: Check if this device has a stored user ID
         let storedUserId: string | null = null;
@@ -173,13 +157,9 @@ export default function RootLayout() {
           session = null;
         }
         
-        setLoadingProgress(25);
-        
         if (session?.user) {
           // User already has an anonymous session
           console.log('✅ Existing anonymous user:', session.user.id);
-          
-          setLoadingProgress(30);
           
           // 🔥 FIX: Verify session with timeout
           let validUser = null;
@@ -201,8 +181,6 @@ export default function RootLayout() {
             // Session is invalid, sign out and recreate user
             console.warn('⚠️ Invalid session detected, will recreate user for this device');
             supabase.auth.signOut().catch(() => {}); // Non-blocking
-            
-            setLoadingProgress(35);
             
             // 🔥 DEVICE-BASED USER: Recreate anonymous user with same device binding
             try {
@@ -240,13 +218,9 @@ export default function RootLayout() {
                 tiktokService.trackRegistration().catch(() => {});
               }
               
-              setLoadingProgress(50);
-              
               // 🔥 FIX: Wait for backend warmup to complete (it started earlier)
               console.log('🔍 Waiting for backend warmup...');
               await backendWarmupPromise;
-              
-              setLoadingProgress(70);
               
               // Initialize with new user
               try {
@@ -263,20 +237,16 @@ export default function RootLayout() {
                 console.warn('⚠️ Initialization timeout, continuing anyway:', timeoutError);
               }
               
-              setLoadingProgress(90);
-              
               // Sync subscription status in background (non-blocking)
               syncSubscriptionStatus()
                 .then(isSubscribed => updateSubscriptionStatus(isSubscribed))
                 .then(() => console.log('✅ Subscription status synced'))
                 .catch(syncError => console.warn('⚠️ Background sync failed:', syncError));
               
-              setLoadingProgress(100);
               return; // Exit early
             } catch (createError) {
               console.error('❌ Failed to create user:', createError);
               // Continue anyway - app might work with cached data
-              setLoadingProgress(100);
               return;
             }
           }
@@ -293,8 +263,6 @@ export default function RootLayout() {
             email: session.user.email || `device-${deviceId}@anonymous.local`,
           });
           
-          setLoadingProgress(40);
-          
           // Identify user in TikTok (non-blocking)
           tiktokService.identifyUser(
             session.user.id,
@@ -304,8 +272,6 @@ export default function RootLayout() {
           // 🔥 FIX: Wait for backend warmup to complete (it started earlier in parallel)
           console.log('🔍 Waiting for backend warmup...');
           await backendWarmupPromise;
-          
-          setLoadingProgress(60);
           
           // Initialize purchases and login with timeout
           try {
@@ -322,21 +288,15 @@ export default function RootLayout() {
             console.warn('⚠️ Initialization timeout, continuing anyway:', timeoutError);
           }
           
-          setLoadingProgress(85);
-          
           // Sync subscription status in background (non-blocking)
           syncSubscriptionStatus()
             .then(isSubscribed => updateSubscriptionStatus(isSubscribed))
             .then(() => console.log('✅ Subscription status synced'))
             .catch(syncError => console.warn('⚠️ Background sync failed:', syncError));
-          
-          setLoadingProgress(100);
         } else {
           // No session - create anonymous user for this device
           const isReturningDevice = !!storedUserId;
           console.log(isReturningDevice ? '🔄 Recreating user for returning device' : '🆕 Creating new user for first-time device');
-          
-          setLoadingProgress(30);
           
           try {
             const { data, error } = await withTimeout(
@@ -370,8 +330,6 @@ export default function RootLayout() {
                 email: `device-${deviceId}@anonymous.local`,
               });
               
-              setLoadingProgress(45);
-              
               // Identify user in TikTok (non-blocking)
               tiktokService.identifyUser(data.user.id, `device-${deviceId}@anonymous.local`).catch(() => {});
               // Only track registration for truly new devices
@@ -382,8 +340,6 @@ export default function RootLayout() {
               // 🔥 FIX: Wait for backend warmup to complete (it started earlier in parallel)
               console.log('🔍 Waiting for backend warmup...');
               await backendWarmupPromise;
-              
-              setLoadingProgress(65);
               
               // Initialize purchases and login with timeout
               try {
@@ -400,29 +356,24 @@ export default function RootLayout() {
                 console.warn('⚠️ Initialization timeout, continuing anyway:', timeoutError);
               }
               
-              setLoadingProgress(88);
-              
               // Sync subscription status in background (non-blocking)
               syncSubscriptionStatus()
                 .then(isSubscribed => updateSubscriptionStatus(isSubscribed))
                 .then(() => console.log('✅ Subscription status synced'))
                 .catch(syncError => console.warn('⚠️ Background sync failed:', syncError));
-              
-              setLoadingProgress(100);
             }
-          } catch (createError) {
-            console.error('❌ Failed to create anonymous user:', createError);
-            // Continue anyway - user might see limited functionality
-            setLoadingProgress(100);
-          }
+            } catch (createError) {
+              console.error('❌ Failed to create anonymous user:', createError);
+              // Continue anyway - user might see limited functionality
+            }
         }
       } catch (error) {
         console.error('❌ App initialization error:', error);
       } finally {
         isInitializing = false;
         clearTimeout(initTimeout);
-        setInitializing(false);
-        setIsLoading(false);
+        console.log('✅ App initialization complete - signaling ready');
+        setAppReady(true); // Signal that app is ready
       }
     };
 
@@ -431,9 +382,7 @@ export default function RootLayout() {
     initTimeout = setTimeout(() => {
       console.warn('⚠️ Maximum initialization time exceeded (20s), forcing continue');
       isInitializing = false;
-      setInitializing(false);
-      setIsLoading(false);
-      setLoadingProgress(100);
+      setAppReady(true); // Signal ready even on timeout
     }, 20000); // 20 second max
 
     initApp();
@@ -552,8 +501,19 @@ export default function RootLayout() {
     };
   }, []);
 
+  const handleLoadingComplete = () => {
+    console.log('🎬 Loading animation complete');
+    setInitializing(false);
+    setIsLoading(false);
+  };
+
   if (initializing) {
-    return <LoadingScreen progress={loadingProgress} />;
+    return (
+      <LoadingScreen 
+        isReady={appReady} 
+        onLoadingComplete={handleLoadingComplete}
+      />
+    );
   }
 
   return (
