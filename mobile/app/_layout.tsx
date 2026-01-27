@@ -39,66 +39,97 @@ export default function RootLayout() {
     
     const initApp = async () => {
       try {
-        // 🔥 FIX: Set progress immediately so user sees something
+        // 🔥 CRITICAL: Set progress immediately so user sees something
         setLoadingProgress(2);
         console.log('🚀 Starting app initialization...');
         
-        // Track app opened (non-blocking)
-        analytics.appOpened();
-        
-        // 🔥 FIX: Start backend warmup IMMEDIATELY in parallel (don't await)
-        // This warms the backend while we do other initialization
-        const backendWarmupPromise = waitForBackendReady(20000, (progress) => {
-          // Only update if we're still in early stages
-          if (progress < 50) {
-            setLoadingProgress(5 + progress * 0.3); // 5% to 20%
-          }
-        }).catch(err => {
-          console.warn('⚠️ Backend warmup failed:', err);
-          return false;
-        });
+        // ========================================
+        // 🎯 STEP 1: Initialize TikTok SDK FIRST (for proper attribution)
+        // ========================================
+        console.log('📱 [1/6] Initializing TikTok SDK...');
+        try {
+          await withTimeout(tiktokService.initialize(), 5000, 'TikTok SDK timeout');
+          console.log('✅ TikTok SDK initialized');
+        } catch (e) {
+          console.error('❌ TikTok SDK init failed:', e);
+        }
         
         setLoadingProgress(5);
         
-        // Initialize TikTok SDK with timeout (non-critical, don't block)
-        try {
-          await withTimeout(tiktokService.initialize(), 3000, 'TikTok SDK timeout');
-        } catch (e) {
-          console.warn('⚠️ TikTok SDK init failed, continuing:', e);
-        }
-        
-        setLoadingProgress(8);
-        
-        // Track InstallApp event (non-blocking, with timeout)
+        // ========================================
+        // 🎯 STEP 2: Track Install/Launch Event IMMEDIATELY (critical for attribution)
+        // ========================================
+        console.log('📱 [2/6] Tracking TikTok install/launch...');
         try {
           const hasTrackedInstall = await withTimeout(
             SecureStore.getItemAsync(TIKTOK_INSTALL_TRACKED_KEY),
             2000,
             'SecureStore timeout'
           );
+          
           if (!hasTrackedInstall) {
-            console.log('🎯 First app install - tracking InstallApp event');
-            tiktokService.trackAppInstall().catch(() => {}); // Fire and forget
-            SecureStore.setItemAsync(TIKTOK_INSTALL_TRACKED_KEY, 'true').catch(() => {});
+            // First time install - CRITICAL for attribution
+            console.log('🎯 FIRST INSTALL - Tracking InstallApp event for TikTok attribution');
+            
+            // Wait for install event to complete (don't fire and forget!)
+            await withTimeout(
+              tiktokService.trackAppInstall(),
+              5000,
+              'Install tracking timeout'
+            );
+            
+            // Mark as tracked
+            await SecureStore.setItemAsync(TIKTOK_INSTALL_TRACKED_KEY, 'true');
+            console.log('✅ Install event tracked successfully');
           } else {
+            // Returning user - track launch
             console.log('🔄 Returning user - tracking LaunchApp event');
-            tiktokService.trackAppLaunch().catch(() => {}); // Fire and forget
+            tiktokService.trackAppLaunch().catch((e) => {
+              console.warn('⚠️ Launch tracking failed:', e);
+            });
           }
         } catch (e) {
-          console.warn('⚠️ Install tracking failed, continuing:', e);
+          console.error('❌ Install/Launch tracking failed:', e);
         }
+        
+        setLoadingProgress(10);
+        
+        // ========================================
+        // 🎯 STEP 3: Initialize PostHog (after TikTok attribution is captured)
+        // ========================================
+        console.log('📱 [3/6] Initializing analytics...');
+        // Track app opened (non-blocking)
+        analytics.appOpened();
         
         setLoadingProgress(12);
         
-        // Get device ID with timeout
+        // ========================================
+        // 🎯 STEP 4: Start backend warmup in parallel
+        // ========================================
+        console.log('📱 [4/6] Starting backend warmup...');
+        const backendWarmupPromise = waitForBackendReady(20000, (progress) => {
+          if (progress < 50) {
+            setLoadingProgress(12 + progress * 0.3);
+          }
+        }).catch(err => {
+          console.warn('⚠️ Backend warmup failed:', err);
+          return false;
+        });
+        
+        setLoadingProgress(15);
+        
+        // ========================================
+        // 🎯 STEP 5: Get device ID
+        // ========================================
+        console.log('📱 [5/6] Getting device ID...');
         let deviceId: string;
         try {
           deviceId = await withTimeout(getHardwareDeviceId(), 3000, 'Device ID timeout');
+          console.log('✅ Device ID retrieved:', deviceId);
         } catch (e) {
           console.warn('⚠️ Device ID fetch failed, using fallback');
           deviceId = `fallback-${Date.now()}`;
         }
-        console.log('📱 Device ID:', deviceId);
         
         setLoadingProgress(18);
         

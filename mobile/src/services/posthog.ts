@@ -1,30 +1,63 @@
 import PostHog from 'posthog-react-native';
 
-// Initialize PostHog
-export const posthog = new PostHog(
-  'phc_HsMJRuIpEXVZqSEGxLMGF14KS9jzxjN88O5mNvfg57r',
-  {
-    host: 'https://eu.i.posthog.com',
-    captureApplicationLifecycleEvents: true, // Automatically track app open/close
-    captureDeepLinks: true,
-    enableSessionReplay: false, // Enable if you want session recordings
+/**
+ * PostHog Analytics Service
+ * 
+ * IMPORTANT: PostHog is initialized LAZILY (on first use) instead of on import
+ * This ensures TikTok SDK can capture Install Referrer data first for proper attribution
+ */
+
+let posthog: PostHog | null = null;
+let isInitializing = false;
+
+// Lazy initialization - only creates PostHog instance when first needed
+const getPostHog = (): PostHog => {
+  if (posthog) {
+    return posthog;
   }
-);
+
+  if (!isInitializing) {
+    isInitializing = true;
+    console.log('📊 PostHog: Lazy initializing...');
+    
+    posthog = new PostHog(
+      'phc_HsMJRuIpEXVZqSEGxLMGF14KS9jzxjN88O5mNvfg57r',
+      {
+        host: 'https://eu.i.posthog.com',
+        captureApplicationLifecycleEvents: false, // ⚠️ DISABLED - TikTok needs to capture this first
+        captureDeepLinks: false, // ⚠️ DISABLED - TikTok needs to capture attribution data first
+        enableSessionReplay: false,
+      }
+    );
+    
+    console.log('✅ PostHog: Initialized (after TikTok SDK)');
+  }
+
+  // Return placeholder until initialization completes
+  return posthog || ({
+    capture: () => {},
+    identify: () => {},
+    reset: () => {},
+  } as any);
+};
 
 // Track events with type safety
 export const trackEvent = (eventName: string, properties?: Record<string, any>) => {
-  posthog.capture(eventName, properties);
+  getPostHog().capture(eventName, properties);
 };
 
 // Identify user (use anonymous ID or user ID)
 export const identifyUser = (userId: string, properties?: Record<string, any>) => {
-  posthog.identify(userId, properties);
+  getPostHog().identify(userId, properties);
 };
 
 // Reset user (on logout)
 export const resetUser = () => {
-  posthog.reset();
+  getPostHog().reset();
 };
+
+// Export getter for direct access (if needed)
+export { getPostHog as posthog };
 
 // Common events
 export const analytics = {

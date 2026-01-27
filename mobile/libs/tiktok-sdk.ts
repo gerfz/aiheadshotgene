@@ -117,9 +117,22 @@ class TikTokSDK {
 
   /**
    * Track app install event
+   * CRITICAL: This must be called on first app launch for proper attribution
+   * @param eventId - Unique event ID for deduplication (recommended)
    */
-  async trackInstall(): Promise<void> {
-    return this.trackEvent({ eventName: 'InstallApp' });
+  async trackInstall(eventId?: string): Promise<void> {
+    const properties: Record<string, any> = {
+      timestamp: Date.now(),
+    };
+    
+    if (eventId) {
+      properties.event_id = eventId;
+    }
+    
+    return this.trackEvent({ 
+      eventName: 'InstallApp',
+      properties 
+    });
   }
 
   /**
@@ -154,14 +167,27 @@ class TikTokSDK {
 
   /**
    * Track registration event
+   * @param eventId - Unique event ID for deduplication (recommended)
    */
-  async trackRegistration(): Promise<void> {
+  async trackRegistration(eventId?: string): Promise<void> {
     if (Platform.OS !== 'android' || !NativeTikTokSDK) {
       return;
     }
 
     try {
-      await NativeTikTokSDK.trackRegistration();
+      if (eventId) {
+        // If event ID provided, use custom event tracking for better control
+        await this.trackEvent({
+          eventName: 'Registration',
+          properties: {
+            event_id: eventId,
+            timestamp: Date.now(),
+          }
+        });
+      } else {
+        // Use native method
+        await NativeTikTokSDK.trackRegistration();
+      }
     } catch (error) {
       console.error('Failed to track registration:', error);
     }

@@ -3,10 +3,20 @@
  * 
  * This service handles TikTok SDK initialization and event tracking
  * for advertising and analytics purposes.
+ * 
+ * IMPORTANT: For proper attribution tracking:
+ * 1. Initialize TikTok SDK BEFORE other analytics SDKs
+ * 2. Track InstallApp event immediately on first launch
+ * 3. Use unique event_id for deduplication
  */
 
 import tiktokSDK from '../../libs/tiktok-sdk';
 import { Platform } from 'react-native';
+
+// Helper to generate unique event IDs for deduplication
+const generateEventId = (): string => {
+  return `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+};
 
 // TikTok Business SDK Configuration
 // Credentials from TikTok Events Manager
@@ -79,13 +89,21 @@ class TikTokService {
 
   /**
    * Track app install event (first launch only)
+   * CRITICAL: This must be called on first app launch for proper attribution
+   * Install Referrer data is automatically captured by TikTok SDK
    */
   async trackAppInstall(): Promise<void> {
     try {
-      await tiktokSDK.trackInstall();
-      console.log('TikTok SDK: App install tracked');
+      const eventId = generateEventId();
+      console.log('🎯 TikTok SDK: Tracking InstallApp event with ID:', eventId);
+      
+      await tiktokSDK.trackInstall(eventId);
+      
+      console.log('✅ TikTok SDK: App install tracked successfully');
+      console.log('📊 TikTok SDK: Event will appear in TikTok Events Manager within 5-10 minutes');
     } catch (error) {
-      console.error('TikTok SDK: Failed to track app install:', error);
+      console.error('❌ TikTok SDK: Failed to track app install:', error);
+      throw error; // Re-throw so caller knows it failed
     }
   }
 
@@ -115,18 +133,24 @@ class TikTokService {
 
   /**
    * Track user registration
+   * Call this when user creates an account or completes onboarding
    */
   async trackRegistration(): Promise<void> {
     try {
-      await tiktokSDK.trackRegistration();
-      console.log('TikTok SDK: Registration tracked');
+      const eventId = generateEventId();
+      console.log('🎯 TikTok SDK: Tracking Registration event with ID:', eventId);
+      
+      await tiktokSDK.trackRegistration(eventId);
+      
+      console.log('✅ TikTok SDK: Registration tracked successfully');
     } catch (error) {
-      console.error('TikTok SDK: Failed to track registration:', error);
+      console.error('❌ TikTok SDK: Failed to track registration:', error);
     }
   }
 
   /**
    * Track subscription purchase
+   * IMPORTANT: This is a key conversion event for TikTok optimization
    */
   async trackSubscriptionPurchase(
     productId: string,
@@ -134,13 +158,29 @@ class TikTokService {
     currency: string = 'USD'
   ): Promise<void> {
     try {
-      // Use Subscribe event for subscriptions
+      const eventId = generateEventId();
+      console.log('🎯 TikTok SDK: Tracking subscription purchase:', { productId, price, currency });
+      
+      // Track Subscribe event (predefined event for subscriptions)
       await tiktokSDK.trackSubscribe();
-      // Also track as purchase with details
-      await tiktokSDK.trackPurchase(price, currency, 'subscription', productId);
-      console.log('TikTok SDK: Subscription purchase tracked');
+      
+      // Also track as Purchase event with revenue details
+      // TikTok uses this for ROAS optimization
+      await tiktokSDK.trackEvent({
+        eventName: 'Purchase',
+        properties: {
+          event_id: eventId,
+          value: price,
+          currency: currency,
+          content_type: 'subscription',
+          content_id: productId,
+          timestamp: Date.now(),
+        }
+      });
+      
+      console.log('✅ TikTok SDK: Subscription purchase tracked (Subscribe + Purchase events)');
     } catch (error) {
-      console.error('TikTok SDK: Failed to track purchase:', error);
+      console.error('❌ TikTok SDK: Failed to track subscription purchase:', error);
     }
   }
 
@@ -162,20 +202,23 @@ class TikTokService {
 
   /**
    * Track portrait generation
+   * This is a key engagement event showing app usage
    */
   async trackPortraitGeneration(style: string, count: number): Promise<void> {
     try {
+      const eventId = generateEventId();
       await tiktokSDK.trackEvent({
         eventName: 'portrait_generated',
         properties: {
+          event_id: eventId,
           style,
           count,
           timestamp: Date.now(),
         },
       });
-      console.log('TikTok SDK: Portrait generation tracked');
+      console.log('✅ TikTok SDK: Portrait generation tracked:', { style, count });
     } catch (error) {
-      console.error('TikTok SDK: Failed to track portrait generation:', error);
+      console.error('❌ TikTok SDK: Failed to track portrait generation:', error);
     }
   }
 
@@ -248,18 +291,44 @@ class TikTokService {
 
   /**
    * Track subscription view
+   * Important funnel event showing user interest in subscribing
    */
   async trackSubscriptionView(): Promise<void> {
     try {
+      const eventId = generateEventId();
       await tiktokSDK.trackEvent({
         eventName: 'subscription_viewed',
         properties: {
+          event_id: eventId,
           timestamp: Date.now(),
         },
       });
-      console.log('TikTok SDK: Subscription view tracked');
+      console.log('✅ TikTok SDK: Subscription view tracked');
     } catch (error) {
-      console.error('TikTok SDK: Failed to track subscription view:', error);
+      console.error('❌ TikTok SDK: Failed to track subscription view:', error);
+    }
+  }
+
+  /**
+   * Track complete registration (onboarding completed)
+   * Use this for "Complete Registration" standard event
+   */
+  async trackCompleteRegistration(): Promise<void> {
+    try {
+      const eventId = generateEventId();
+      console.log('🎯 TikTok SDK: Tracking CompleteRegistration event');
+      
+      await tiktokSDK.trackEvent({
+        eventName: 'CompleteRegistration',
+        properties: {
+          event_id: eventId,
+          timestamp: Date.now(),
+        },
+      });
+      
+      console.log('✅ TikTok SDK: CompleteRegistration tracked');
+    } catch (error) {
+      console.error('❌ TikTok SDK: Failed to track CompleteRegistration:', error);
     }
   }
 }
