@@ -12,8 +12,6 @@ import { router, Stack } from 'expo-router';
 import * as SecureStore from 'expo-secure-store';
 import { analytics } from '../src/services/posthog';
 import tiktokService from '../src/services/tiktok';
-import airbridgeService from '../src/services/airbridge';
-import { useAppStore } from '../src/store/useAppStore';
 
 const { width, height } = Dimensions.get('window');
 const FIRST_TIME_KEY = 'has_seen_welcome';
@@ -44,12 +42,6 @@ export default function WelcomeScreen() {
       
       // Track Complete Registration in TikTok (key conversion event)
       tiktokService.trackCompleteRegistration();
-      
-      // Track Complete Registration in Airbridge (for attribution)
-      const user = useAppStore.getState().user;
-      if (user) {
-        airbridgeService.trackCompleteRegistration(user.id).catch(() => {});
-      }
       
       // Navigate to home page
       router.replace('/home');

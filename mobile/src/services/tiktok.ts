@@ -24,13 +24,14 @@ const TIKTOK_CONFIG = {
   appId: 'com.aiportrait.studio',
   tiktokAppId: '7596076889249218568',
   accessToken: 'TTY6OCuPwnlefc2VSlanM2a0Yg0vxDH7', // App Secret
-  debugMode: false, // FALSE = Production mode (real events for verification)
+  debugMode: false, // FALSE = Production mode (real events for campaigns)
 };
 
 // Debug mode info:
 // When debugMode = true: Events appear in "Test Events" tab (for testing only)
 // When debugMode = false: Events are REAL and used for app verification and reporting
 // Status will change from "Pending Verification" to "Verified" once real events are received
+// ⚠️ REMEMBER: Set debugMode = false before production build!
 
 class TikTokService {
   private isInitialized = false;
@@ -178,12 +179,7 @@ class TikTokService {
         }
       });
       
-      // Track with Airbridge MMP (for attribution)
-      const { default: airbridgeService } = await import('./airbridge');
-      await airbridgeService.trackSubscribe(price, currency, productId);
-      
       console.log('✅ TikTok SDK: Subscription purchase tracked (Subscribe + Purchase events)');
-      console.log('✅ Airbridge: Subscription purchase tracked for attribution');
     } catch (error) {
       console.error('❌ TikTok SDK: Failed to track subscription purchase:', error);
     }
