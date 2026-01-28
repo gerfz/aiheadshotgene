@@ -2,7 +2,7 @@
   "expo": {
     "name": "AI Headshot Generator & Studio",
     "slug": "ai-portrait-studio",
-    "version": "1.4.7",
+    "version": "1.4.8",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
@@ -23,7 +23,7 @@
     "android": {
       "icon": "./assets/icon.png",
       "package": "com.aiportrait.studio",
-      "versionCode": 75,
+      "versionCode": 78,
       "permissions": [
         "android.permission.READ_EXTERNAL_STORAGE",
         "android.permission.WRITE_EXTERNAL_STORAGE",
@@ -50,6 +50,10 @@
     },
     "plugins": [
       "./plugins/withTikTokSDK.js",
+      [
+        "react-native-appsflyer",
+        {}
+      ],
       [
         "expo-build-properties",
         {

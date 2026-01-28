@@ -12,6 +12,7 @@ import { Toast, LoadingScreen } from '../src/components';
 import { posthog, identifyUser, analytics } from '../src/services/posthog';
 import { clearCache } from '../src/services/cache';
 import tiktokService from '../src/services/tiktok';
+import appsFlyerService from '../src/services/appsflyer';
 
 const FIRST_TIME_KEY = 'has_seen_welcome';
 const TIKTOK_INSTALL_TRACKED_KEY = 'tiktok_install_tracked';
@@ -42,9 +43,20 @@ export default function RootLayout() {
         console.log('🚀 Starting app initialization...');
         
         // ========================================
-        // 🎯 STEP 1: Initialize TikTok SDK FIRST (for proper attribution)
+        // 🎯 STEP 1: Initialize AppsFlyer MMP FIRST (required for TikTok attribution)
         // ========================================
-        console.log('📱 [1/5] Initializing TikTok SDK...');
+        console.log('📱 [1/6] Initializing AppsFlyer MMP...');
+        try {
+          await withTimeout(appsFlyerService.initialize(), 5000, 'AppsFlyer timeout');
+          console.log('✅ AppsFlyer MMP initialized');
+        } catch (e) {
+          console.error('❌ AppsFlyer init failed:', e);
+        }
+        
+        // ========================================
+        // 🎯 STEP 2: Initialize TikTok SDK (for event tracking)
+        // ========================================
+        console.log('📱 [2/6] Initializing TikTok SDK...');
         try {
           await withTimeout(tiktokService.initialize(), 5000, 'TikTok SDK timeout');
           console.log('✅ TikTok SDK initialized');
@@ -53,9 +65,9 @@ export default function RootLayout() {
         }
         
         // ========================================
-        // 🎯 STEP 2: Track Install/Launch Event IMMEDIATELY (critical for attribution)
+        // 🎯 STEP 3: Track Install/Launch Event IMMEDIATELY (critical for attribution)
         // ========================================
-        console.log('📱 [2/5] Tracking TikTok install/launch...');
+        console.log('📱 [3/6] Tracking install/launch...');
         try {
           const hasTrackedInstall = await withTimeout(
             SecureStore.getItemAsync(TIKTOK_INSTALL_TRACKED_KEY),
@@ -89,25 +101,25 @@ export default function RootLayout() {
         }
         
         // ========================================
-        // 🎯 STEP 3: Initialize PostHog (after TikTok attribution is captured)
+        // 🎯 STEP 4: Initialize PostHog (after attribution SDKs)
         // ========================================
-        console.log('📱 [3/5] Initializing analytics...');
+        console.log('📱 [4/6] Initializing analytics...');
         // Track app opened (triggers PostHog lazy init)
         analytics.appOpened();
         
         // ========================================
-        // 🎯 STEP 4: Start backend warmup in parallel
+        // 🎯 STEP 5: Start backend warmup in parallel
         // ========================================
-        console.log('📱 [4/5] Starting backend warmup...');
+        console.log('📱 [5/6] Starting backend warmup...');
         const backendWarmupPromise = waitForBackendReady(20000).catch(err => {
           console.warn('⚠️ Backend warmup failed:', err);
           return false;
         });
         
         // ========================================
-        // 🎯 STEP 5: Get device ID
+        // 🎯 STEP 6: Get device ID
         // ========================================
-        console.log('📱 [5/5] Getting device ID...');
+        console.log('📱 [6/6] Getting device ID...');
         let deviceId: string;
         try {
           deviceId = await withTimeout(getHardwareDeviceId(), 3000, 'Device ID timeout');
@@ -211,11 +223,13 @@ export default function RootLayout() {
                 email: `device-${deviceId}@anonymous.local`,
               });
               
-              // Identify user in TikTok (non-blocking)
+              // Identify user in TikTok and AppsFlyer (non-blocking)
               tiktokService.identifyUser(newData.user.id, `device-${deviceId}@anonymous.local`).catch(() => {});
+              appsFlyerService.setCustomerUserId(newData.user.id);
               // Don't track registration for returning devices
               if (!storedUserId) {
                 tiktokService.trackRegistration().catch(() => {});
+                appsFlyerService.trackRegistration('anonymous').catch(() => {});
               }
               
               // 🔥 FIX: Wait for backend warmup to complete (it started earlier)
@@ -263,11 +277,12 @@ export default function RootLayout() {
             email: session.user.email || `device-${deviceId}@anonymous.local`,
           });
           
-          // Identify user in TikTok (non-blocking)
+          // Identify user in TikTok and AppsFlyer (non-blocking)
           tiktokService.identifyUser(
             session.user.id,
             session.user.email || `device-${deviceId}@anonymous.local`
           ).catch(() => {});
+          appsFlyerService.setCustomerUserId(session.user.id);
           
           // 🔥 FIX: Wait for backend warmup to complete (it started earlier in parallel)
           console.log('🔍 Waiting for backend warmup...');
@@ -330,11 +345,13 @@ export default function RootLayout() {
                 email: `device-${deviceId}@anonymous.local`,
               });
               
-              // Identify user in TikTok (non-blocking)
+              // Identify user in TikTok and AppsFlyer (non-blocking)
               tiktokService.identifyUser(data.user.id, `device-${deviceId}@anonymous.local`).catch(() => {});
+              appsFlyerService.setCustomerUserId(data.user.id);
               // Only track registration for truly new devices
               if (!isReturningDevice) {
                 tiktokService.trackRegistration().catch(() => {});
+                appsFlyerService.trackRegistration('anonymous').catch(() => {});
               }
               
               // 🔥 FIX: Wait for backend warmup to complete (it started earlier in parallel)
