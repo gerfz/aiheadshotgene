@@ -178,7 +178,12 @@ class TikTokService {
         }
       });
       
+      // Track with Airbridge MMP (for attribution)
+      const { default: airbridgeService } = await import('./airbridge');
+      await airbridgeService.trackSubscribe(price, currency, productId);
+      
       console.log('✅ TikTok SDK: Subscription purchase tracked (Subscribe + Purchase events)');
+      console.log('✅ Airbridge: Subscription purchase tracked for attribution');
     } catch (error) {
       console.error('❌ TikTok SDK: Failed to track subscription purchase:', error);
     }
