@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -30,31 +30,10 @@ export default function GalleryScreen() {
   const [batches, setBatches] = useState<GenerationBatch[]>(cachedBatches || []);
   const [refreshing, setRefreshing] = useState(false);
   const [initialLoading, setInitialLoading] = useState(false);
-  const [showDummyProcessing, setShowDummyProcessing] = useState(isNewGeneration);
-  const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
-  
-  // Create a dummy batch that shows immediately
-  const dummyBatch: GenerationBatch = {
-    id: 'dummy-processing',
-    user_id: '',
-    original_image_url: '',
-    status: 'processing',
-    total_count: 1,
-    completed_count: 0,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-    generations: [{
-      id: 'dummy',
-      user_id: '',
-      batch_id: 'dummy-processing',
-      original_image_url: '',
-      generated_image_url: null,
-      style_key: 'processing',
-      status: 'processing',
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    }],
-  };
+  const [showNewGenerationBanner, setShowNewGenerationBanner] = useState(isNewGeneration);
+  const [initialBatchCount] = useState(cachedBatches?.length || 0);
+  const batchesRef = useRef<GenerationBatch[]>(batches);
+  const showBannerRef = useRef(isNewGeneration);
 
   const loadBatches = async () => {
     try {
@@ -62,23 +41,19 @@ export default function GalleryScreen() {
       const batchesArray = Array.isArray(batchesData.batches) ? batchesData.batches : [];
       
       setBatches(batchesArray);
+      batchesRef.current = batchesArray; // Update ref for interval
       setCachedBatches(batchesArray); // Cache the batches
-      setHasLoadedOnce(true);
       
-      // Only hide dummy if we have at least one real processing/completed batch
-      const hasRealBatch = batchesArray.some(b => b.id !== 'dummy-processing');
-      if (hasRealBatch) {
-        // Wait 1 second before hiding dummy to ensure smooth transition
-        setTimeout(() => {
-          setShowDummyProcessing(false);
-        }, 1000);
+      // Hide banner when new batch appears (count increased)
+      if (showBannerRef.current && batchesArray.length > initialBatchCount) {
+        setShowNewGenerationBanner(false);
+        showBannerRef.current = false;
       }
       
       setInitialLoading(false);
     } catch (error) {
       console.error('Failed to load batches:', error);
       setInitialLoading(false);
-      setHasLoadedOnce(true);
     }
   };
 
@@ -86,33 +61,27 @@ export default function GalleryScreen() {
     // Load batches immediately when screen mounts
     loadBatches();
     
-    // Hide dummy processing after 10 seconds max (in case API is slow)
-    const dummyTimeout = setTimeout(() => {
-      setShowDummyProcessing(false);
-    }, 10000);
-
-    return () => {
-      clearTimeout(dummyTimeout);
-    };
-  }, []);
-
-  // Auto-refresh only when there are pending batches
-  useEffect(() => {
-    const hasPending = batches.some(b => b.status === 'pending' || b.status === 'processing');
-    
-    if (!hasPending) {
-      return; // No pending batches, don't set up interval
-    }
-
-    // Set up auto-refresh interval only for pending batches
+    // Set up auto-refresh interval
     const interval = setInterval(() => {
-      loadBatches();
+      const hasPending = batchesRef.current.some(b => b.status === 'pending' || b.status === 'processing');
+      
+      // Keep polling if there are pending batches OR if we're waiting for new generation
+      if (hasPending || showBannerRef.current) {
+        loadBatches();
+      }
     }, 3000);
+
+    // Hide banner after 60 seconds max
+    const bannerTimeout = setTimeout(() => {
+      setShowNewGenerationBanner(false);
+      showBannerRef.current = false;
+    }, 60000);
 
     return () => {
       clearInterval(interval);
+      clearTimeout(bannerTimeout);
     };
-  }, [batches]); // Re-run when batches change
+  }, []); // Only run once on mount
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -151,22 +120,20 @@ export default function GalleryScreen() {
     // Get first completed generation for thumbnail
     const firstCompleted = item.generations?.find(g => g.status === 'completed' && g.generated_image_url);
     
-    // Get style names from generations - show "Loading..." for dummy, "Edited Photo" for edited
-    const styleNames = item.id === 'dummy-processing' 
-      ? 'Loading...'
-      : item.generations
-          ?.map(g => {
-            // Check if this is an edited photo
-            if (g.is_edited) {
-              return 'Edited Photo';
-            }
-            // Otherwise show the style name
-            return g.style_key
-              .split('_')
-              .map((word: string) => word.charAt(0).toUpperCase() + word.slice(1))
-              .join(' ');
-          })
-          .join(', ') || 'Batch Generation';
+    // Get style names from generations - show "Edited Photo" for edited
+    const styleNames = item.generations
+      ?.map(g => {
+        // Check if this is an edited photo
+        if (g.is_edited) {
+          return 'Edited Photo';
+        }
+        // Otherwise show the style name
+        return g.style_key
+          .split('_')
+          .map((word: string) => word.charAt(0).toUpperCase() + word.slice(1))
+          .join(' ');
+      })
+      .join(', ') || 'Processing...';
     
     // Format the date with error handling
     let formattedDate = 'Just now';
@@ -308,13 +275,26 @@ export default function GalleryScreen() {
         }} 
       />
       <View style={styles.container}>
+        {/* New Generation Banner */}
+        {showNewGenerationBanner && (
+          <View style={styles.newGenerationBanner}>
+            <View style={styles.bannerIcon}>
+              <Ionicons name="hourglass-outline" size={24} color="#6366F1" />
+            </View>
+            <View style={styles.bannerText}>
+              <Text style={styles.bannerTitle}>Processing your photo...</Text>
+              <Text style={styles.bannerSubtitle}>This usually takes 15-30 seconds</Text>
+            </View>
+          </View>
+        )}
+        
         <FlatList
-          data={showDummyProcessing && !hasLoadedOnce ? [dummyBatch, ...batches] : batches}
+          data={batches}
           renderItem={renderItem}
           keyExtractor={(item) => item.id}
           numColumns={1}
           contentContainerStyle={styles.content}
-          ListEmptyComponent={!showDummyProcessing ? renderEmpty : null}
+          ListEmptyComponent={!showNewGenerationBanner ? renderEmpty : null}
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#6366F1" />
           }
@@ -355,6 +335,43 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     paddingHorizontal: 40,
   },
+  
+  // New Generation Banner
+  newGenerationBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#1A1A1A',
+    marginHorizontal: 20,
+    marginTop: 10,
+    marginBottom: 10,
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#6366F1',
+  },
+  bannerIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 8,
+    backgroundColor: '#0F172A',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  bannerText: {
+    flex: 1,
+  },
+  bannerTitle: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  bannerSubtitle: {
+    color: '#888888',
+    fontSize: 14,
+  },
+  
   gridItem: {
     marginBottom: 16,
   },
