@@ -8,10 +8,11 @@ import {
   Image,
   RefreshControl,
   Dimensions,
+  Alert,
 } from 'react-native';
 import { router, Stack } from 'expo-router';
 import { useAppStore } from '../src/store/useAppStore';
-import { getBatches } from '../src/services/api';
+import { getBatches, deleteBatch } from '../src/services/api';
 import { Ionicons } from '@expo/vector-icons';
 import type { GenerationBatch } from '../src/types';
 
@@ -72,6 +73,30 @@ export default function GalleryScreen() {
     setRefreshing(true);
     await loadBatches();
     setRefreshing(false);
+  };
+
+  const handleDeleteBatch = async (batchId: string, photoCount: number) => {
+    Alert.alert(
+      'Delete Batch',
+      `Are you sure you want to delete ${photoCount} ${photoCount === 1 ? 'photo' : 'photos'}?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await deleteBatch(batchId);
+              // Reload batches after deletion
+              await loadBatches();
+            } catch (error) {
+              console.error('Failed to delete batch:', error);
+              Alert.alert('Error', 'Failed to delete batch. Please try again.');
+            }
+          },
+        },
+      ]
+    );
   };
 
   const renderItem = ({ item }: { item: GenerationBatch }) => {
@@ -142,7 +167,13 @@ export default function GalleryScreen() {
           
           {/* Delete button - only show for completed */}
           {!isPending && completedCount === item.total_count && (
-            <TouchableOpacity style={styles.deleteButton}>
+            <TouchableOpacity 
+              style={styles.deleteButton}
+              onPress={(e) => {
+                e.stopPropagation(); // Prevent opening the batch
+                handleDeleteBatch(item.id, item.total_count);
+              }}
+            >
               <Ionicons name="trash-outline" size={20} color="#666666" />
             </TouchableOpacity>
           )}

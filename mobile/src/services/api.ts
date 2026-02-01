@@ -289,6 +289,26 @@ export async function getBatches(): Promise<{ batches: GenerationBatch[] }> {
   }
 }
 
+// Delete a batch
+export async function deleteBatch(batchId: string): Promise<{ success: boolean }> {
+  try {
+    const headers = await getHeaders();
+    const response = await fetch(`${API_URL}/api/user/batches/${batchId}`, {
+      method: 'DELETE',
+      headers,
+    });
+    
+    if (!response.ok) {
+      throw new Error('Failed to delete batch');
+    }
+    
+    return response.json();
+  } catch (error: any) {
+    console.error('Error deleting batch:', error);
+    throw error;
+  }
+}
+
 // Batch generate portraits (multiple styles at once)
 export async function generateBatchPortraits(
   imageUri: string,

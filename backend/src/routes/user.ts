@@ -438,4 +438,43 @@ router.get(
   }
 );
 
+// Delete a batch
+router.delete(
+  '/batches/:batchId',
+  verifyToken,
+  async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const userId = req.userId!;
+      const { batchId } = req.params;
+      
+      // Verify the batch belongs to the user
+      const { data: batch, error: batchError } = await supabaseAdmin
+        .from('generation_batches')
+        .select('id')
+        .eq('id', batchId)
+        .eq('user_id', userId)
+        .single();
+      
+      if (batchError || !batch) {
+        return res.status(404).json({ error: 'Batch not found' });
+      }
+      
+      // Delete the batch (cascade will delete associated generations)
+      const { error: deleteError } = await supabaseAdmin
+        .from('generation_batches')
+        .delete()
+        .eq('id', batchId);
+      
+      if (deleteError) throw deleteError;
+      
+      console.log(`✅ Deleted batch ${batchId} for user ${userId.slice(0, 8)}...`);
+      
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error('Error deleting batch:', error);
+      res.status(500).json({ error: error.message });
+    }
+  }
+);
+
 export default router;
