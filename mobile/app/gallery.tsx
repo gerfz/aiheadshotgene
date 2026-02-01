@@ -27,6 +27,10 @@ export default function GalleryScreen() {
   const loadBatches = async () => {
     try {
       const batchesData = await getBatches();
+      console.log('📦 Loaded batches:', batchesData.batches?.length || 0);
+      if (batchesData.batches && batchesData.batches.length > 0) {
+        console.log('📦 First batch:', JSON.stringify(batchesData.batches[0], null, 2));
+      }
       setBatches(Array.isArray(batchesData.batches) ? batchesData.batches : []);
     } catch (error) {
       console.error('Failed to load batches:', error);
@@ -57,10 +61,12 @@ export default function GalleryScreen() {
 
   const renderItem = ({ item }: { item: GenerationBatch }) => {
     const isPending = item.status === 'pending' || item.status === 'processing';
-    const completedCount = item.generations.filter(g => g.status === 'completed').length;
+    const completedCount = item.generations?.filter(g => g.status === 'completed').length || 0;
+    
+    console.log(`📦 Rendering batch ${item.id}: status=${item.status}, completed=${completedCount}/${item.total_count}`);
     
     // Get first completed generation for thumbnail
-    const firstCompleted = item.generations.find(g => g.status === 'completed' && g.generated_image_url);
+    const firstCompleted = item.generations?.find(g => g.status === 'completed' && g.generated_image_url);
     
     // Format the date
     const date = new Date(item.created_at);
@@ -70,17 +76,20 @@ export default function GalleryScreen() {
       <TouchableOpacity
         style={styles.gridItem}
         onPress={() => {
-          if (!isPending && completedCount > 0) {
-            // Navigate to batch detail screen
+          // Allow clicking if at least one photo is completed
+          if (completedCount > 0) {
+            console.log(`📦 Opening batch ${item.id}`);
             router.push({
               pathname: '/batch-detail',
               params: {
                 batchId: item.id,
               },
             });
+          } else {
+            console.log(`📦 Batch ${item.id} has no completed photos yet`);
           }
         }}
-        disabled={isPending && completedCount === 0}
+        disabled={completedCount === 0}
       >
         <View style={styles.cardContainer}>
           {firstCompleted ? (
