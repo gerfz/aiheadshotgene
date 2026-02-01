@@ -12,9 +12,7 @@ const REVENUECAT_APP_USER_ID = 'app34a2bf623c'; // Your RevenueCat app ID
 
 // Product identifiers (must match Google Play Console)
 export const PRODUCT_IDS = {
-  WEEKLY: 'weekly_pro',
-  MONTHLY: 'monthly_pro',
-  YEARLY: 'yearly_pro',
+  WEEKLY: 'weekly_pro', // Only weekly subscription now
 };
 
 // Entitlement identifier (must match RevenueCat dashboard)
@@ -22,9 +20,14 @@ export const ENTITLEMENT_ID = 'pro';
 
 // Package identifiers (must match RevenueCat offering)
 export const PACKAGE_IDS = {
-  WEEKLY: '$rc_weekly',
-  MONTHLY: '$rc_monthly',
-  ANNUAL: '$rc_annual',
+  WEEKLY: '$rc_weekly', // Only weekly package
+};
+
+// Credit pack identifiers (for one-time purchases)
+export const CREDIT_PACK_IDS = {
+  SMALL: 'credits_500',   // 500 credits
+  MEDIUM: 'credits_1500', // 1500 credits
+  LARGE: 'credits_3500',  // 3500 credits
 };
 
 /**

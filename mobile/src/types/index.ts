@@ -6,8 +6,11 @@ export interface User {
 export interface Profile {
   id: string;
   email: string;
-  free_credits: number;
+  total_credits: number;
   is_subscribed: boolean;
+  is_trial_active: boolean;
+  trial_start_date: string | null;
+  trial_end_date: string | null;
   created_at: string;
 }
 
@@ -46,9 +49,13 @@ export interface GenerationResult {
 }
 
 export interface CreditsInfo {
-  freeCredits: number;
+  totalCredits: number;
   isSubscribed: boolean;
   hasCredits: boolean;
-  emailVerified?: boolean;
+  isTrialActive: boolean;
+  trialEndsAt: string | null;
+  trialDaysRemaining: number;
+  canGenerate: boolean;
+  canEdit: boolean;
 }
 

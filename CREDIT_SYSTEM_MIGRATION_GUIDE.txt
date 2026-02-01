@@ -1,0 +1,184 @@
+================================================================================
+CREDIT SYSTEM & UI OVERHAUL - DEPLOYMENT GUIDE
+================================================================================
+Date: 2026-01-24
+Status: READY FOR DEPLOYMENT
+
+================================================================================
+OVERVIEW OF CHANGES
+================================================================================
+
+This update transforms the app from unlimited subscriptions to a credit-based
+system with trials. Key changes:
+
+1. CREDIT SYSTEM
+   - Generations: 200 credits each
+   - Edits: 50 credits each
+   - Weekly subscription: 3000 credits/week (credits carry over)
+   - 3-day free trial: 1000 credits, auto-converts to paid weekly
+
+2. UI CHANGES
+   - Home page is now style selection (immediate visual impact)
+   - Removed bottom navigation bar
+   - Credits display in top-left header
+   - Photo history in top-right header
+   - Profile button in history screen header
+
+3. SUBSCRIPTION CHANGES
+   - Weekly-only subscription (removed monthly/yearly)
+   - 3-day free trial with auto-conversion
+   - Credit packs available for one-time purchases
+
+================================================================================
+DEPLOYMENT STEPS
+================================================================================
+
+STEP 1: DATABASE MIGRATIONS (CRITICAL - DO THIS FIRST)
+--------------------------------------------------------
+Run these SQL migrations in order on your Supabase database:
+
+1. database/migrations/create_credit_transactions_table.sql
+2. database/migrations/add_credit_system.sql
+3. database/migrations/migrate_to_credit_system.sql
+
+How to run:
+- Go to Supabase Dashboard > SQL Editor
+- Copy and paste each file's content
+- Run them one by one in order
+- Verify no errors
+
+STEP 2: BACKEND DEPLOYMENT
+--------------------------------------------------------
+The backend changes are already in the code:
+- backend/src/routes/user.ts (updated)
+- backend/src/routes/generate.ts (updated)
+- backend/src/routes/webhooks.ts (new)
+- backend/src/index.ts (updated)
+
+Deploy backend:
+cd backend
+git add .
+git commit -m "Add credit system and webhooks"
+git push
+
+(Your backend should auto-deploy on Render)
+
+STEP 3: REVENUECAT CONFIGURATION
+--------------------------------------------------------
+1. Go to RevenueCat Dashboard
+2. Update your weekly_pro product:
+   - Add 3-day free trial
+   - Set trial to auto-convert to paid
+   
+3. Configure webhook:
+   - Go to Settings > Integrations > Webhooks
+   - Add webhook URL: https://your-backend.com/api/webhooks/revenuecat
+   - Enable events: INITIAL_PURCHASE, RENEWAL, TRIAL_CONVERTED, EXPIRATION
+
+STEP 4: FRONTEND BUILD
+--------------------------------------------------------
+cd mobile
+eas build --platform android --profile production
+
+Wait for build to complete, then upload to Play Store.
+
+STEP 5: APPSFLYER SETUP (ALREADY DONE)
+--------------------------------------------------------
+AppsFlyer is already integrated and working. Just verify:
+- TikTok SAN integration is enabled in AppsFlyer dashboard
+- In-app event postbacks are ON for TikTok
+
+================================================================================
+TESTING CHECKLIST
+================================================================================
+
+Before releasing to users, test these flows:
+
+[ ] New user gets 3-day trial with 1000 credits
+[ ] Trial shows days remaining in header
+[ ] Generation costs 200 credits
+[ ] Edit costs 50 credits
+[ ] Credits deduct correctly
+[ ] Trial auto-converts after 3 days
+[ ] Weekly renewal adds 3000 credits
+[ ] Credits carry over week to week
+[ ] Credit packs can be purchased
+[ ] No credits modal shows correct options
+[ ] Home page shows style selection
+[ ] Navigation works without bottom bar
+[ ] History button navigates to gallery
+[ ] Profile button shows in gallery header
+
+================================================================================
+KEY FILES CHANGED
+================================================================================
+
+BACKEND (8 files):
+- database/migrations/add_credit_system.sql (new)
+- database/migrations/migrate_to_credit_system.sql (new)
+- database/migrations/create_credit_transactions_table.sql (new)
+- backend/src/routes/user.ts (modified)
+- backend/src/routes/generate.ts (modified)
+- backend/src/routes/webhooks.ts (new)
+- backend/src/index.ts (modified)
+
+FRONTEND (15 files):
+- mobile/src/types/index.ts (modified)
+- mobile/src/services/api.ts (modified)
+- mobile/src/services/purchases.ts (modified)
+- mobile/src/store/useAppStore.ts (no changes needed - uses types)
+- mobile/src/hooks/useSubscription.ts (modified)
+- mobile/app/home.tsx (replaced with style selection)
+- mobile/app/upload.tsx (modified)
+- mobile/app/gallery.tsx (modified)
+- mobile/app/generating.tsx (modified)
+- mobile/app/edit-portrait.tsx (modified)
+- mobile/app/result.tsx (modified)
+- mobile/app/subscription.tsx (modified)
+- mobile/app/credit-packs.tsx (new)
+- mobile/src/components/BottomNav.tsx (deleted)
+- mobile/src/components/CreditsHeader.tsx (new)
+- mobile/src/components/CreditsDisplay.tsx (modified)
+- mobile/src/components/NoCreditsModal.tsx (modified)
+- mobile/src/components/index.ts (modified)
+
+================================================================================
+ROLLBACK PLAN (IF NEEDED)
+================================================================================
+
+If something goes wrong:
+
+1. Backend: Revert git commit and redeploy
+2. Frontend: Upload previous APK version to Play Store
+3. Database: Run this to revert (CAREFUL!):
+   
+   ALTER TABLE profiles DROP COLUMN IF EXISTS total_credits;
+   ALTER TABLE profiles DROP COLUMN IF EXISTS trial_start_date;
+   ALTER TABLE profiles DROP COLUMN IF EXISTS trial_end_date;
+   ALTER TABLE profiles DROP COLUMN IF EXISTS is_trial_active;
+   ALTER TABLE profiles DROP COLUMN IF EXISTS credits_per_week;
+   DROP TABLE IF EXISTS credit_transactions;
+
+================================================================================
+POST-DEPLOYMENT MONITORING
+================================================================================
+
+Watch these metrics after deployment:
+
+1. Trial conversion rate (should be high with auto-convert)
+2. Credit usage patterns
+3. Credit pack purchases vs subscriptions
+4. User retention with new credit system
+5. AppsFlyer attribution (TikTok ads should now work!)
+
+================================================================================
+NOTES
+================================================================================
+
+- Old home.tsx backed up to home-old.tsx.backup
+- style-select.tsx is no longer used (home.tsx replaced it)
+- Bottom navigation completely removed
+- All credit checks now use totalCredits instead of freeCredits
+- Backend uses decrement_user_credits_v2 with variable costs (200 or 50)
+
+================================================================================

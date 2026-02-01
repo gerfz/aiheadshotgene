@@ -16,29 +16,25 @@ import { analytics } from '../services/posthog';
 interface NoCreditsModalProps {
   visible: boolean;
   onClose: () => void;
-  onRateUs: () => void;
+  creditsNeeded?: number;
+  action?: string;
   source?: 'create_button' | 'upload' | 'generation';
 }
 
 export const NoCreditsModal: React.FC<NoCreditsModalProps> = ({ 
   visible, 
   onClose, 
-  onRateUs,
+  creditsNeeded = 200,
+  action = 'generate',
   source = 'create_button'
 }) => {
   const scaleAnim = useState(new Animated.Value(0.8))[0];
   const opacityAnim = useState(new Animated.Value(0))[0];
-  const [hasAlreadyRated, setHasAlreadyRated] = useState(false);
 
   useEffect(() => {
     if (visible) {
-      // Check if user has already rated
-      hasBeenAskedToRate().then((hasRated) => {
-        setHasAlreadyRated(hasRated);
-        
-        // Track modal shown event
-        analytics.noCreditsModalShown(hasRated, source);
-      });
+      // Track modal shown event
+      analytics.noCreditsModalShown(false, source);
       
       Animated.parallel([
         Animated.spring(scaleAnim, {
@@ -59,22 +55,10 @@ export const NoCreditsModal: React.FC<NoCreditsModalProps> = ({
     }
   }, [visible]);
 
-  const handleRateUs = () => {
-    // Track rate us button click
-    analytics.noCreditsRateUsClicked();
-    analytics.noCreditsModalClosed('rate_us', hasAlreadyRated);
-    
-    onClose();
-    // Small delay to allow modal to close before showing rate modal
-    setTimeout(() => {
-      onRateUs();
-    }, 100);
-  };
-
   const handleSubscribe = () => {
     // Track subscribe button click
-    analytics.noCreditsSubscribeClicked(hasAlreadyRated);
-    analytics.noCreditsModalClosed('subscribe', hasAlreadyRated);
+    analytics.noCreditsSubscribeClicked(false);
+    analytics.noCreditsModalClosed('subscribe', false);
     
     onClose();
     // Small delay to allow modal to close before navigating
@@ -83,9 +67,20 @@ export const NoCreditsModal: React.FC<NoCreditsModalProps> = ({
     }, 100);
   };
 
+  const handleBuyCredits = () => {
+    // Track buy credits button click
+    analytics.noCreditsModalClosed('buy_credits', false);
+    
+    onClose();
+    // Small delay to allow modal to close before navigating
+    setTimeout(() => {
+      router.push('/credit-packs');
+    }, 100);
+  };
+
   const handleClose = () => {
     // Track dismissal
-    analytics.noCreditsModalClosed('dismissed', hasAlreadyRated);
+    analytics.noCreditsModalClosed('dismissed', false);
     onClose();
   };
 
@@ -126,39 +121,30 @@ export const NoCreditsModal: React.FC<NoCreditsModalProps> = ({
           
           {/* Subtitle */}
           <Text style={styles.subtitle}>
-            {hasAlreadyRated 
-              ? "You've run out of free credits. Subscribe to get unlimited AI headshots!"
-              : "You've run out of free credits. Get more credits to continue creating amazing AI headshots!"
-            }
+            You need {creditsNeeded} credits to {action} a portrait. Get more credits to continue!
           </Text>
-
-          {/* Rate Us Button - Only show if user hasn't rated yet */}
-          {!hasAlreadyRated && (
-            <TouchableOpacity
-              style={[styles.button, styles.rateButton]}
-              onPress={handleRateUs}
-              activeOpacity={0.8}
-            >
-              <View style={styles.buttonContent}>
-                <Ionicons name="star" size={20} color="#FFFFFF" />
-                <Text style={styles.buttonText}>Rate Us for 2 Free Credits</Text>
-              </View>
-            </TouchableOpacity>
-          )}
 
           {/* Subscribe Button */}
           <TouchableOpacity
-            style={[
-              styles.button, 
-              styles.subscribeButton,
-              hasAlreadyRated && styles.lastButton
-            ]}
+            style={[styles.button, styles.subscribeButton]}
             onPress={handleSubscribe}
             activeOpacity={0.8}
           >
             <View style={styles.buttonContent}>
               <Ionicons name="rocket" size={20} color="#FFFFFF" />
-              <Text style={styles.buttonText}>Go Pro - Unlimited Credits</Text>
+              <Text style={styles.buttonText}>Subscribe (3000 credits/week)</Text>
+            </View>
+          </TouchableOpacity>
+
+          {/* Buy Credits Button */}
+          <TouchableOpacity
+            style={[styles.button, styles.buyButton, styles.lastButton]}
+            onPress={handleBuyCredits}
+            activeOpacity={0.8}
+          >
+            <View style={styles.buttonContent}>
+              <Ionicons name="diamond" size={20} color="#FFFFFF" />
+              <Text style={styles.buttonText}>Buy Credit Pack</Text>
             </View>
           </TouchableOpacity>
         </Animated.View>
@@ -232,11 +218,11 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
   },
-  rateButton: {
-    backgroundColor: '#10B981',
-  },
   subscribeButton: {
     backgroundColor: '#6366F1',
+  },
+  buyButton: {
+    backgroundColor: '#8B5CF6',
   },
   lastButton: {
     marginBottom: 0,

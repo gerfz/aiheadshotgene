@@ -23,47 +23,41 @@ router.get(
       // Get profile first (fastest query)
       const profile = await getUserProfile(userId);
       
-      // Check if email is verified in auth.users (only if needed)
-      const { data: authUser } = await supabaseAdmin.auth.admin.getUserById(userId);
-      const isEmailVerified = authUser?.user?.email_confirmed_at !== null;
+      // Check if trial has expired
+      const now = new Date();
+      const trialExpired = profile.is_trial_active && 
+                          profile.trial_end_date && 
+                          new Date(profile.trial_end_date) < now;
       
-      // If email is verified in auth but not in profile, sync it
-      if (isEmailVerified && !profile.email_verified && !profile.credits_awarded) {
-        // Award credits for verification
+      if (trialExpired) {
+        // Expire the trial
         await supabaseAdmin
           .from('profiles')
-          .update({
-            email_verified: true,
-            credits_awarded: true,
-            free_credits: profile.free_credits + 3
-          })
+          .update({ is_trial_active: false })
           .eq('id', userId);
-        
-        // Refetch profile
-        const { data: updatedProfile } = await supabaseAdmin
-          .from('profiles')
-          .select('*')
-          .eq('id', userId)
-          .single();
-        
-        if (updatedProfile) {
-          return res.json({
-            freeCredits: updatedProfile.free_credits,
-            isSubscribed: updatedProfile.is_subscribed,
-            hasCredits: updatedProfile.is_subscribed || updatedProfile.free_credits > 0,
-            emailVerified: true
-          });
-        }
+        profile.is_trial_active = false;
+      }
+      
+      // Calculate trial days remaining
+      let trialDaysRemaining = 0;
+      if (profile.is_trial_active && profile.trial_end_date) {
+        const endDate = new Date(profile.trial_end_date);
+        const diffTime = endDate.getTime() - now.getTime();
+        trialDaysRemaining = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
       }
 
       res.json({
-        freeCredits: profile.free_credits,
+        totalCredits: profile.total_credits || 0,
         isSubscribed: profile.is_subscribed,
-        hasCredits: profile.is_subscribed || profile.free_credits > 0,
-        emailVerified: isEmailVerified || profile.email_verified || false
+        hasCredits: profile.is_subscribed || (profile.total_credits || 0) > 0,
+        isTrialActive: profile.is_trial_active || false,
+        trialEndsAt: profile.trial_end_date || null,
+        trialDaysRemaining: trialDaysRemaining,
+        canGenerate: profile.is_subscribed || (profile.total_credits || 0) >= 200,
+        canEdit: profile.is_subscribed || (profile.total_credits || 0) >= 50
       });
     } catch (error: any) {
-      // If profile doesn't exist, create it with device tracking
+      // If profile doesn't exist, create it with trial
       if (error.code === 'PGRST116') {
         try {
           // Get device_id and previous_user_id from auth metadata
@@ -72,39 +66,57 @@ router.get(
           const previousUserId = authUser?.user?.user_metadata?.previous_user_id;
           
           // Check if this device has already been used
-          let freeCredits = 2; // Default for new devices (changed from 5 to 2)
+          let totalCredits = 0;
           let isSubscribed = false;
+          let isTrialActive = false;
+          let trialStartDate = null;
+          let trialEndDate = null;
           
           // 🔥 PRIORITY 1: Try to get data from previous_user_id (most accurate)
           if (previousUserId) {
             const { data: previousProfile } = await supabaseAdmin
               .from('profiles')
-              .select('free_credits, is_subscribed')
+              .select('total_credits, is_subscribed, is_trial_active, trial_start_date, trial_end_date')
               .eq('id', previousUserId)
               .single();
             
             if (previousProfile) {
-              freeCredits = previousProfile.free_credits;
+              totalCredits = previousProfile.total_credits || 0;
               isSubscribed = previousProfile.is_subscribed;
-              console.log(`✅ Restored state from previous user ${previousUserId}: ${freeCredits} credits, subscribed: ${isSubscribed}`);
+              isTrialActive = previousProfile.is_trial_active || false;
+              trialStartDate = previousProfile.trial_start_date;
+              trialEndDate = previousProfile.trial_end_date;
+              console.log(`✅ Restored state from previous user ${previousUserId}: ${totalCredits} credits, subscribed: ${isSubscribed}`);
             }
           }
           // 🔥 FALLBACK: If no previous_user_id, check by device_id
           else if (deviceId) {
             const { data: existingProfile } = await supabaseAdmin
               .from('profiles')
-              .select('id, free_credits, is_subscribed')
+              .select('id, total_credits, is_subscribed, is_trial_active, trial_start_date, trial_end_date')
               .eq('device_id', deviceId)
               .order('created_at', { ascending: true })
               .limit(1)
               .single();
             
-            // If device was already used, copy credits from original account
+            // If device was already used, copy state from original account
             if (existingProfile) {
-              freeCredits = existingProfile.free_credits;
+              totalCredits = existingProfile.total_credits || 0;
               isSubscribed = existingProfile.is_subscribed;
-              console.log(`⚠️ Device ${deviceId} already used, copying ${freeCredits} credits from existing account`);
+              isTrialActive = existingProfile.is_trial_active || false;
+              trialStartDate = existingProfile.trial_start_date;
+              trialEndDate = existingProfile.trial_end_date;
+              console.log(`⚠️ Device ${deviceId} already used, copying state from existing account`);
             }
+          }
+          
+          // If new device and not subscribed, start trial
+          if (!isSubscribed && !isTrialActive && !trialStartDate) {
+            isTrialActive = true;
+            trialStartDate = new Date();
+            trialEndDate = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000); // 3 days from now
+            totalCredits = 1000; // Trial credits
+            console.log(`🎁 Starting 3-day trial for new user ${req.userId}`);
           }
           
           const { data, error: insertError } = await supabaseAdmin
@@ -112,8 +124,11 @@ router.get(
             .insert({
               id: req.userId,
               email: req.userEmail,
-              free_credits: freeCredits,
+              total_credits: totalCredits,
               is_subscribed: isSubscribed,
+              is_trial_active: isTrialActive,
+              trial_start_date: trialStartDate,
+              trial_end_date: trialEndDate,
               email_verified: true,
               credits_awarded: true,
               device_id: deviceId || null
@@ -123,11 +138,24 @@ router.get(
 
           if (insertError) throw insertError;
 
+          // Calculate trial days remaining
+          let trialDaysRemaining = 0;
+          if (data.is_trial_active && data.trial_end_date) {
+            const now = new Date();
+            const endDate = new Date(data.trial_end_date);
+            const diffTime = endDate.getTime() - now.getTime();
+            trialDaysRemaining = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+          }
+
           return res.json({
-            freeCredits: data.free_credits,
+            totalCredits: data.total_credits || 0,
             isSubscribed: data.is_subscribed,
-            hasCredits: data.free_credits > 0 || data.is_subscribed,
-            emailVerified: data.email_verified || false
+            hasCredits: data.is_subscribed || (data.total_credits || 0) > 0,
+            isTrialActive: data.is_trial_active || false,
+            trialEndsAt: data.trial_end_date || null,
+            trialDaysRemaining: trialDaysRemaining,
+            canGenerate: data.is_subscribed || (data.total_credits || 0) >= 200,
+            canEdit: data.is_subscribed || (data.total_credits || 0) >= 50
           });
         } catch (insertErr: any) {
           return res.status(500).json({ error: insertErr.message });
@@ -161,21 +189,47 @@ router.post(
   async (req: AuthenticatedRequest, res: Response) => {
     try {
       const userId = req.userId!;
-      const { isSubscribed } = req.body;
+      const { isSubscribed, isRenewal, isTrialConversion } = req.body;
 
-      // Get the user's profile to find their device_id
+      // Get the user's profile
       const { data: profile, error: profileError } = await supabaseAdmin
         .from('profiles')
-        .select('device_id')
+        .select('device_id, is_trial_active, total_credits')
         .eq('id', userId)
         .single();
 
       if (profileError) throw profileError;
 
-      // Update subscription status for this user
+      let creditsToAdd = 0;
+      
+      // Determine how many credits to add
+      if (isTrialConversion) {
+        // Trial converting to paid: add 2000 more credits (they already have 1000 from trial)
+        creditsToAdd = 2000;
+        console.log(`🎉 Trial conversion for user ${userId}: adding ${creditsToAdd} credits`);
+      } else if (isRenewal && isSubscribed) {
+        // Weekly renewal: add 3000 credits
+        creditsToAdd = 3000;
+        console.log(`🔄 Weekly renewal for user ${userId}: adding ${creditsToAdd} credits`);
+      } else if (isSubscribed && !profile.is_subscribed) {
+        // New subscription (not from trial): add 3000 credits
+        creditsToAdd = 3000;
+        console.log(`✨ New subscription for user ${userId}: adding ${creditsToAdd} credits`);
+      }
+
+      // Update subscription status and add credits
+      const updateData: any = { 
+        is_subscribed: isSubscribed,
+        is_trial_active: false // End trial if converting
+      };
+      
+      if (creditsToAdd > 0) {
+        updateData.total_credits = (profile.total_credits || 0) + creditsToAdd;
+      }
+
       const { data, error } = await supabaseAdmin
         .from('profiles')
-        .update({ is_subscribed: isSubscribed })
+        .update(updateData)
         .eq('id', userId)
         .select()
         .single();
@@ -186,7 +240,10 @@ router.post(
       if (profile.device_id) {
         const { error: syncError } = await supabaseAdmin
           .from('profiles')
-          .update({ is_subscribed: isSubscribed })
+          .update({ 
+            is_subscribed: isSubscribed,
+            is_trial_active: false
+          })
           .eq('device_id', profile.device_id)
           .neq('id', userId); // Don't update the current user again
 
@@ -200,7 +257,9 @@ router.post(
 
       res.json({
         success: true,
-        isSubscribed: data.is_subscribed
+        isSubscribed: data.is_subscribed,
+        totalCredits: data.total_credits,
+        creditsAdded: creditsToAdd
       });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
@@ -208,7 +267,7 @@ router.post(
   }
 );
 
-// Award credits for rating the app
+// Award credits for rating the app (DEPRECATED - keeping for backward compatibility)
 router.post(
   '/rate-reward',
   verifyToken,
@@ -219,11 +278,11 @@ router.post(
       // Get current profile
       const profile = await getUserProfile(userId);
       
-      // Award 2 credits for rating
+      // Award 400 credits for rating (equivalent to 2 generations in new system)
       const { data, error } = await supabaseAdmin
         .from('profiles')
         .update({
-          free_credits: profile.free_credits + 2
+          total_credits: (profile.total_credits || 0) + 400
         })
         .eq('id', userId)
         .select()
@@ -231,14 +290,107 @@ router.post(
       
       if (error) throw error;
       
-      console.log(`✅ Awarded 2 rating credits to user ${userId}`);
+      console.log(`✅ Awarded 400 rating credits to user ${userId}`);
       
       res.json({
         success: true,
-        freeCredits: data.free_credits
+        totalCredits: data.total_credits
       });
     } catch (error: any) {
       console.error('Error awarding rating credits:', error);
+      res.status(500).json({ error: error.message });
+    }
+  }
+);
+
+// Purchase credit pack
+router.post(
+  '/credits/purchase',
+  verifyToken,
+  async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const userId = req.userId!;
+      const { packId, credits, transactionId } = req.body;
+      
+      if (!packId || !credits || !transactionId) {
+        return res.status(400).json({ error: 'Missing required fields' });
+      }
+      
+      // Verify transaction hasn't been processed already
+      const { data: existingTransaction } = await supabaseAdmin
+        .from('credit_transactions')
+        .select('id')
+        .eq('transaction_id', transactionId)
+        .single();
+      
+      if (existingTransaction) {
+        return res.status(400).json({ error: 'Transaction already processed' });
+      }
+      
+      // Add credits using RPC function
+      const { data: result, error: rpcError } = await supabaseAdmin
+        .rpc('add_user_credits', {
+          user_id: userId,
+          credits_to_add: credits
+        });
+      
+      if (rpcError) throw rpcError;
+      
+      // Log transaction
+      await supabaseAdmin
+        .from('credit_transactions')
+        .insert({
+          user_id: userId,
+          transaction_id: transactionId,
+          pack_id: packId,
+          credits_added: credits,
+          transaction_type: 'purchase'
+        });
+      
+      console.log(`✅ Added ${credits} credits to user ${userId} (pack: ${packId})`);
+      
+      res.json({
+        success: true,
+        totalCredits: result[0].new_total
+      });
+    } catch (error: any) {
+      console.error('Error purchasing credits:', error);
+      res.status(500).json({ error: error.message });
+    }
+  }
+);
+
+// Start trial for user
+router.post(
+  '/trial/start',
+  verifyToken,
+  async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const userId = req.userId!;
+      
+      // Check if user already had a trial
+      const profile = await getUserProfile(userId);
+      if (profile.trial_start_date) {
+        return res.status(400).json({ error: 'Trial already used' });
+      }
+      
+      // Start trial using RPC function
+      const { data: result, error: rpcError } = await supabaseAdmin
+        .rpc('start_user_trial', {
+          user_id: userId,
+          trial_credits: 1000
+        });
+      
+      if (rpcError) throw rpcError;
+      
+      console.log(`✅ Started 3-day trial for user ${userId}`);
+      
+      res.json({
+        success: true,
+        trialEndsAt: result[0].trial_ends
+      });
+    } catch (error: any) {
+      console.error('Error starting trial:', error);
       res.status(500).json({ error: error.message });
     }
   }

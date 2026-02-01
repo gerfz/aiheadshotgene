@@ -1,344 +1,498 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Image,
-  RefreshControl,
+  Dimensions,
+  ActivityIndicator,
+  TextInput,
+  Alert,
 } from 'react-native';
-import { router, Stack, useFocusEffect } from 'expo-router';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Image } from 'expo-image';
+import { router, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
 import { useAppStore } from '../src/store/useAppStore';
-import { getCredits, getGenerations, updateSubscriptionStatus } from '../src/services/api';
-import { signOut } from '../src/services/supabase';
-import { CreditsDisplay, BottomNav } from '../src/components';
-import { syncSubscriptionStatus } from '../src/services/purchases';
-import { 
-  getCachedCredits, 
-  getCachedGenerations, 
-  cacheCredits, 
-  cacheGenerations,
-  clearCache
-} from '../src/services/cache';
+import { STYLE_PRESETS } from '../src/constants/styles';
+import { getMostUsedStyles } from '../src/services/api';
+import { analytics } from '../src/services/posthog';
+import { getSession } from '../src/services/supabase';
+import { CreditsHeader } from '../src/components';
 
-// Helper to convert style keys to professional display names
-const getStyleDisplayName = (styleKey: string, isEdited?: boolean): string => {
-  const styleNames: Record<string, string> = {
-    'business': 'Business Photo',
-    'business_photo': 'Business Photo',
-    'emotional_film': 'Emotional Film',
-    'victoria_secret': "Victoria's Secret",
-    'nineties_camera': '90s Camera',
-    'professional_headshot': 'Professional',
-    'with_puppy': 'With Puppy',
-    'custom': 'Custom Style',
-    // Legacy style names
-    'corporate': 'Corporate',
-    'creative': 'Creative',
-    'friendly': 'Friendly',
-  };
-  
-  let displayName = styleNames[styleKey] || styleKey.split('_').map(word => 
-    word.charAt(0).toUpperCase() + word.slice(1)
-  ).join(' ');
-  
-  // Add (Edited) suffix if it's an edited portrait
-  if (isEdited) {
-    displayName += ' (Edited)';
-  }
-  
-  return displayName;
-};
+const { width } = Dimensions.get('window');
+const CARD_PADDING = 16; // Padding between cards
+const SCREEN_PADDING = 20; // Side padding
+const cardWidth = (width - (SCREEN_PADDING * 2) - (CARD_PADDING * 2)) / 3; // 3 columns with small peek of 4th
+const cardHeight = cardWidth * 1.4;
+
+// Memoized Style Card Component
+const StyleCard = React.memo(({ 
+  style, 
+  selectedStyle, 
+  onSelect
+}: { 
+  style: any; 
+  selectedStyle: string | null; 
+  onSelect: (key: string) => void;
+}) => {
+  return (
+    <TouchableOpacity
+      style={styles.gridCard}
+      onPress={() => onSelect(style.key)}
+      activeOpacity={0.9}
+    >
+      <View style={styles.imageContainer}>
+        <Image 
+          source={style.thumbnail} 
+          style={styles.styleImage}
+          contentFit="cover"
+          cachePolicy="memory-disk"
+          transition={200}
+        />
+        
+        {/* Black gradient overlay at bottom */}
+        <View style={styles.gradientOverlay} />
+        
+        <View style={styles.selectionIndicator}>
+          {selectedStyle === style.key ? (
+            <Ionicons name="checkmark-circle" size={24} color="#6366F1" />
+          ) : (
+            <View style={styles.unselectedCircle} />
+          )}
+        </View>
+        
+        {style.badge && (
+          <View style={[
+            styles.badge,
+            style.badge.type === 'female' && styles.badgeFemale,
+            style.badge.type === 'info' && styles.badgeInfo,
+          ]}>
+            <Text style={styles.badgeText}>{style.badge.label}</Text>
+          </View>
+        )}
+        
+        {/* Title on preview with gradient */}
+        <View style={styles.titleContainer}>
+          <Text style={styles.styleName} numberOfLines={1}>
+            {style.name.length > 15 ? `${style.name.substring(0, 15)}...` : style.name}
+          </Text>
+        </View>
+      </View>
+    </TouchableOpacity>
+  );
+});
+
+// Static category definitions (will be updated with dynamic most used)
+const STATIC_CATEGORIES = [
+  {
+    id: 'business',
+    name: 'Business',
+    icon: '💼',
+    styles: ['executive_portrait', 'corporate_headshot', 'startup_founder', 'business_casual', 'conference_speaker', 'business', 'tight_portrait', 'luxury_fashion', 'professional_headshot'],
+  },
+  {
+    id: 'dating',
+    name: 'Dating',
+    icon: '💕',
+    styles: ['candlelit_dinner', 'sunset_walk', 'cozy_date_night', 'romantic_picnic', 'jazz_club_date', 'wine_bar', 'emotional_film', 'with_puppy', 'nineties_camera'],
+  },
+  {
+    id: 'social_lifestyle',
+    name: 'Social / Lifestyle',
+    icon: '📸',
+    styles: ['with_supercar', 'coffee_shop', 'luxury_yacht', 'city_rooftop', 'beach_sunset', 'nineties_camera', 'with_puppy', 'emotional_film'],
+  },
+  {
+    id: 'creative',
+    name: 'Creative',
+    icon: '🎭',
+    styles: ['magazine_cover', 'pikachu', 'bulbasaur', 'charmander', 'squirtle', 'jigglypuff', 'zootopia_cable_car', 'tom_and_jerry', 'ben_ten', 'pink_panther', 'victoria_secret', 'custom'],
+  },
+  {
+    id: 'adventure',
+    name: 'Adventure',
+    icon: '🏔️',
+    styles: ['mountain_hiking', 'safari_expedition', 'jungle_explorer', 'canyon_adventure', 'desert_wanderer', 'custom'],
+  },
+  {
+    id: 'classy',
+    name: 'Classy',
+    icon: '👔',
+    styles: ['black_tie', 'evening_gown', 'gentleman_study', 'champagne_celebration', 'art_museum', 'custom'],
+  },
+  {
+    id: 'winter',
+    name: 'Winter',
+    icon: '❄️',
+    styles: ['cozy_cabin', 'luxury_ski', 'winter_forest', 'mountain_peak', 'winter_city', 'custom'],
+  },
+  {
+    id: 'jobs',
+    name: 'Jobs',
+    icon: '💼',
+    styles: ['executive_chef', 'airline_pilot', 'surgeon', 'creative_artist', 'firefighter_hero', 'custom'],
+  },
+];
+
+type ViewMode = 'categories' | 'all';
 
 export default function HomeScreen() {
-  const { user, credits, generations, setCredits, setGenerations, setUser } = useAppStore();
-  const [refreshing, setRefreshing] = useState(false);
-  const [isLoadingFresh, setIsLoadingFresh] = useState(false);
-  const [hasInitialLoad, setHasInitialLoad] = useState(false);
+  const { selectedStyle, setSelectedStyle, customPrompt, setCustomPrompt, credits, setSelectedImage } = useAppStore();
+  const [categories, setCategories] = useState(STATIC_CATEGORIES);
+  const [loading, setLoading] = useState(true);
+  const [showCustomPrompt, setShowCustomPrompt] = useState(false);
+  const [viewMode, setViewMode] = useState<ViewMode>('categories');
+  const [allStyles, setAllStyles] = useState<string[]>([]);
 
-  const loadCachedData = async () => {
-    try {
-      const [cachedCredits, cachedGenerations] = await Promise.all([
-        getCachedCredits(),
-        getCachedGenerations(),
-      ]);
-      
-      if (cachedCredits) {
-        console.log('⚡ Loading cached credits instantly');
-        setCredits(cachedCredits);
-      }
-      
-      if (cachedGenerations) {
-        console.log('⚡ Loading cached generations instantly');
-        setGenerations(cachedGenerations);
-      }
-      
-      return { hasCache: !!(cachedCredits || cachedGenerations) };
-    } catch (error) {
-      console.error('Failed to load cached data:', error);
-      return { hasCache: false };
-    }
-  };
+  // Load most used styles on mount
+  useEffect(() => {
+    loadMostUsedStyles();
+  }, []);
 
-  const loadFreshData = async (showAsRefreshing = false, retryCount = 0) => {
-    const maxRetries = 3;
-    
+  const loadMostUsedStyles = async () => {
     try {
-      if (!showAsRefreshing) {
-        setIsLoadingFresh(true);
+      const { mostUsedStyles } = await getMostUsedStyles();
+      
+      // Custom is always first, then top 9 most used
+      const mostUsedStyleKeys = ['custom'];
+      
+      // Add top 9 most used styles (excluding custom)
+      mostUsedStyles.slice(0, 9).forEach((item) => {
+        if (item.style_key !== 'custom' && STYLE_PRESETS[item.style_key]) {
+          mostUsedStyleKeys.push(item.style_key);
+        }
+      });
+      
+      // If we don't have 10 styles yet, fill with defaults
+      const defaultStyles = ['business', 'emotional_film', 'victoria_secret', 'professional_headshot', 'wine_bar', 'with_puppy', 'nineties_camera', 'tight_portrait', 'luxury_fashion'];
+      for (const styleKey of defaultStyles) {
+        if (mostUsedStyleKeys.length >= 10) break;
+        if (!mostUsedStyleKeys.includes(styleKey)) {
+          mostUsedStyleKeys.push(styleKey);
+        }
       }
       
-      // Small delay to ensure auth state is updated after signup
-      await new Promise(resolve => setTimeout(resolve, 100));
-      
-      // 🔥 FIX 2: getCredits() and getGenerations() now have built-in retry logic
-      const [creditsData, generationsData] = await Promise.all([
-        getCredits(),
-        getGenerations(),
-      ]);
-      
-      // Ensure freeCredits is a number
-      const normalizedCredits = {
-        ...creditsData,
-        freeCredits: creditsData?.freeCredits ?? 0,
-        hasCredits: creditsData?.hasCredits ?? false,
-        isSubscribed: creditsData?.isSubscribed ?? false,
+      // Create the Most Used category
+      const mostUsedCategory = {
+        id: 'most_used',
+        name: 'Most Used',
+        icon: '⚡',
+        styles: mostUsedStyleKeys,
       };
       
-      // Update state
-      setCredits(normalizedCredits);
-      setGenerations(generationsData?.generations || []);
+      // Update categories with Most Used at the top
+      setCategories([mostUsedCategory, ...STATIC_CATEGORIES]);
       
-      // Cache the fresh data
-      await Promise.all([
-        cacheCredits(normalizedCredits),
-        cacheGenerations(generationsData?.generations || []),
-      ]);
-      
-      console.log('✅ Fresh data loaded and cached');
-    } catch (error: any) {
-      console.error(`Failed to load fresh data (attempt ${retryCount + 1}/${maxRetries}):`, error);
-      
-      // 🔥 FIX 3: Never downgrade auth state on transient failures
-      // Only reset to 0 if server explicitly says user not found (401/404)
-      const isRealFailure = error?.status === 401 || error?.status === 404;
-      
-      if (isRealFailure) {
-        console.error('❌ Real auth failure detected (401/404). User not found.');
-        // Only in this case, reset to empty state
-        setCredits({ 
-          freeCredits: 0, 
-          hasCredits: false, 
-          isSubscribed: false 
-        });
-        setGenerations([]);
-        return;
-      }
-      
-      // For timeouts, 5xx errors, network errors: NEVER downgrade, keep retrying
-      if (retryCount < maxRetries) {
-        console.log(`🔄 Transient error. Retrying in ${(retryCount + 1) * 2} seconds...`);
-        await new Promise(resolve => setTimeout(resolve, (retryCount + 1) * 2000)); // Exponential backoff: 2s, 4s, 6s
-        return loadFreshData(showAsRefreshing, retryCount + 1);
-      }
-      
-      // 🔥 After all retries failed due to transient errors: KEEP existing/cached data
-      console.warn('⚠️ All retries exhausted due to transient errors. Preserving cached state.');
-      console.warn('⚠️ User can pull-to-refresh to retry manually.');
-      
-      // Only set defaults if we have absolutely nothing (first time user with network issues)
-      if (!credits && !generations.length) {
-        console.warn('⚠️ No cached data available for first-time user. Showing placeholder.');
-        setCredits({ 
-          freeCredits: 0, 
-          hasCredits: false, 
-          isSubscribed: false 
-        });
-        setGenerations([]);
-      }
-    } finally {
-      setIsLoadingFresh(false);
-    }
-  };
-
-  useEffect(() => {
-    if (user?.id && !hasInitialLoad) {
-      setHasInitialLoad(true);
-      
-      // ALWAYS load cached data first for instant UI
-      loadCachedData().then(({ hasCache }) => {
-        if (hasCache) {
-          console.log('⚡ Cached data loaded instantly');
-        } else {
-          console.log('ℹ️ No cached data, showing fresh data only');
+      // Build all styles list for "Show All" mode
+      const allStyleKeys = ['custom'];
+      mostUsedStyles.forEach((item) => {
+        if (item.style_key !== 'custom' && STYLE_PRESETS[item.style_key] && !allStyleKeys.includes(item.style_key)) {
+          allStyleKeys.push(item.style_key);
         }
-        
-        // Then load fresh data in background (with retries)
-        loadFreshData();
       });
-    }
-  }, [user?.id, hasInitialLoad]);
-  
-  // When navigating back to home (e.g., from subscription page), force refresh
-  useFocusEffect(
-    React.useCallback(() => {
-      if (hasInitialLoad && user?.id) {
-        console.log('🔄 Screen focused, forcing fresh data load');
-        // Clear cache to ensure we get fresh subscription state
-        clearCache().then(() => {
-          loadFreshData();
-        });
-      }
-    }, [hasInitialLoad, user?.id])
-  );
-
-  const onRefresh = async () => {
-    setRefreshing(true);
-    
-    // Run subscription sync and data fetch in parallel
-    await Promise.all([
-      // Sync subscription status from RevenueCat
-      syncSubscriptionStatus()
-        .then(isSubscribed => updateSubscriptionStatus(isSubscribed))
-        .then(() => console.log('✅ Subscription status synced on refresh'))
-        .catch(syncError => console.warn('⚠️ Failed to sync subscription status:', syncError)),
+      Object.keys(STYLE_PRESETS).forEach((key) => {
+        if (!allStyleKeys.includes(key)) {
+          allStyleKeys.push(key);
+        }
+      });
+      setAllStyles(allStyleKeys);
       
-      // Load fresh data from backend
-      loadFreshData(true),
-    ]);
-    
-    setRefreshing(false);
+      setLoading(false);
+    } catch (error) {
+      console.error('Failed to load most used styles:', error);
+      // Fallback to default Most Used category
+      const defaultMostUsed = {
+        id: 'most_used',
+        name: 'Most Used',
+        icon: '⚡',
+        styles: ['custom', 'business', 'emotional_film', 'victoria_secret', 'professional_headshot'],
+      };
+      setCategories([defaultMostUsed, ...STATIC_CATEGORIES]);
+      
+      // Fallback all styles
+      const fallbackStyles = ['custom', ...Object.keys(STYLE_PRESETS).filter(k => k !== 'custom')];
+      setAllStyles(fallbackStyles);
+      
+      setLoading(false);
+    }
   };
 
-  const handleStartGeneration = () => {
-    if (!credits?.hasCredits) {
-      // Redirect to subscription when no credits
-      router.push('/subscription');
+  const handleStyleSelect = useCallback((styleKey: string) => {
+    // Allow deselecting by clicking the same style again
+    if (selectedStyle === styleKey) {
+      setSelectedStyle(null);
+      setShowCustomPrompt(false);
+      setCustomPrompt(null);
       return;
     }
-    router.push('/upload');
-  };
 
-  const completedGenerations = Array.isArray(generations) 
-    ? generations.filter(g => g.status === 'completed')
-    : [];
-  const recentGenerations = completedGenerations.slice(0, 3);
+    setSelectedStyle(styleKey);
+    
+    // Track style selection
+    const category = categories.find(cat => cat.styles.includes(styleKey))?.name || 'Unknown';
+    analytics.styleSelected(styleKey, category);
+    
+    // Show custom prompt input if custom style is selected
+    if (styleKey === 'custom') {
+      setShowCustomPrompt(true);
+    } else {
+      setShowCustomPrompt(false);
+      // Clear custom prompt when selecting a non-custom style
+      setCustomPrompt(null);
+    }
+  }, [selectedStyle, setSelectedStyle, setCustomPrompt, categories]);
+
+  const handleContinue = useCallback(async () => {
+    if (!selectedStyle) return;
+
+    // For custom style, require custom prompt
+    if (selectedStyle === 'custom' && !customPrompt) {
+      Alert.alert('Custom Prompt Required', 'Please enter a custom prompt to continue.');
+      return;
+    }
+
+    // Check if user has enough credits
+    if (!credits?.canGenerate) {
+      Alert.alert(
+        'Insufficient Credits',
+        'You need 200 credits to generate a portrait.',
+        [
+          { text: 'Get Credits', onPress: () => router.push('/subscription') },
+          { text: 'Cancel', style: 'cancel' }
+        ]
+      );
+      return;
+    }
+
+    // Check if user is authenticated before proceeding
+    try {
+      const session = await getSession();
+      if (!session) {
+        Alert.alert(
+          'Session Error',
+          'Please restart the app to continue.',
+          [{ text: 'OK' }]
+        );
+        return;
+      }
+    } catch (error) {
+      console.error('❌ Failed to check session:', error);
+      Alert.alert(
+        'Connection Error',
+        'Please check your internet connection and try again.',
+        [{ text: 'OK' }]
+      );
+      return;
+    }
+    
+    // Open image picker
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    
+    if (status !== 'granted') {
+      Alert.alert(
+        'Permission Required',
+        'We need access to your photos to continue.',
+        [{ text: 'OK' }]
+      );
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+
+    if (!result.canceled && result.assets[0]) {
+      setSelectedImage(result.assets[0].uri);
+      analytics.photoUploaded('gallery');
+      // Navigate to generating screen
+      router.push('/generating');
+    }
+  }, [selectedStyle, customPrompt, credits, setSelectedImage]);
+
 
   return (
     <>
-      <Stack.Screen options={{ headerShown: false }} />
-      <View style={styles.container}>
-        <ScrollView
-          contentContainerStyle={styles.content}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#6366F1" />
-          }
-        >
-          <View style={styles.creditsContainer}>
-            <CreditsDisplay credits={credits} />
-          </View>
+      <Stack.Screen 
+        options={{ 
+          headerShown: false,
+        }} 
+      />
+      <SafeAreaView style={styles.container} edges={['top']}>
+        {/* Credits Header */}
+        <CreditsHeader showHistory={true} />
 
-          <View style={styles.howItWorks}>
-            <Text style={styles.sectionTitle}>How It Works</Text>
-            <View style={styles.steps}>
-              <View style={styles.step}>
-                <View style={styles.stepNumber}>
-                  <Text style={styles.stepNumberText}>1</Text>
-                </View>
-                <Text style={styles.stepTitle}>Click the + Button</Text>
-                <Text style={styles.stepDescription}>
-                  Tap the + button below to get started
-                </Text>
-              </View>
-              <View style={styles.step}>
-                <View style={styles.stepNumber}>
-                  <Text style={styles.stepNumberText}>2</Text>
-                </View>
-                <Text style={styles.stepTitle}>Choose Style</Text>
-                <Text style={styles.stepDescription}>
-                  Pick from our professional styles
-                </Text>
-              </View>
-              <View style={styles.step}>
-                <View style={styles.stepNumber}>
-                  <Text style={styles.stepNumberText}>3</Text>
-                </View>
-                <Text style={styles.stepTitle}>We Create</Text>
-                <Text style={styles.stepDescription}>
-                  We create your perfect headshot
-                </Text>
-              </View>
-            </View>
+        {loading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#6366F1" />
+            <Text style={styles.loadingText}>Loading styles...</Text>
           </View>
-
-          {completedGenerations.length > 0 && (
-            <View style={styles.historySection}>
-              <View style={styles.sectionHeader}>
-                <Text style={styles.sectionTitle}>Recent Portraits</Text>
-                <TouchableOpacity onPress={() => router.push('/gallery')}>
-                  <Text style={styles.viewAllButton}>View All</Text>
-                </TouchableOpacity>
-              </View>
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.historyScroll}
+        ) : (
+          <>
+            {/* Sort Options */}
+            <View style={styles.sortContainer}>
+              <TouchableOpacity
+                style={[styles.sortButton, viewMode === 'categories' && styles.sortButtonActive]}
+                onPress={() => setViewMode('categories')}
+                activeOpacity={0.7}
               >
-                {recentGenerations.map((gen) => (
-                  <TouchableOpacity
-                    key={gen.id}
-                    style={styles.historyCard}
-                    onPress={() => router.push({ 
-                      pathname: '/result', 
-                      params: { 
-                        id: gen.id,
-                        generatedUrl: gen.generated_image_url || '',
-                        originalUrl: gen.original_image_url || '',
-                        styleKey: gen.style_key,
-                        customPrompt: gen.custom_prompt || ''
-                      } 
-                    })}
-                  >
-                    <Image
-                      source={{ uri: gen.generated_image_url! }}
-                      style={styles.historyImage}
-                    />
-                    <Text style={styles.historyStyle}>
-                      {getStyleDisplayName(gen.style_key, gen.is_edited)}
-                    </Text>
-                  </TouchableOpacity>
+                <Text style={[styles.sortButtonText, viewMode === 'categories' && styles.sortButtonTextActive]}>
+                  Categories
+                </Text>
+              </TouchableOpacity>
+              
+              <View style={styles.sortDivider} />
+              
+              <TouchableOpacity
+                style={[styles.sortButton, viewMode === 'all' && styles.sortButtonActive]}
+                onPress={() => setViewMode('all')}
+                activeOpacity={0.7}
+              >
+                <Text style={[styles.sortButtonText, viewMode === 'all' && styles.sortButtonTextActive]}>
+                  Show All
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Content based on view mode */}
+            {viewMode === 'categories' ? (
+              // Categories with Horizontal Scrolling
+              <ScrollView
+                style={styles.contentScroll}
+                contentContainerStyle={styles.contentContainer}
+                showsVerticalScrollIndicator={false}
+                removeClippedSubviews={true}
+                maxToRenderPerBatch={10}
+                updateCellsBatchingPeriod={50}
+                initialNumToRender={8}
+                windowSize={5}
+              >
+                {categories.map((category) => (
+                  <View key={category.id} style={styles.categorySection}>
+                    {/* Category Header with Arrow */}
+                    <View style={styles.categoryHeader}>
+                      <Text style={styles.categoryTitle}>
+                        {category.name.toUpperCase()}
+                      </Text>
+                      <TouchableOpacity 
+                        style={styles.seeAllButton}
+                        onPress={() => {
+                          router.push({
+                            pathname: '/category-detail',
+                            params: {
+                              categoryId: category.id,
+                              categoryName: category.name,
+                              styles: category.styles.join(','),
+                            },
+                          });
+                        }}
+                      >
+                        <Ionicons name="chevron-forward" size={20} color="#666666" />
+                      </TouchableOpacity>
+                    </View>
+
+                    {/* Horizontal Scroll of Styles */}
+                    <ScrollView
+                      horizontal
+                      showsHorizontalScrollIndicator={false}
+                      contentContainerStyle={styles.horizontalScroll}
+                      removeClippedSubviews={true}
+                      maxToRenderPerBatch={5}
+                      updateCellsBatchingPeriod={50}
+                      initialNumToRender={4}
+                      windowSize={3}
+                    >
+                      {category.styles.map((styleKey) => {
+                        const style = STYLE_PRESETS[styleKey];
+                        return (
+                          <StyleCard
+                            key={style.key}
+                            style={style}
+                            selectedStyle={selectedStyle}
+                            onSelect={handleStyleSelect}
+                          />
+                        );
+                      })}
+                    </ScrollView>
+                  </View>
                 ))}
               </ScrollView>
-            </View>
-          )}
-
-          {/* Updates Section */}
-          <View style={styles.updatesSection}>
-            <View style={styles.updateCard}>
-              <View style={styles.updateTopRow}>
-                <View style={styles.latestUpdateBadge}>
-                  <Text style={styles.latestUpdateBadgeText}>WHAT'S NEW</Text>
+            ) : (
+              // Show All - Grid View
+              <ScrollView
+                style={styles.contentScroll}
+                contentContainerStyle={styles.gridScrollContent}
+                showsVerticalScrollIndicator={false}
+                removeClippedSubviews={true}
+                maxToRenderPerBatch={15}
+                updateCellsBatchingPeriod={50}
+                initialNumToRender={12}
+                windowSize={5}
+              >
+                <View style={styles.gridContainer}>
+                  {allStyles.map((styleKey) => {
+                    const style = STYLE_PRESETS[styleKey];
+                    return (
+                      <StyleCard
+                        key={style.key}
+                        style={style}
+                        selectedStyle={selectedStyle}
+                        onSelect={handleStyleSelect}
+                      />
+                    );
+                  })}
                 </View>
+              </ScrollView>
+            )}
+
+            {/* Custom Prompt Input - Show when custom style is selected */}
+            {showCustomPrompt && selectedStyle === 'custom' && (
+              <View style={styles.customPromptContainer}>
+                <View style={styles.customPromptHeader}>
+                  <Ionicons name="create-outline" size={24} color="#6366F1" />
+                  <Text style={styles.customPromptTitle}>Describe Your Portrait</Text>
+                </View>
+                <TextInput
+                  style={styles.customPromptInput}
+                  placeholder="E.g., Professional headshot in a modern office, wearing a navy suit..."
+                  placeholderTextColor="#64748B"
+                  multiline
+                  numberOfLines={4}
+                  value={customPrompt || ''}
+                  onChangeText={setCustomPrompt}
+                  textAlignVertical="top"
+                />
+                <Text style={styles.customPromptHint}>
+                  💡 Tip: Be specific about clothing, background, lighting, and mood
+                </Text>
               </View>
-              
-              <Text style={styles.updateHeadline}>16 New Styles Added</Text>
-              <Text style={styles.updateDescription}>
-                Business, Dating & Social/Lifestyle categories expanded with amazing new styles
-              </Text>
-              
-              <View style={styles.updateDivider} />
-              
-              <View style={styles.nextUpdateRow}>
-                <Text style={styles.nextUpdateLabel}>Next Update:</Text>
-                <Text style={styles.nextUpdateDate}>Feb 15, 2026</Text>
+            )}
+
+            {/* Continue Button - Only show when style is selected */}
+            {selectedStyle && (
+              <View style={styles.footer}>
+                <TouchableOpacity
+                  style={[
+                    styles.continueButton,
+                    selectedStyle === 'custom' && (!customPrompt || customPrompt.trim().length === 0) && styles.continueButtonDisabled
+                  ]}
+                  onPress={handleContinue}
+                  disabled={selectedStyle === 'custom' && (!customPrompt || customPrompt.trim().length === 0)}
+                >
+                  <Text style={styles.continueButtonText}>
+                    Continue (200 credits)
+                  </Text>
+                </TouchableOpacity>
               </View>
-            </View>
-          </View>
-        </ScrollView>
-        <BottomNav />
-      </View>
+            )}
+          </>
+        )}
+      </SafeAreaView>
     </>
   );
 }
@@ -346,231 +500,234 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0F172A',
-  },
-  content: {
-    padding: 20,
-    paddingTop: 60,
-    paddingBottom: 120,
-  },
-  guestText: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#9CA3AF',
-  },
-  logoutButton: {
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    backgroundColor: '#1F2937',
-    borderRadius: 8,
-  },
-  logoutText: {
-    color: '#EF4444',
-    fontSize: 14,
-  },
-  loginButton: {
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    backgroundColor: '#6366F1',
-    borderRadius: 8,
-  },
-  loginButtonText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  promoBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#1E293B', // Dark slate background
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 24,
-    borderWidth: 1,
-    borderColor: '#6366F1', // Primary color border
-    shadowColor: '#6366F1',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  promoIconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(99, 102, 241, 0.15)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 12,
-  },
-  promoIcon: {
-    fontSize: 20,
-  },
-  promoContent: {
-    flex: 1,
-  },
-  promoTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#FFFFFF',
-    marginBottom: 2,
-  },
-  promoText: {
-    fontSize: 13,
-    color: '#9CA3AF',
-  },
-  promoArrow: {
-    width: 24,
-    height: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#6366F1',
-    borderRadius: 12,
-  },
-  promoArrowText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: 'bold',
-    marginBottom: 2, // Optical adjustment
-  },
-  creditsContainer: {
-    alignItems: 'flex-start',
-    marginBottom: 24,
-  },
-  historySection: {
-    marginBottom: 32,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#FFFFFF',
-  },
-  viewAllButton: {
-    fontSize: 14,
-    color: '#6366F1',
-    fontWeight: '600',
-  },
-  historyScroll: {
-    paddingRight: 20,
-  },
-  historyCard: {
-    marginRight: 16,
-    width: 160,
-  },
-  historyImage: {
-    width: 160,
-    height: 220,
-    borderRadius: 12,
-    marginBottom: 8,
-  },
-  historyStyle: {
-    fontSize: 14,
-    color: '#9CA3AF',
-    textAlign: 'center',
-  },
-  howItWorks: {
-    marginBottom: 32,
-  },
-  steps: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 20,
-  },
-  step: {
-    flex: 1,
-    alignItems: 'center',
-    paddingHorizontal: 8,
-  },
-  stepNumber: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#6366F1',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 12,
-  },
-  stepNumberText: {
-    color: '#FFFFFF',
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  stepTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#FFFFFF',
-    marginBottom: 4,
-    textAlign: 'center',
-  },
-  stepDescription: {
-    fontSize: 12,
-    color: '#9CA3AF',
-    textAlign: 'center',
+    backgroundColor: '#000000',
   },
   
-  // Updates Section
-  updatesSection: {
-    marginBottom: 20,
-    paddingHorizontal: 4,
+  // Loading
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 16,
   },
-  updateCard: {
-    backgroundColor: '#1E293B',
-    borderRadius: 16,
-    padding: 16,
+  loadingText: {
+    color: '#666666',
+    fontSize: 16,
   },
-  updateTopRow: {
+  
+  // Sort Options
+  sortContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 10,
+    paddingHorizontal: SCREEN_PADDING,
+    paddingVertical: 12,
+    gap: 12,
   },
-  latestUpdateBadge: {
-    backgroundColor: 'rgba(74, 222, 128, 0.15)',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 5,
+  sortButton: {
+    flex: 1,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    backgroundColor: '#1A1A1A',
+    alignItems: 'center',
   },
-  latestUpdateBadgeText: {
-    color: '#4ADE80',
-    fontSize: 10,
-    fontWeight: '700',
-    letterSpacing: 0.5,
+  sortButtonActive: {
+    backgroundColor: '#6366F1',
   },
-  updateHeadline: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#FFFFFF',
-    letterSpacing: -0.3,
-    marginBottom: 4,
-  },
-  updateDescription: {
+  sortButtonText: {
     fontSize: 13,
-    color: '#94A3B8',
+    fontWeight: '600',
+    color: '#666666',
+  },
+  sortButtonTextActive: {
+    color: '#FFFFFF',
+  },
+  sortDivider: {
+    width: 1,
+    height: 20,
+    backgroundColor: '#333333',
+  },
+  
+  // Content
+  contentScroll: {
+    flex: 1,
+  },
+  contentContainer: {
+    paddingTop: 8,
+    paddingBottom: 120,
+  },
+  gridScrollContent: {
+    paddingHorizontal: SCREEN_PADDING,
+    paddingTop: 8,
+    paddingBottom: 120,
+  },
+  gridContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  
+  // Category Section
+  categorySection: {
+    marginBottom: 24,
+  },
+  categoryHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: SCREEN_PADDING,
+    marginBottom: 12,
+  },
+  categoryTitle: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#666666',
+    letterSpacing: 1,
+  },
+  seeAllButton: {
+    padding: 4,
+  },
+  
+  // Horizontal Scroll
+  horizontalScroll: {
+    paddingLeft: SCREEN_PADDING,
+    paddingRight: SCREEN_PADDING,
+    gap: 12,
+  },
+  gridCard: {
+    width: cardWidth,
+  },
+  imageContainer: {
+    width: '100%',
+    height: cardHeight,
+    borderRadius: 12,
+    overflow: 'hidden',
+    backgroundColor: '#1A1A1A',
+    position: 'relative',
+  },
+  styleImage: {
+    width: '100%',
+    height: '100%',
+  },
+  gradientOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: '20%',
+    backgroundColor: 'transparent',
+    background: 'linear-gradient(to bottom, transparent, rgba(0,0,0,0.8))',
+    // For React Native, we'll use a solid dark overlay at bottom
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+  },
+  selectionIndicator: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+  },
+  unselectedCircle: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+  },
+  badge: {
+    position: 'absolute',
+    top: 8,
+    left: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    backgroundColor: 'rgba(99, 102, 241, 0.9)',
+  },
+  badgeFemale: {
+    backgroundColor: 'rgba(236, 72, 153, 0.9)',
+  },
+  badgeInfo: {
+    backgroundColor: 'rgba(59, 130, 246, 0.9)',
+  },
+  badgeText: {
+    color: '#FFFFFF',
+    fontSize: 10,
+    fontWeight: '600',
+  },
+  titleContainer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    padding: 10,
+  },
+  styleName: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '600',
+    textAlign: 'left',
+    textShadowColor: 'rgba(0, 0, 0, 0.8)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
+  },
+  
+  // Custom Prompt
+  customPromptContainer: {
+    margin: 20,
+    padding: 20,
+    backgroundColor: '#1A1A1A',
+    borderRadius: 16,
+    borderWidth: 2,
+    borderColor: '#6366F1',
+  },
+  customPromptHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+    gap: 8,
+  },
+  customPromptTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  customPromptInput: {
+    backgroundColor: '#000000',
+    borderRadius: 12,
+    padding: 16,
+    color: '#FFFFFF',
+    fontSize: 15,
+    minHeight: 120,
+    borderWidth: 1,
+    borderColor: '#333333',
+  },
+  customPromptHint: {
+    color: '#666666',
+    fontSize: 13,
+    marginTop: 12,
     lineHeight: 18,
   },
-  updateDivider: {
-    height: 1,
-    backgroundColor: '#334155',
-    marginVertical: 10,
+  
+  // Footer
+  footer: {
+    padding: 20,
+    paddingBottom: 30,
+    backgroundColor: '#000000',
+    borderTopWidth: 1,
+    borderTopColor: '#1A1A1A',
   },
-  nextUpdateRow: {
-    flexDirection: 'row',
+  continueButton: {
+    backgroundColor: '#6366F1',
+    paddingVertical: 16,
+    borderRadius: 12,
     alignItems: 'center',
-    gap: 6,
   },
-  nextUpdateLabel: {
-    fontSize: 12,
-    color: '#64748B',
-    fontWeight: '500',
+  continueButtonDisabled: {
+    backgroundColor: '#334155',
+    opacity: 0.5,
   },
-  nextUpdateDate: {
-    fontSize: 12,
-    color: '#94A3B8',
+  continueButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
     fontWeight: '600',
   },
 });

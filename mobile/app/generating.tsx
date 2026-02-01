@@ -134,15 +134,9 @@ export default function GeneratingScreen() {
         // Update credits cache in background (non-blocking)
         getCredits()
           .then(creditsData => {
-            const normalizedCredits = {
-              ...creditsData,
-              freeCredits: creditsData?.freeCredits ?? 0,
-              hasCredits: creditsData?.hasCredits ?? false,
-              isSubscribed: creditsData?.isSubscribed ?? false,
-            };
-            setCredits(normalizedCredits);
-            cacheCredits(normalizedCredits);
-            console.log('💾 Credits updated and cached after generation');
+            setCredits(creditsData);
+            cacheCredits(creditsData);
+            console.log('💾 Credits updated after generation:', creditsData.totalCredits);
           })
           .catch(err => console.warn('Failed to update credits cache:', err));
         

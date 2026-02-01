@@ -214,7 +214,7 @@ export async function getCredits(): Promise<CreditsInfo> {
 }
 
 // Award credits for rating the app
-export async function awardRatingCredits(): Promise<{ success: boolean; freeCredits: number }> {
+export async function awardRatingCredits(): Promise<{ success: boolean; totalCredits: number }> {
   const headers = await getHeaders();
   
   const response = await fetch(`${API_URL}/api/user/rate-reward`, {
@@ -224,6 +224,42 @@ export async function awardRatingCredits(): Promise<{ success: boolean; freeCred
 
   if (!response.ok) {
     throw new Error('Failed to award rating credits');
+  }
+
+  return response.json();
+}
+
+// Purchase credit pack
+export async function purchaseCredits(packId: string, credits: number, transactionId: string): Promise<{ success: boolean; totalCredits: number }> {
+  const headers = await getAuthHeaders();
+  
+  const response = await fetch(`${API_URL}/api/user/credits/purchase`, {
+    method: 'POST',
+    headers: {
+      ...headers,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ packId, credits, transactionId }),
+  });
+
+  if (!response.ok) {
+    throw new Error('Failed to purchase credits');
+  }
+
+  return response.json();
+}
+
+// Start trial for user
+export async function startTrial(): Promise<{ success: boolean; trialEndsAt: string }> {
+  const headers = await getAuthHeaders();
+  
+  const response = await fetch(`${API_URL}/api/user/trial/start`, {
+    method: 'POST',
+    headers,
+  });
+
+  if (!response.ok) {
+    throw new Error('Failed to start trial');
   }
 
   return response.json();
@@ -433,7 +469,11 @@ export async function deleteGeneration(generationId: string): Promise<{ success:
 }
 
 // Update subscription status in backend
-export async function updateSubscriptionStatus(isSubscribed: boolean): Promise<{ success: boolean }> {
+export async function updateSubscriptionStatus(
+  isSubscribed: boolean, 
+  isRenewal: boolean = false,
+  isTrialConversion: boolean = false
+): Promise<{ success: boolean; totalCredits?: number; creditsAdded?: number }> {
   const headers = await getAuthHeaders();
   
   const response = await fetch(`${API_URL}/api/user/subscription`, {
@@ -442,7 +482,7 @@ export async function updateSubscriptionStatus(isSubscribed: boolean): Promise<{
       ...headers,
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ isSubscribed }),
+    body: JSON.stringify({ isSubscribed, isRenewal, isTrialConversion }),
   });
   
   if (!response.ok) {

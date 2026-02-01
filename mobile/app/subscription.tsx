@@ -263,7 +263,6 @@ export default function SubscriptionScreen() {
   };
 
   const weeklyPkg = resolvePackage('weekly', 0);
-  const yearlyPkg = resolvePackage('annual', 2) || resolvePackage('yearly', 2);
 
   // Auto-select weekly if not set
   useEffect(() => {
@@ -471,10 +470,35 @@ export default function SubscriptionScreen() {
             </View>
           </View>
 
+          {/* Credit Info */}
+          <View style={styles.creditInfoContainer}>
+            <View style={styles.creditInfoCard}>
+              <Ionicons name="diamond" size={32} color="#A78BFA" />
+              <Text style={styles.creditInfoTitle}>3000 Credits Every Week</Text>
+              <Text style={styles.creditInfoSubtitle}>
+                Unused credits carry over to next week
+              </Text>
+            </View>
+            
+            <View style={styles.creditBreakdown}>
+              <View style={styles.breakdownRow}>
+                <Ionicons name="checkmark-circle" size={20} color="#10B981" />
+                <Text style={styles.breakdownText}>15 AI Headshots (200 credits each)</Text>
+              </View>
+              <View style={styles.breakdownRow}>
+                <Ionicons name="checkmark-circle" size={20} color="#10B981" />
+                <Text style={styles.breakdownText}>60 Photo Edits (50 credits each)</Text>
+              </View>
+              <View style={styles.breakdownRow}>
+                <Ionicons name="checkmark-circle" size={20} color="#10B981" />
+                <Text style={styles.breakdownText}>Credits never expire</Text>
+              </View>
+            </View>
+          </View>
+
           {/* Plans */}
           <View style={styles.plansContainer}>
-            {renderPackage(weeklyPkg, 'Weekly')}
-            {renderPackage(yearlyPkg, 'Yearly', 'Best Value')}
+            {renderPackage(weeklyPkg, 'Weekly Pro', '3-Day Free Trial')}
           </View>
 
           {/* Bottom Action */}
@@ -482,8 +506,7 @@ export default function SubscriptionScreen() {
             <TouchableOpacity
               style={[styles.ctaButton, purchasing && styles.ctaButtonDisabled]}
               onPress={() => {
-                const pkg = [weeklyPkg, yearlyPkg].find(p => p.identifier === selectedPackage);
-                if (pkg) handlePurchase(pkg as PurchasesPackage);
+                if (weeklyPkg) handlePurchase(weeklyPkg as PurchasesPackage);
               }}
               disabled={purchasing}
             >
@@ -491,13 +514,7 @@ export default function SubscriptionScreen() {
                 <ActivityIndicator color="#FFF" />
               ) : (
                 <Text style={styles.ctaText}>
-                  {(() => {
-                    const pkg = [weeklyPkg, yearlyPkg].find(p => p.identifier === selectedPackage);
-                    if (pkg && hasIntroOffer(pkg)) {
-                      return 'Start Trial';
-                    }
-                    return 'Continue';
-                  })()}
+                  {hasIntroOffer(weeklyPkg) ? 'Start 3-Day Free Trial' : 'Subscribe Now'}
                 </Text>
               )}
             </TouchableOpacity>
@@ -666,6 +683,43 @@ const styles = StyleSheet.create({
   featureDescription: {
     color: '#94A3B8',
     fontSize: 13,
+  },
+
+  // Credit Info
+  creditInfoContainer: {
+    marginBottom: 24,
+  },
+  creditInfoCard: {
+    backgroundColor: 'rgba(167, 139, 250, 0.1)',
+    borderRadius: 16,
+    padding: 20,
+    alignItems: 'center',
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(167, 139, 250, 0.3)',
+  },
+  creditInfoTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    marginTop: 8,
+  },
+  creditInfoSubtitle: {
+    fontSize: 13,
+    color: '#94A3B8',
+    marginTop: 4,
+  },
+  creditBreakdown: {
+    gap: 12,
+  },
+  breakdownRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  breakdownText: {
+    fontSize: 14,
+    color: '#E2E8F0',
   },
 
   // Plans

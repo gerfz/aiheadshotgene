@@ -23,7 +23,7 @@
     "android": {
       "icon": "./assets/icon.png",
       "package": "com.aiportrait.studio",
-      "versionCode": 78,
+      "versionCode": 79,
       "permissions": [
         "android.permission.READ_EXTERNAL_STORAGE",
         "android.permission.WRITE_EXTERNAL_STORAGE",

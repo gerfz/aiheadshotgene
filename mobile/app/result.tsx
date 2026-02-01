@@ -353,7 +353,7 @@ export default function ResultScreen() {
               <View style={[styles.iconCircle, styles.editIcon]}>
                 <Ionicons name="color-wand-outline" size={22} color="#FFFFFF" />
               </View>
-              <Text style={styles.iconLabel}>Edit</Text>
+              <Text style={styles.iconLabel}>Edit (50)</Text>
             </TouchableOpacity>
             
             {id && (

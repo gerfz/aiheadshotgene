@@ -3,6 +3,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import generateRoutes from './routes/generate';
 import userRoutes from './routes/user';
+import webhookRoutes from './routes/webhooks';
 import { startWorker, getWorkerStatus, triggerWorker } from './workers/generationWorker';
 
 dotenv.config();
@@ -35,6 +36,7 @@ app.get('/health', (req, res) => {
 // Routes
 app.use('/api/generate', generateRoutes);
 app.use('/api/user', userRoutes);
+app.use('/api/webhooks', webhookRoutes);
 
 // 404 Handler - MUST be after all other routes
 app.use((req, res) => {

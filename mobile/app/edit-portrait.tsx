@@ -39,15 +39,15 @@ export default function EditPortraitScreen() {
       return;
     }
 
-    // Check if user is subscribed
-    if (!credits?.isSubscribed) {
+    // Check if user has enough credits (50 for edit)
+    if (!credits?.canEdit) {
       Alert.alert(
-        'Pro Feature',
-        'Editing portraits is a Pro feature. Subscribe to unlock unlimited edits!',
+        'Insufficient Credits',
+        `You need 50 credits to edit a portrait. You have ${credits?.totalCredits || 0} credits.`,
         [
           { text: 'Cancel', style: 'cancel' },
           { 
-            text: 'View Plans', 
+            text: 'Get Credits', 
             onPress: () => router.push('/subscription')
           }
         ]

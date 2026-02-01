@@ -46,7 +46,7 @@ export function useSubscription() {
         setCredits({
           ...credits,
           isSubscribed,
-          hasCredits: isSubscribed || credits.freeCredits > 0,
+          hasCredits: isSubscribed || credits.totalCredits > 0,
         });
       }
     });
@@ -100,7 +100,7 @@ export function useSubscription() {
           setCredits({
             ...credits,
             isSubscribed,
-            hasCredits: isSubscribed || credits.freeCredits > 0,
+            hasCredits: isSubscribed || credits.totalCredits > 0,
           });
         }
 

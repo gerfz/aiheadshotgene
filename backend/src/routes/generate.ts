@@ -95,13 +95,20 @@ router.post(
       // Authenticated user flow
       const profile = await getUserProfile(userId);
       
-      console.log(`💳 [CREDITS CHECK] User: ${userId.slice(0, 8)}... | Subscribed: ${profile.is_subscribed} | Credits: ${profile.free_credits}`);
+      // Determine cost based on operation type
+      const isEdited = styleKey === 'edit';
+      const creditCost = isEdited ? 50 : 200; // 50 for edit, 200 for generation
       
-      if (!profile.is_subscribed && profile.free_credits <= 0) {
-        console.log(`❌ [GENERATE FAILED] User: ${userId.slice(0, 8)}... | Reason: No credits (sub: ${profile.is_subscribed}, credits: ${profile.free_credits})`);
+      console.log(`💳 [CREDITS CHECK] User: ${userId.slice(0, 8)}... | Subscribed: ${profile.is_subscribed} | Credits: ${profile.total_credits || 0} | Cost: ${creditCost}`);
+      
+      // Check if user has enough credits (subscribed users always have access)
+      if (!profile.is_subscribed && (profile.total_credits || 0) < creditCost) {
+        console.log(`❌ [GENERATE FAILED] User: ${userId.slice(0, 8)}... | Reason: Insufficient credits (need ${creditCost}, have ${profile.total_credits || 0})`);
         return res.status(403).json({ 
-          error: 'No credits remaining',
-          message: 'Please subscribe to continue generating portraits'
+          error: 'Insufficient credits',
+          message: `You need ${creditCost} credits to ${isEdited ? 'edit' : 'generate'} a portrait`,
+          required: creditCost,
+          available: profile.total_credits || 0
         });
       }
       
@@ -122,30 +129,38 @@ router.post(
         ? req.body.originalStyleKey 
         : styleKey;
       
-      const isEdited = styleKey === 'edit';
-      
       // Create generation record with 'queued' status
       const generation = await createGeneration(userId, actualStyleKey, originalImageUrl, customPrompt, isEdited);
 
-      // Decrement credits immediately (before job is queued)
-      if (!isSubscribed) {
-        try {
-          await decrementCredits(userId);
-          console.log(`💰 [CREDIT USED] User: ${userId.slice(0, 8)}... | Remaining: ${profile.free_credits - 1}`);
-        } catch (creditError: any) {
-          console.log(`❌ [GENERATE FAILED] User: ${userId.slice(0, 8)}... | Reason: Credit decrement failed - ${creditError.message}`);
-          
-          // If credit decrement fails, delete the generation and fail
-          await require('../services/supabase').supabaseAdmin
-            .from('generations')
-            .delete()
-            .eq('id', generation.id);
-          
-          return res.status(403).json({
-            error: 'Failed to use credit',
-            message: creditError.message || 'Could not decrement credits'
+      // Decrement credits using new v2 function with specific cost
+      try {
+        const { data: creditResult, error: creditError } = await require('../services/supabase').supabaseAdmin
+          .rpc('decrement_user_credits_v2', {
+            user_id: userId,
+            cost: creditCost
           });
+        
+        if (creditError) throw creditError;
+        
+        if (!creditResult || creditResult.length === 0 || !creditResult[0].success) {
+          throw new Error('Insufficient credits');
         }
+        
+        const remainingCredits = creditResult[0].remaining_credits;
+        console.log(`💰 [CREDITS USED] User: ${userId.slice(0, 8)}... | Cost: ${creditCost} | Remaining: ${remainingCredits}`);
+      } catch (creditError: any) {
+        console.log(`❌ [GENERATE FAILED] User: ${userId.slice(0, 8)}... | Reason: Credit deduction failed - ${creditError.message}`);
+        
+        // If credit deduction fails, delete the generation and fail
+        await require('../services/supabase').supabaseAdmin
+          .from('generations')
+          .delete()
+          .eq('id', generation.id);
+        
+        return res.status(403).json({
+          error: 'Failed to use credits',
+          message: creditError.message || 'Could not deduct credits'
+        });
       }
 
       // Create job in queue

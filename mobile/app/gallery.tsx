@@ -12,10 +12,12 @@ import {
 import { router, Stack } from 'expo-router';
 import { useAppStore } from '../src/store/useAppStore';
 import { getGenerations } from '../src/services/api';
-import { BottomNav } from '../src/components';
+import { Ionicons } from '@expo/vector-icons';
 
 const { width } = Dimensions.get('window');
-const imageSize = (width - 60) / 2; // 2 columns with padding
+const PADDING = 20;
+const GAP = 16;
+const imageSize = (width - PADDING * 2 - GAP) / 2; // 2 columns with gap
 
 export default function GalleryScreen() {
   const { generations, setGenerations } = useAppStore();
@@ -45,40 +47,61 @@ export default function GalleryScreen() {
     ? generations.filter(g => g.status === 'completed')
     : [];
 
-  const renderItem = ({ item }: { item: any }) => (
-    <TouchableOpacity
-      style={styles.gridItem}
-      onPress={() =>
-        router.push({
-          pathname: '/result',
-          params: {
-            id: item.id,
-            generatedUrl: item.generated_image_url || '',
-            originalUrl: item.original_image_url || '',
-            styleKey: item.style_key,
-            customPrompt: item.custom_prompt || '',
-          },
-        })
-      }
-    >
-      <Image
-        source={{ uri: item.generated_image_url! }}
-        style={styles.gridImage}
-      />
-      <View style={styles.gridOverlay}>
-        <Text style={styles.gridStyle}>
-          {item.style_key.charAt(0).toUpperCase() + item.style_key.slice(1)}
-        </Text>
-      </View>
-    </TouchableOpacity>
-  );
+  const renderItem = ({ item }: { item: any }) => {
+    // Format the date
+    const date = new Date(item.created_at);
+    const formattedDate = `${date.getMonth() + 1}/${date.getDate()}/${String(date.getFullYear()).slice(2)} ${date.getHours()}:${String(date.getMinutes()).padStart(2, '0')}`;
+    
+    // Get style name from style_key
+    const styleName = item.style_key
+      .split('_')
+      .map((word: string) => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
+    
+    return (
+      <TouchableOpacity
+        style={styles.gridItem}
+        onPress={() =>
+          router.push({
+            pathname: '/result',
+            params: {
+              id: item.id,
+              generatedUrl: item.generated_image_url || '',
+              originalUrl: item.original_image_url || '',
+              styleKey: item.style_key,
+              customPrompt: item.custom_prompt || '',
+            },
+          })
+        }
+      >
+        <View style={styles.cardContainer}>
+          <Image
+            source={{ uri: item.generated_image_url! }}
+            style={styles.gridImage}
+          />
+          
+          {/* Info section on the right */}
+          <View style={styles.infoSection}>
+            <Text style={styles.projectTitle}>{styleName}</Text>
+            <Text style={styles.imageCount}>1 image</Text>
+            <Text style={styles.dateText}>{formattedDate}</Text>
+          </View>
+          
+          {/* Delete button */}
+          <TouchableOpacity style={styles.deleteButton}>
+            <Ionicons name="trash-outline" size={20} color="#666666" />
+          </TouchableOpacity>
+        </View>
+      </TouchableOpacity>
+    );
+  };
 
   const renderEmpty = () => (
     <View style={styles.emptyState}>
-      <Text style={styles.emptyIcon}>🖼️</Text>
-      <Text style={styles.emptyTitle}>No portraits yet</Text>
+      <Text style={styles.emptyIcon}>✨</Text>
+      <Text style={styles.emptyTitle}>It's empty here</Text>
       <Text style={styles.emptySubtitle}>
-        Create your first professional portrait to see it here
+        Your projects will appear here once you generate something.
       </Text>
     </View>
   );
@@ -88,10 +111,18 @@ export default function GalleryScreen() {
       <Stack.Screen 
         options={{ 
           headerShown: true,
-          title: 'Your Gallery',
-          headerStyle: { backgroundColor: '#0F172A' },
+          title: 'History',
+          headerStyle: { backgroundColor: '#000000' },
           headerTintColor: '#FFFFFF',
           headerTitleStyle: { fontWeight: 600 },
+          headerRight: () => (
+            <TouchableOpacity
+              onPress={() => router.push('/profile-new')}
+              style={{ marginRight: 16 }}
+            >
+              <Ionicons name="person-circle-outline" size={28} color="#FFFFFF" />
+            </TouchableOpacity>
+          ),
         }} 
       />
       <View style={styles.container}>
@@ -99,16 +130,14 @@ export default function GalleryScreen() {
           data={completedGenerations}
           renderItem={renderItem}
           keyExtractor={(item) => item.id}
-          numColumns={2}
+          numColumns={1}
           contentContainerStyle={styles.content}
-          columnWrapperStyle={styles.columnWrapper}
           ListEmptyComponent={renderEmpty}
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#6366F1" />
           }
           showsVerticalScrollIndicator={false}
         />
-        <BottomNav />
       </View>
     </>
   );
@@ -117,14 +146,11 @@ export default function GalleryScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0F172A',
+    backgroundColor: '#000000',
   },
   content: {
-    padding: 20,
-    paddingBottom: 120,
-  },
-  columnWrapper: {
-    justifyContent: 'space-between',
+    padding: PADDING,
+    paddingBottom: 40,
   },
   emptyState: {
     alignItems: 'center',
@@ -143,34 +169,46 @@ const styles = StyleSheet.create({
   },
   emptySubtitle: {
     fontSize: 14,
-    color: '#9CA3AF',
+    color: '#666666',
     textAlign: 'center',
     paddingHorizontal: 40,
   },
   gridItem: {
-    width: imageSize,
-    height: imageSize * 1.3,
-    marginBottom: 20,
-    borderRadius: 16,
-    overflow: 'hidden',
-    backgroundColor: '#1E293B',
+    marginBottom: 16,
+  },
+  cardContainer: {
+    flexDirection: 'row',
+    backgroundColor: '#1A1A1A',
+    borderRadius: 12,
+    padding: 12,
+    alignItems: 'center',
   },
   gridImage: {
-    width: '100%',
-    height: '100%',
+    width: 80,
+    height: 80,
+    borderRadius: 8,
   },
-  gridOverlay: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
-    padding: 12,
+  infoSection: {
+    flex: 1,
+    marginLeft: 12,
   },
-  gridStyle: {
-    fontSize: 12,
-    color: '#FFFFFF',
+  projectTitle: {
+    fontSize: 16,
     fontWeight: '600',
+    color: '#FFFFFF',
+    marginBottom: 4,
+  },
+  imageCount: {
+    fontSize: 13,
+    color: '#666666',
+    marginBottom: 4,
+  },
+  dateText: {
+    fontSize: 12,
+    color: '#666666',
+  },
+  deleteButton: {
+    padding: 8,
   },
 });
 
