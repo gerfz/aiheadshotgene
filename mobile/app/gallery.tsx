@@ -29,7 +29,20 @@ export default function GalleryScreen() {
       const batchesData = await getBatches();
       console.log('📦 Loaded batches:', batchesData.batches?.length || 0);
       if (batchesData.batches && batchesData.batches.length > 0) {
-        console.log('📦 First batch:', JSON.stringify(batchesData.batches[0], null, 2));
+        const firstBatch = batchesData.batches[0];
+        console.log('📦 First batch ID:', firstBatch.id);
+        console.log('📦 First batch status:', firstBatch.status);
+        console.log('📦 First batch generations count:', firstBatch.generations?.length || 0);
+        if (firstBatch.generations && firstBatch.generations.length > 0) {
+          const firstGen = firstBatch.generations[0];
+          console.log('📦 First generation:', {
+            id: firstGen.id,
+            style_key: firstGen.style_key,
+            status: firstGen.status,
+            has_url: !!firstGen.generated_image_url,
+            url_preview: firstGen.generated_image_url?.substring(0, 50)
+          });
+        }
       }
       setBatches(Array.isArray(batchesData.batches) ? batchesData.batches : []);
     } catch (error) {
@@ -40,14 +53,16 @@ export default function GalleryScreen() {
 
   useEffect(() => {
     loadBatches();
-    
+  }, []);
+
+  useEffect(() => {
     // Auto-refresh every 3 seconds if there are pending batches
+    const hasPending = batches.some(b => b.status === 'pending' || b.status === 'processing');
+    
+    if (!hasPending) return;
+    
     const interval = setInterval(() => {
-      const hasPending = batches.some(b => b.status === 'pending' || b.status === 'processing');
-      
-      if (hasPending) {
-        loadBatches();
-      }
+      loadBatches();
     }, 3000);
 
     return () => clearInterval(interval);
@@ -63,14 +78,21 @@ export default function GalleryScreen() {
     const isPending = item.status === 'pending' || item.status === 'processing';
     const completedCount = item.generations?.filter(g => g.status === 'completed').length || 0;
     
-    console.log(`📦 Rendering batch ${item.id}: status=${item.status}, completed=${completedCount}/${item.total_count}`);
-    
     // Get first completed generation for thumbnail
     const firstCompleted = item.generations?.find(g => g.status === 'completed' && g.generated_image_url);
     
-    // Format the date
-    const date = new Date(item.created_at);
-    const formattedDate = `${date.getMonth() + 1}/${date.getDate()}/${String(date.getFullYear()).slice(2)} ${date.getHours()}:${String(date.getMinutes()).padStart(2, '0')}`;
+    // Format the date with error handling
+    let formattedDate = 'Just now';
+    try {
+      if (item.created_at) {
+        const date = new Date(item.created_at);
+        if (!isNaN(date.getTime())) {
+          formattedDate = `${date.getMonth() + 1}/${date.getDate()}/${String(date.getFullYear()).slice(2)} ${date.getHours()}:${String(date.getMinutes()).padStart(2, '0')}`;
+        }
+      }
+    } catch (e) {
+      console.error('Date formatting error:', e);
+    }
     
     return (
       <TouchableOpacity
@@ -78,15 +100,12 @@ export default function GalleryScreen() {
         onPress={() => {
           // Allow clicking if at least one photo is completed
           if (completedCount > 0) {
-            console.log(`📦 Opening batch ${item.id}`);
             router.push({
               pathname: '/batch-detail',
               params: {
                 batchId: item.id,
               },
             });
-          } else {
-            console.log(`📦 Batch ${item.id} has no completed photos yet`);
           }
         }}
         disabled={completedCount === 0}

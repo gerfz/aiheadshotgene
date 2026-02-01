@@ -418,11 +418,21 @@ router.post(
           .then(res => res.arrayBuffer())
           .then(buffer => Buffer.from(buffer).toString('base64'))
           .then(async (imageBase64) => {
-            // Generate portrait
-            const generatedImageUrl = await generatePortrait(
+            // Generate portrait (returns base64)
+            const generatedBase64 = await generatePortrait(
               imageBase64,
               styleKey,
               file.mimetype
+            );
+            
+            // Upload the generated image to storage
+            const generatedFileName = `${userId}/${generationId}-${styleKey}.jpg`;
+            const generatedImageBuffer = Buffer.from(generatedBase64, 'base64');
+            const generatedImageUrl = await uploadImage(
+              'portraits',
+              generatedFileName,
+              generatedImageBuffer,
+              'image/jpeg'
             );
             
             // Update generation with result
