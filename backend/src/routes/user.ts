@@ -46,17 +46,34 @@ router.get(
         trialDaysRemaining = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
       }
 
-      // Sync credits across all profiles with same device_id
+      // Sync credits FROM the oldest profile with same device_id
       if (profile.device_id) {
-        await supabaseAdmin
+        // Get the oldest profile with this device_id (the original account)
+        const { data: oldestProfile } = await supabaseAdmin
           .from('profiles')
-          .update({ 
-            total_credits: profile.total_credits,
-            is_subscribed: profile.is_subscribed,
-            is_trial_active: profile.is_trial_active
-          })
+          .select('id, total_credits, is_subscribed, is_trial_active')
           .eq('device_id', profile.device_id)
-          .neq('id', userId);
+          .order('created_at', { ascending: true })
+          .limit(1)
+          .single();
+        
+        if (oldestProfile) {
+          // Sync FROM oldest TO all others (including current)
+          await supabaseAdmin
+            .from('profiles')
+            .update({ 
+              total_credits: oldestProfile.total_credits,
+              is_subscribed: oldestProfile.is_subscribed,
+              is_trial_active: oldestProfile.is_trial_active
+            })
+            .eq('device_id', profile.device_id)
+            .neq('id', oldestProfile.id); // Don't update the source
+          
+          // Update the response to use oldest profile's data
+          profile.total_credits = oldestProfile.total_credits;
+          profile.is_subscribed = oldestProfile.is_subscribed;
+          profile.is_trial_active = oldestProfile.is_trial_active;
+        }
       }
 
       res.json({
