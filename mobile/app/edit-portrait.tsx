@@ -86,12 +86,12 @@ export default function EditPortraitScreen() {
         options={{
           headerShown: true,
           title: 'Edit Photo',
-          headerStyle: { backgroundColor: '#0F172A' },
+          headerStyle: { backgroundColor: '#000000' },
           headerTintColor: '#FFFFFF',
           headerTitleStyle: { fontWeight: '600' },
           headerLeft: () => (
-            <TouchableOpacity onPress={() => router.back()} style={{ marginRight: 15 }}>
-              <Ionicons name="close" size={24} color="#FFFFFF" />
+            <TouchableOpacity onPress={() => router.back()} style={{ marginLeft: 16 }}>
+              <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
             </TouchableOpacity>
           ),
         }}
@@ -123,7 +123,7 @@ export default function EditPortraitScreen() {
               <TextInput
                 style={styles.input}
                 placeholder="Ex: Change tie to red, make me smile, remove glasses..."
-                placeholderTextColor="#64748B"
+                placeholderTextColor="#666666"
                 value={editPrompt}
                 onChangeText={setEditPrompt}
                 multiline
@@ -135,44 +135,10 @@ export default function EditPortraitScreen() {
                   style={styles.clearButton} 
                   onPress={() => setEditPrompt('')}
                 >
-                  <Ionicons name="close-circle" size={20} color="#64748B" />
+                  <Ionicons name="close-circle" size={20} color="#666666" />
                 </TouchableOpacity>
               )}
             </View>
-          </View>
-
-          {/* Quick Suggestions (Horizontal Scroll) */}
-          <View style={styles.suggestionsContainer}>
-            <Text style={styles.subLabel}>Quick Suggestions</Text>
-            <ScrollView 
-              horizontal 
-              showsHorizontalScrollIndicator={false} 
-              contentContainerStyle={styles.suggestionsScroll}
-            >
-              {suggestions.map((item, index) => (
-                <TouchableOpacity
-                  key={index}
-                  style={styles.suggestionChip}
-                  onPress={() => {
-                    const newText = editPrompt 
-                      ? `${editPrompt}, ${item.text.toLowerCase()}`
-                      : item.text;
-                    setEditPrompt(newText);
-                  }}
-                >
-                  <Ionicons name={item.icon as any} size={16} color="#E2E8F0" />
-                  <Text style={styles.suggestionText}>{item.text}</Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-          </View>
-
-          {/* Pro Tip Section */}
-          <View style={styles.tipContainer}>
-            <Ionicons name="bulb-outline" size={18} color="#F59E0B" />
-            <Text style={styles.tipText}>
-              <Text style={styles.tipBold}>Pro Tip:</Text> Be specific with colors and styles for best results!
-            </Text>
           </View>
 
         </ScrollView>
@@ -199,7 +165,7 @@ export default function EditPortraitScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0F172A',
+    backgroundColor: '#000000',
   },
   keyboardAvoidingView: {
     flex: 1,
@@ -216,11 +182,11 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   previewImage: {
-    width: width * 0.65, // Increased from 0.5
+    width: width * 0.65,
     height: width * 0.65 * 1.3,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
+    borderColor: '#1A1A1A',
   },
   wandContainer: {
     position: 'absolute',
@@ -229,7 +195,7 @@ const styles = StyleSheet.create({
     padding: 10,
     borderRadius: 20,
     borderWidth: 4,
-    borderColor: '#0F172A',
+    borderColor: '#000000',
     shadowColor: '#6366F1',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.5,
@@ -250,7 +216,7 @@ const styles = StyleSheet.create({
   subLabel: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#94A3B8',
+    color: '#666666',
     marginBottom: 10,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
@@ -259,7 +225,7 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   input: {
-    backgroundColor: '#1E293B',
+    backgroundColor: '#1A1A1A',
     borderRadius: 16,
     padding: 16,
     paddingRight: 40,
@@ -267,7 +233,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     height: 100,
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: '#333333',
   },
   clearButton: {
     position: 'absolute',
@@ -329,10 +295,10 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: '#0F172A',
+    backgroundColor: '#000000',
     padding: 20,
     borderTopWidth: 1,
-    borderTopColor: '#1E293B',
+    borderTopColor: '#1A1A1A',
   },
   generateButton: {
     backgroundColor: '#6366F1',
@@ -349,7 +315,7 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   generateButtonDisabled: {
-    backgroundColor: '#334155',
+    backgroundColor: '#333333',
     shadowOpacity: 0,
     elevation: 0,
   },
@@ -359,7 +325,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   footerNote: {
-    color: '#64748B',
+    color: '#666666',
     fontSize: 12,
     textAlign: 'center',
   },

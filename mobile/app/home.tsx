@@ -31,13 +31,15 @@ const cardHeight = cardWidth * 1.4;
 // Memoized Style Card Component
 const StyleCard = React.memo(({ 
   style, 
-  selectedStyle, 
+  selectedStyles, 
   onSelect
 }: { 
   style: any; 
-  selectedStyle: string | null; 
+  selectedStyles: string[]; 
   onSelect: (key: string) => void;
 }) => {
+  const isSelected = selectedStyles.includes(style.key);
+  
   return (
     <TouchableOpacity
       style={styles.gridCard}
@@ -57,7 +59,7 @@ const StyleCard = React.memo(({
         <View style={styles.gradientOverlay} />
         
         <View style={styles.selectionIndicator}>
-          {selectedStyle === style.key ? (
+          {isSelected ? (
             <Ionicons name="checkmark-circle" size={24} color="#6366F1" />
           ) : (
             <View style={styles.unselectedCircle} />
@@ -146,6 +148,7 @@ export default function HomeScreen() {
   const [showCustomPrompt, setShowCustomPrompt] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>('categories');
   const [allStyles, setAllStyles] = useState<string[]>([]);
+  const [selectedStyles, setSelectedStyles] = useState<string[]>([]); // Multi-select support
 
   // Load most used styles on mount
   useEffect(() => {
@@ -162,6 +165,26 @@ export default function HomeScreen() {
       setCredits(creditsData);
     } catch (error) {
       console.error('❌ Failed to refresh credits:', error);
+    }
+  };
+
+  const startBackgroundGeneration = async (imageUri: string, styleKey: string | null) => {
+    if (!styleKey) return;
+    
+    try {
+      const { generatePortrait } = await import('../src/services/api');
+      
+      // Start generation
+      await generatePortrait(
+        imageUri,
+        styleKey,
+        customPrompt || undefined
+      );
+      
+      // Generation complete - will show in gallery on next refresh
+    } catch (error) {
+      console.error('❌ Background generation failed:', error);
+      Alert.alert('Generation Failed', 'Please try again from the gallery.');
     }
   };
 
@@ -234,29 +257,30 @@ export default function HomeScreen() {
   };
 
   const handleStyleSelect = useCallback((styleKey: string) => {
-    // Allow deselecting by clicking the same style again
-    if (selectedStyle === styleKey) {
-      setSelectedStyle(null);
-      setShowCustomPrompt(false);
-      setCustomPrompt(null);
-      return;
-    }
-
-    setSelectedStyle(styleKey);
+    // Multi-select logic
+    setSelectedStyles(prev => {
+      const isSelected = prev.includes(styleKey);
+      if (isSelected) {
+        // Deselect
+        return prev.filter(k => k !== styleKey);
+      } else {
+        // Select (add to array)
+        return [...prev, styleKey];
+      }
+    });
     
     // Track style selection
     const category = categories.find(cat => cat.styles.includes(styleKey))?.name || 'Unknown';
     analytics.styleSelected(styleKey, category);
     
-    // Show custom prompt input if custom style is selected
+    // Show custom prompt if custom is selected
     if (styleKey === 'custom') {
       setShowCustomPrompt(true);
-    } else {
+    } else if (!selectedStyles.includes('custom') && styleKey !== 'custom') {
       setShowCustomPrompt(false);
-      // Clear custom prompt when selecting a non-custom style
       setCustomPrompt(null);
     }
-  }, [selectedStyle, setSelectedStyle, setCustomPrompt, categories]);
+  }, [selectedStyles, setCustomPrompt, categories]);
 
   const handleContinue = useCallback(async () => {
     if (!selectedStyle) return;
@@ -315,16 +339,21 @@ export default function HomeScreen() {
 
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.8,
+      allowsEditing: false,
+      quality: 1.0,
     });
 
     if (!result.canceled && result.assets[0]) {
       setSelectedImage(result.assets[0].uri);
       analytics.photoUploaded('gallery');
-      // Navigate to generating screen
-      router.push('/generating');
+      
+      // Navigate to gallery screen immediately
+      router.push('/gallery');
+      
+      // Start generation in background
+      setTimeout(() => {
+        startBackgroundGeneration(result.assets[0].uri, selectedStyle);
+      }, 100);
     }
   }, [selectedStyle, customPrompt, credits, setSelectedImage]);
 
@@ -426,7 +455,7 @@ export default function HomeScreen() {
                           <StyleCard
                             key={style.key}
                             style={style}
-                            selectedStyle={selectedStyle}
+                            selectedStyles={selectedStyles}
                             onSelect={handleStyleSelect}
                           />
                         );
@@ -454,7 +483,7 @@ export default function HomeScreen() {
                       <StyleCard
                         key={style.key}
                         style={style}
-                        selectedStyle={selectedStyle}
+                        selectedStyles={selectedStyles}
                         onSelect={handleStyleSelect}
                       />
                     );
@@ -486,19 +515,19 @@ export default function HomeScreen() {
               </View>
             )}
 
-            {/* Continue Button - Only show when style is selected */}
-            {selectedStyle && (
+            {/* Continue Button - Only show when styles are selected */}
+            {selectedStyles.length > 0 && (
               <View style={styles.footer}>
                 <TouchableOpacity
                   style={[
                     styles.continueButton,
-                    selectedStyle === 'custom' && (!customPrompt || customPrompt.trim().length === 0) && styles.continueButtonDisabled
+                    selectedStyles.includes('custom') && (!customPrompt || customPrompt.trim().length === 0) && styles.continueButtonDisabled
                   ]}
                   onPress={handleContinue}
-                  disabled={selectedStyle === 'custom' && (!customPrompt || customPrompt.trim().length === 0)}
+                  disabled={selectedStyles.includes('custom') && (!customPrompt || customPrompt.trim().length === 0)}
                 >
                   <Text style={styles.continueButtonText}>
-                    Continue (200 credits)
+                    Continue ({selectedStyles.length} {selectedStyles.length === 1 ? 'style' : 'styles'} • {selectedStyles.length * 200} credits)
                   </Text>
                 </TouchableOpacity>
               </View>

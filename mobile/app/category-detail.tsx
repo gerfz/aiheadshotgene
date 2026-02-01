@@ -100,16 +100,41 @@ export default function CategoryDetailScreen() {
 
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.8,
+      allowsEditing: false,
+      quality: 1.0,
     });
 
     if (!result.canceled && result.assets[0]) {
       setSelectedImage(result.assets[0].uri);
       analytics.photoUploaded('gallery');
-      // Navigate to generating screen
-      router.push('/generating');
+      
+      // Navigate to gallery screen immediately
+      router.push('/gallery');
+      
+      // Start generation in background
+      setTimeout(() => {
+        startBackgroundGeneration(result.assets[0].uri, selectedStyle);
+      }, 100);
+    }
+  };
+
+  const startBackgroundGeneration = async (imageUri: string, styleKey: string | null) => {
+    if (!styleKey) return;
+    
+    try {
+      const { generatePortrait } = await import('../src/services/api');
+      
+      // Start generation
+      await generatePortrait(
+        imageUri,
+        styleKey,
+        undefined
+      );
+      
+      // Generation complete - will show in gallery on next refresh
+    } catch (error) {
+      console.error('❌ Background generation failed:', error);
+      Alert.alert('Generation Failed', 'Please try again from the gallery.');
     }
   };
 

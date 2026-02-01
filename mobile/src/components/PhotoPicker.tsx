@@ -25,9 +25,8 @@ export function PhotoPicker({ imageUri, onImageSelected }: PhotoPickerProps) {
 
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.8,
+      allowsEditing: false,
+      quality: 1.0,
     });
 
     if (!result.canceled && result.assets[0]) {
@@ -45,9 +44,8 @@ export function PhotoPicker({ imageUri, onImageSelected }: PhotoPickerProps) {
     }
 
     const result = await ImagePicker.launchCameraAsync({
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.8,
+      allowsEditing: false,
+      quality: 1.0,
     });
 
     if (!result.canceled && result.assets[0]) {

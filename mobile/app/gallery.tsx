@@ -35,7 +35,19 @@ export default function GalleryScreen() {
 
   useEffect(() => {
     loadGenerations();
-  }, []);
+    
+    // Auto-refresh every 3 seconds if there are pending generations
+    const interval = setInterval(() => {
+      const hasPending = Array.isArray(generations) && 
+        generations.some(g => g.status === 'pending' || g.status === 'processing');
+      
+      if (hasPending) {
+        loadGenerations();
+      }
+    }, 3000);
+
+    return () => clearInterval(interval);
+  }, [generations]);
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -43,11 +55,12 @@ export default function GalleryScreen() {
     setRefreshing(false);
   };
 
-  const completedGenerations = Array.isArray(generations) 
-    ? generations.filter(g => g.status === 'completed')
-    : [];
+  // Show all generations (completed and in-progress)
+  const allGenerations = Array.isArray(generations) ? generations : [];
 
   const renderItem = ({ item }: { item: any }) => {
+    const isPending = item.status === 'pending' || item.status === 'processing';
+    
     // Format the date
     const date = new Date(item.created_at);
     const formattedDate = `${date.getMonth() + 1}/${date.getDate()}/${String(date.getFullYear()).slice(2)} ${date.getHours()}:${String(date.getMinutes()).padStart(2, '0')}`;
@@ -61,36 +74,56 @@ export default function GalleryScreen() {
     return (
       <TouchableOpacity
         style={styles.gridItem}
-        onPress={() =>
-          router.push({
-            pathname: '/result',
-            params: {
-              id: item.id,
-              generatedUrl: item.generated_image_url || '',
-              originalUrl: item.original_image_url || '',
-              styleKey: item.style_key,
-              customPrompt: item.custom_prompt || '',
-            },
-          })
-        }
+        onPress={() => {
+          if (!isPending) {
+            router.push({
+              pathname: '/result',
+              params: {
+                id: item.id,
+                generatedUrl: item.generated_image_url || '',
+                originalUrl: item.original_image_url || '',
+                styleKey: item.style_key,
+                customPrompt: item.custom_prompt || '',
+              },
+            });
+          }
+        }}
+        disabled={isPending}
       >
         <View style={styles.cardContainer}>
-          <Image
-            source={{ uri: item.generated_image_url! }}
-            style={styles.gridImage}
-          />
+          {isPending ? (
+            <View style={styles.pendingImageContainer}>
+              <Ionicons name="hourglass-outline" size={32} color="#6366F1" />
+            </View>
+          ) : (
+            <Image
+              source={{ uri: item.generated_image_url! }}
+              style={styles.gridImage}
+            />
+          )}
           
           {/* Info section on the right */}
           <View style={styles.infoSection}>
             <Text style={styles.projectTitle}>{styleName}</Text>
             <Text style={styles.imageCount}>1 image</Text>
-            <Text style={styles.dateText}>{formattedDate}</Text>
+            {isPending ? (
+              <View style={styles.statusContainer}>
+                <Ionicons name="sync" size={12} color="#6366F1" />
+                <Text style={styles.statusText}>
+                  {item.status === 'pending' ? '2 minutes left' : 'Processing...'}
+                </Text>
+              </View>
+            ) : (
+              <Text style={styles.dateText}>{formattedDate}</Text>
+            )}
           </View>
           
-          {/* Delete button */}
-          <TouchableOpacity style={styles.deleteButton}>
-            <Ionicons name="trash-outline" size={20} color="#666666" />
-          </TouchableOpacity>
+          {/* Delete button - only show for completed */}
+          {!isPending && (
+            <TouchableOpacity style={styles.deleteButton}>
+              <Ionicons name="trash-outline" size={20} color="#666666" />
+            </TouchableOpacity>
+          )}
         </View>
       </TouchableOpacity>
     );
@@ -115,6 +148,14 @@ export default function GalleryScreen() {
           headerStyle: { backgroundColor: '#000000' },
           headerTintColor: '#FFFFFF',
           headerTitleStyle: { fontWeight: 600 },
+          headerLeft: () => (
+            <TouchableOpacity
+              onPress={() => router.push('/home')}
+              style={{ marginLeft: 16 }}
+            >
+              <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
+            </TouchableOpacity>
+          ),
           headerRight: () => (
             <TouchableOpacity
               onPress={() => router.push('/profile-new')}
@@ -127,7 +168,7 @@ export default function GalleryScreen() {
       />
       <View style={styles.container}>
         <FlatList
-          data={completedGenerations}
+          data={allGenerations}
           renderItem={renderItem}
           keyExtractor={(item) => item.id}
           numColumns={1}
@@ -188,9 +229,27 @@ const styles = StyleSheet.create({
     height: 80,
     borderRadius: 8,
   },
+  pendingImageContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 8,
+    backgroundColor: '#2A2A2A',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   infoSection: {
     flex: 1,
     marginLeft: 12,
+  },
+  statusContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  statusText: {
+    fontSize: 12,
+    color: '#6366F1',
+    fontWeight: '500',
   },
   projectTitle: {
     fontSize: 16,

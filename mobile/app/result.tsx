@@ -278,38 +278,36 @@ export default function ResultScreen() {
     <>
       <Stack.Screen 
         options={{ 
-          title: 'Your Portrait',
+          title: 'Your Photo',
+          headerStyle: { backgroundColor: '#000000' },
+          headerTintColor: '#FFFFFF',
+          headerTitleStyle: { fontWeight: '600' },
           headerLeft: () => (
             <TouchableOpacity onPress={async () => {
               // Show paywall for first-time users
               if (await shouldShowPaywall()) return;
               
-              // Navigate to home - will work from any depth
+              // Navigate to gallery/history
+              router.push('/gallery');
+            }} style={{ marginLeft: 16 }}>
+              <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
+            </TouchableOpacity>
+          ),
+          headerRight: () => (
+            <TouchableOpacity onPress={async () => {
+              // Show paywall for first-time users
+              if (await shouldShowPaywall()) return;
+              
+              // Navigate to home
               router.push('/home');
-            }} style={{ marginRight: 15 }}>
-              <Text style={{ fontSize: 28, color: '#FFFFFF' }}>←</Text>
+            }} style={{ marginRight: 16 }}>
+              <Ionicons name="home-outline" size={24} color="#FFFFFF" />
             </TouchableOpacity>
           ),
         }} 
       />
       <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
         <View style={styles.content}>
-          {/* Header - fixed */}
-          <View style={styles.header}>
-            <Text style={styles.styleName}>{styleName}</Text>
-          </View>
-
-          {/* Show custom prompt if it's a custom style */}
-          {styleKey === 'custom' && customPrompt && (
-            <View style={styles.customPromptContainer}>
-              <View style={styles.customPromptHeader}>
-                <Text style={styles.customPromptIcon}>✨</Text>
-                <Text style={styles.customPromptTitle}>Your Prompt</Text>
-              </View>
-              <Text style={styles.customPromptText} numberOfLines={2}>{customPrompt}</Text>
-            </View>
-          )}
-
           {/* Image container - flexible, takes remaining space */}
           <View style={styles.imageContainer}>
             <Image
@@ -319,23 +317,14 @@ export default function ResultScreen() {
             />
           </View>
           
-          {/* Icon Bar - fixed */}
-          <View style={styles.iconBar}>
-            <TouchableOpacity style={styles.iconButton} onPress={handleDownload}>
-              <View style={styles.iconCircle}>
-                <Ionicons name="download-outline" size={22} color="#FFFFFF" />
-              </View>
-              <Text style={styles.iconLabel}>Save</Text>
+          {/* Action Buttons - fixed */}
+          <View style={styles.actionButtons}>
+            <TouchableOpacity style={styles.actionButton} onPress={handleDownload}>
+              <Ionicons name="download-outline" size={24} color="#FFFFFF" />
+              <Text style={styles.actionButtonText}>Save</Text>
             </TouchableOpacity>
             
-            <TouchableOpacity style={styles.iconButton} onPress={handleShare}>
-              <View style={[styles.iconCircle, styles.secondaryIcon]}>
-                <Ionicons name="share-outline" size={22} color="#FFFFFF" />
-              </View>
-              <Text style={styles.iconLabel}>Share</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity style={styles.iconButton} onPress={async () => {
+            <TouchableOpacity style={styles.actionButton} onPress={async () => {
               // Show paywall for first-time users
               if (await shouldShowPaywall()) return;
               
@@ -350,50 +339,15 @@ export default function ResultScreen() {
                 }
               });
             }}>
-              <View style={[styles.iconCircle, styles.editIcon]}>
-                <Ionicons name="color-wand-outline" size={22} color="#FFFFFF" />
-              </View>
-              <Text style={styles.iconLabel}>Edit (50)</Text>
+              <Ionicons name="create-outline" size={24} color="#FFFFFF" />
+              <Text style={styles.actionButtonText}>Edit</Text>
             </TouchableOpacity>
             
-            {id && (
-              <TouchableOpacity style={styles.iconButton} onPress={handleDelete}>
-                <View style={[styles.iconCircle, styles.deleteIcon]}>
-                  <Ionicons name="trash-outline" size={22} color="#EF4444" />
-                </View>
-                <Text style={styles.iconLabel}>Delete</Text>
-              </TouchableOpacity>
-            )}
+            <TouchableOpacity style={styles.actionButton} onPress={handleShare}>
+              <Ionicons name="share-outline" size={24} color="#FFFFFF" />
+              <Text style={styles.actionButtonText}>Share</Text>
+            </TouchableOpacity>
           </View>
-
-          {/* Comparison - fixed (optional) */}
-          {originalUrl && (
-            <View style={styles.comparison}>
-              <View style={styles.compareItem}>
-                <Image
-                  source={{ uri: originalUrl }}
-                  style={styles.compareImage}
-                />
-                <Text style={styles.compareLabel}>Original</Text>
-              </View>
-              <View style={styles.arrow}>
-                <Ionicons name="arrow-forward" size={16} color="#6366F1" />
-              </View>
-              <View style={styles.compareItem}>
-                <Image
-                  source={{ uri: generatedUrl }}
-                  style={styles.compareImage}
-                />
-                <Text style={styles.compareLabel}>Generated</Text>
-              </View>
-            </View>
-          )}
-
-          {/* Button - fixed at bottom */}
-          <TouchableOpacity style={styles.newButton} onPress={handleCreateNew}>
-            <Ionicons name="add-circle-outline" size={22} color="#FFFFFF" style={{ marginRight: 8 }} />
-            <Text style={styles.newButtonText}>Create New Portrait</Text>
-          </TouchableOpacity>
         </View>
       </SafeAreaView>
 
@@ -411,13 +365,10 @@ export default function ResultScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0F172A',
+    backgroundColor: '#000000',
   },
   content: {
     flex: 1,
-    paddingHorizontal: 20,
-    paddingTop: 8,
-    paddingBottom: 16,
   },
   header: {
     alignItems: 'center',
@@ -460,57 +411,34 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 8,
   },
   resultImage: {
     width: '100%',
     height: '100%',
-    borderRadius: 20,
-    backgroundColor: '#1E293B',
+    backgroundColor: '#000000',
   },
-  iconBar: {
+  actionButtons: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
-    paddingVertical: 8,
-    marginBottom: 8,
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    gap: 12,
   },
-  iconButton: {
-    alignItems: 'center',
-    minWidth: 60,
-  },
-  iconCircle: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: '#6366F1',
+  actionButton: {
+    flex: 1,
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#6366F1',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
-    elevation: 4,
+    backgroundColor: '#1A1A1A',
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    gap: 8,
   },
-  secondaryIcon: {
-    backgroundColor: '#334155',
-    shadowColor: '#000',
-  },
-  editIcon: {
-    backgroundColor: '#8B5CF6',
-    shadowColor: '#8B5CF6',
-  },
-  deleteIcon: {
-    backgroundColor: '#334155',
-    borderWidth: 1,
-    borderColor: '#EF4444',
-    shadowColor: '#EF4444',
-    shadowOpacity: 0.1,
-  },
-  iconLabel: {
-    color: '#94A3B8',
-    fontSize: 11,
-    fontWeight: '500',
-    marginTop: 4,
+  actionButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
   },
   comparison: {
     flexDirection: 'row',

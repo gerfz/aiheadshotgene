@@ -24,6 +24,18 @@ export interface Generation {
   status: 'pending' | 'processing' | 'completed' | 'failed';
   created_at: string;
   is_edited?: boolean;
+  batch_id?: string | null;
+}
+
+export interface GenerationBatch {
+  id: string;
+  user_id: string;
+  original_image_url: string;
+  status: 'pending' | 'processing' | 'completed' | 'failed';
+  total_count: number;
+  completed_count: number;
+  created_at: string;
+  generations: Generation[];
 }
 
 export interface StylePreset {
