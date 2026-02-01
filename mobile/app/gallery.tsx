@@ -24,50 +24,31 @@ const imageSize = (width - PADDING * 2 - GAP) / 2; // 2 columns with gap
 export default function GalleryScreen() {
   const [batches, setBatches] = useState<GenerationBatch[]>([]);
   const [refreshing, setRefreshing] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
 
   const loadBatches = async () => {
     try {
       const batchesData = await getBatches();
-      console.log('📦 Loaded batches:', batchesData.batches?.length || 0);
-      if (batchesData.batches && batchesData.batches.length > 0) {
-        const firstBatch = batchesData.batches[0];
-        console.log('📦 First batch ID:', firstBatch.id);
-        console.log('📦 First batch status:', firstBatch.status);
-        console.log('📦 First batch generations count:', firstBatch.generations?.length || 0);
-        if (firstBatch.generations && firstBatch.generations.length > 0) {
-          const firstGen = firstBatch.generations[0];
-          console.log('📦 First generation:', {
-            id: firstGen.id,
-            style_key: firstGen.style_key,
-            status: firstGen.status,
-            has_url: !!firstGen.generated_image_url,
-            url_preview: firstGen.generated_image_url?.substring(0, 50)
-          });
-        }
-      }
       setBatches(Array.isArray(batchesData.batches) ? batchesData.batches : []);
+      setInitialLoading(false);
     } catch (error) {
       console.error('Failed to load batches:', error);
       setBatches([]); // Set empty array on error
+      setInitialLoading(false);
     }
   };
 
   useEffect(() => {
+    // Load batches immediately when screen mounts
     loadBatches();
-  }, []);
-
-  useEffect(() => {
-    // Auto-refresh every 3 seconds if there are pending batches
-    const hasPending = batches.some(b => b.status === 'pending' || b.status === 'processing');
     
-    if (!hasPending) return;
-    
+    // Set up auto-refresh interval (always running)
     const interval = setInterval(() => {
       loadBatches();
     }, 3000);
 
     return () => clearInterval(interval);
-  }, [batches]);
+  }, []);
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -105,6 +86,15 @@ export default function GalleryScreen() {
     
     // Get first completed generation for thumbnail
     const firstCompleted = item.generations?.find(g => g.status === 'completed' && g.generated_image_url);
+    
+    // Get style names from generations
+    const styleNames = item.generations
+      ?.map(g => g.style_key
+        .split('_')
+        .map((word: string) => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(' ')
+      )
+      .join(', ') || 'Batch Generation';
     
     // Format the date with error handling
     let formattedDate = 'Just now';
@@ -149,48 +139,58 @@ export default function GalleryScreen() {
           
           {/* Info section on the right */}
           <View style={styles.infoSection}>
-            <Text style={styles.projectTitle}>Batch Generation</Text>
+            <Text style={styles.projectTitle} numberOfLines={1}>{styleNames}</Text>
             <Text style={styles.imageCount}>
               {completedCount}/{item.total_count} {item.total_count === 1 ? 'photo' : 'photos'}
             </Text>
             {isPending ? (
               <View style={styles.statusContainer}>
                 <Ionicons name="sync" size={12} color="#6366F1" />
-                <Text style={styles.statusText}>
-                  {item.status === 'pending' ? '2 minutes left' : 'Processing...'}
-                </Text>
+                <Text style={styles.statusText}>Processing...</Text>
               </View>
             ) : (
               <Text style={styles.dateText}>{formattedDate}</Text>
             )}
           </View>
           
-          {/* Delete button - only show for completed */}
-          {!isPending && completedCount === item.total_count && (
-            <TouchableOpacity 
-              style={styles.deleteButton}
-              onPress={(e) => {
-                e.stopPropagation(); // Prevent opening the batch
-                handleDeleteBatch(item.id, item.total_count);
-              }}
-            >
-              <Ionicons name="trash-outline" size={20} color="#666666" />
-            </TouchableOpacity>
-          )}
+          {/* Delete button - always show */}
+          <TouchableOpacity 
+            style={styles.deleteButton}
+            onPress={(e) => {
+              e.stopPropagation(); // Prevent opening the batch
+              handleDeleteBatch(item.id, item.total_count);
+            }}
+          >
+            <Ionicons name="trash-outline" size={20} color="#666666" />
+          </TouchableOpacity>
         </View>
       </TouchableOpacity>
     );
   };
 
-  const renderEmpty = () => (
-    <View style={styles.emptyState}>
-      <Text style={styles.emptyIcon}>✨</Text>
-      <Text style={styles.emptyTitle}>It's empty here</Text>
-      <Text style={styles.emptySubtitle}>
-        Your projects will appear here once you generate something.
-      </Text>
-    </View>
-  );
+  const renderEmpty = () => {
+    if (initialLoading) {
+      return (
+        <View style={styles.emptyState}>
+          <Text style={styles.emptyIcon}>⏳</Text>
+          <Text style={styles.emptyTitle}>Loading...</Text>
+          <Text style={styles.emptySubtitle}>
+            Fetching your photos
+          </Text>
+        </View>
+      );
+    }
+    
+    return (
+      <View style={styles.emptyState}>
+        <Text style={styles.emptyIcon}>✨</Text>
+        <Text style={styles.emptyTitle}>It's empty here</Text>
+        <Text style={styles.emptySubtitle}>
+          Your projects will appear here once you generate something.
+        </Text>
+      </View>
+    );
+  };
 
   return (
     <>

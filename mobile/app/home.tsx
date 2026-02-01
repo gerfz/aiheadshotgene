@@ -142,7 +142,7 @@ const STATIC_CATEGORIES = [
 type ViewMode = 'categories' | 'all';
 
 export default function HomeScreen() {
-  const { selectedStyle, setSelectedStyle, customPrompt, setCustomPrompt, credits, setSelectedImage, setCredits } = useAppStore();
+  const { selectedStyle, setSelectedStyle, customPrompt, setCustomPrompt, credits, setSelectedImage, setCredits, cachedCategories, cachedAllStyles, setCachedStyles } = useAppStore();
   const [categories, setCategories] = useState(STATIC_CATEGORIES);
   const [loading, setLoading] = useState(true);
   const [showCustomPrompt, setShowCustomPrompt] = useState(false);
@@ -150,9 +150,17 @@ export default function HomeScreen() {
   const [allStyles, setAllStyles] = useState<string[]>([]);
   const [selectedStyles, setSelectedStyles] = useState<string[]>([]); // Multi-select support
 
-  // Load most used styles on mount
+  // Load most used styles on mount (use cache if available)
   useEffect(() => {
-    loadMostUsedStyles();
+    if (cachedCategories && cachedAllStyles) {
+      // Use cached data
+      setCategories(cachedCategories);
+      setAllStyles(cachedAllStyles);
+      setLoading(false);
+    } else {
+      // Load fresh data
+      loadMostUsedStyles();
+    }
     // Debug: Refresh credits on mount
     refreshCredits();
   }, []);
@@ -236,6 +244,9 @@ export default function HomeScreen() {
       });
       setAllStyles(allStyleKeys);
       
+      // Cache the loaded styles
+      setCachedStyles([mostUsedCategory, ...STATIC_CATEGORIES], allStyleKeys);
+      
       setLoading(false);
     } catch (error) {
       console.error('Failed to load most used styles:', error);
@@ -251,6 +262,9 @@ export default function HomeScreen() {
       // Fallback all styles
       const fallbackStyles = ['custom', ...Object.keys(STYLE_PRESETS).filter(k => k !== 'custom')];
       setAllStyles(fallbackStyles);
+      
+      // Cache the fallback data
+      setCachedStyles([defaultMostUsed, ...STATIC_CATEGORIES], fallbackStyles);
       
       setLoading(false);
     }

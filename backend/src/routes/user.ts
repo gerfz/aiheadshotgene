@@ -46,6 +46,19 @@ router.get(
         trialDaysRemaining = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
       }
 
+      // Sync credits across all profiles with same device_id
+      if (profile.device_id) {
+        await supabaseAdmin
+          .from('profiles')
+          .update({ 
+            total_credits: profile.total_credits,
+            is_subscribed: profile.is_subscribed,
+            is_trial_active: profile.is_trial_active
+          })
+          .eq('device_id', profile.device_id)
+          .neq('id', userId);
+      }
+
       res.json({
         totalCredits: profile.total_credits || 0,
         isSubscribed: profile.is_subscribed,
@@ -404,13 +417,43 @@ router.get(
     try {
       const userId = req.userId!;
       
-      // Fetch batches using the view
-      const { data: batches, error } = await supabaseAdmin
-        .from('batch_generations_view')
-        .select('*')
-        .eq('user_id', userId);
+      // Get user's device_id
+      const { data: profile } = await supabaseAdmin
+        .from('profiles')
+        .select('device_id')
+        .eq('id', userId)
+        .single();
       
-      if (error) throw error;
+      let batches;
+      
+      // If device_id exists, fetch batches for all profiles with same device_id
+      if (profile?.device_id) {
+        // Get all user IDs with same device_id
+        const { data: profiles } = await supabaseAdmin
+          .from('profiles')
+          .select('id')
+          .eq('device_id', profile.device_id);
+        
+        const userIds = profiles?.map(p => p.id) || [userId];
+        
+        // Fetch batches for all these users
+        const { data: batchData, error } = await supabaseAdmin
+          .from('batch_generations_view')
+          .select('*')
+          .in('user_id', userIds);
+        
+        if (error) throw error;
+        batches = batchData;
+      } else {
+        // No device_id, just fetch for this user
+        const { data: batchData, error } = await supabaseAdmin
+          .from('batch_generations_view')
+          .select('*')
+          .eq('user_id', userId);
+        
+        if (error) throw error;
+        batches = batchData;
+      }
       
       // Transform the view data to match our expected format
       const batchesArray = batches?.map((row: any) => ({
