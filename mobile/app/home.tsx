@@ -168,22 +168,22 @@ export default function HomeScreen() {
     }
   };
 
-  const startBackgroundGeneration = async (imageUri: string, styleKey: string | null) => {
-    if (!styleKey) return;
+  const startBatchGeneration = async (imageUri: string, styleKeys: string[]) => {
+    if (styleKeys.length === 0) return;
     
     try {
-      const { generatePortrait } = await import('../src/services/api');
+      const { generateBatchPortraits } = await import('../src/services/api');
       
-      // Start generation
-      await generatePortrait(
-        imageUri,
-        styleKey,
-        customPrompt || undefined
-      );
+      // Start batch generation
+      await generateBatchPortraits(imageUri, styleKeys);
       
-      // Generation complete - will show in gallery on next refresh
+      console.log(`✅ Batch generation started for ${styleKeys.length} styles`);
+      
+      // Clear selections after starting
+      setSelectedStyles([]);
+      
     } catch (error) {
-      console.error('❌ Background generation failed:', error);
+      console.error('❌ Batch generation failed:', error);
       Alert.alert('Generation Failed', 'Please try again from the gallery.');
     }
   };
@@ -283,19 +283,22 @@ export default function HomeScreen() {
   }, [selectedStyles, setCustomPrompt, categories]);
 
   const handleContinue = useCallback(async () => {
-    if (!selectedStyle) return;
+    if (selectedStyles.length === 0) return;
 
     // For custom style, require custom prompt
-    if (selectedStyle === 'custom' && !customPrompt) {
+    if (selectedStyles.includes('custom') && !customPrompt) {
       Alert.alert('Custom Prompt Required', 'Please enter a custom prompt to continue.');
       return;
     }
 
+    // Calculate total cost
+    const totalCost = selectedStyles.length * 200;
+
     // Check if user has enough credits
-    if (!credits?.canGenerate) {
+    if ((credits?.totalCredits || 0) < totalCost) {
       Alert.alert(
         'Insufficient Credits',
-        'You need 200 credits to generate a portrait.',
+        `You need ${totalCost} credits to generate ${selectedStyles.length} ${selectedStyles.length === 1 ? 'portrait' : 'portraits'}. You have ${credits?.totalCredits || 0} credits.`,
         [
           { text: 'Get Credits', onPress: () => router.push('/subscription') },
           { text: 'Cancel', style: 'cancel' }
@@ -350,12 +353,12 @@ export default function HomeScreen() {
       // Navigate to gallery screen immediately
       router.push('/gallery');
       
-      // Start generation in background
+      // Start batch generation in background
       setTimeout(() => {
-        startBackgroundGeneration(result.assets[0].uri, selectedStyle);
+        startBatchGeneration(result.assets[0].uri, selectedStyles);
       }, 100);
     }
-  }, [selectedStyle, customPrompt, credits, setSelectedImage]);
+  }, [selectedStyles, customPrompt, credits, setSelectedImage]);
 
 
   return (

@@ -396,4 +396,65 @@ router.post(
   }
 );
 
+// Get user batches with generations
+router.get(
+  '/batches',
+  verifyToken,
+  async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const userId = req.userId!;
+      
+      // Fetch batches using the view
+      const { data: batches, error } = await supabaseAdmin
+        .from('batch_generations_view')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      
+      // Group generations by batch
+      const batchMap = new Map();
+      
+      batches?.forEach((row: any) => {
+        if (!batchMap.has(row.batch_id)) {
+          batchMap.set(row.batch_id, {
+            id: row.batch_id,
+            user_id: row.user_id,
+            original_image_url: row.batch_original_image_url,
+            status: row.batch_status,
+            total_count: row.batch_total_count,
+            completed_count: row.batch_completed_count,
+            created_at: row.batch_created_at,
+            updated_at: row.batch_updated_at,
+            generations: []
+          });
+        }
+        
+        // Add generation to batch
+        if (row.generation_id) {
+          batchMap.get(row.batch_id).generations.push({
+            id: row.generation_id,
+            user_id: row.user_id,
+            guest_device_id: row.guest_device_id,
+            style_key: row.style_key,
+            original_image_url: row.original_image_url,
+            generated_image_url: row.generated_image_url,
+            status: row.generation_status,
+            created_at: row.generation_created_at,
+            batch_id: row.batch_id
+          });
+        }
+      });
+      
+      const batchesArray = Array.from(batchMap.values());
+      
+      res.json({ batches: batchesArray });
+    } catch (error: any) {
+      console.error('Error fetching batches:', error);
+      res.status(500).json({ error: error.message });
+    }
+  }
+);
+
 export default router;

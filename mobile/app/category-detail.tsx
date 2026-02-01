@@ -33,30 +33,33 @@ export default function CategoryDetailScreen() {
     styles: string;
   }>();
 
-  const { selectedStyle, setSelectedStyle, setSelectedImage, credits } = useAppStore();
+  const { setSelectedImage, credits } = useAppStore();
+  const [selectedStyles, setSelectedStyles] = React.useState<string[]>([]);
   
   // Parse styles from comma-separated string
   const styleKeys = params.styles?.split(',') || [];
 
   const handleStyleSelect = (styleKey: string) => {
-    // Allow deselecting by clicking the same style again
-    if (selectedStyle === styleKey) {
-      setSelectedStyle(null);
-      return;
+    // Toggle selection
+    if (selectedStyles.includes(styleKey)) {
+      setSelectedStyles(selectedStyles.filter(s => s !== styleKey));
+    } else {
+      setSelectedStyles([...selectedStyles, styleKey]);
+      analytics.styleSelected(styleKey, params.categoryName || 'Category');
     }
-
-    setSelectedStyle(styleKey);
-    analytics.styleSelected(styleKey, params.categoryName || 'Category');
   };
 
   const handleContinue = async () => {
-    if (!selectedStyle) return;
+    if (selectedStyles.length === 0) return;
+
+    // Calculate total cost
+    const totalCost = selectedStyles.length * 200;
 
     // Check if user has enough credits
-    if (!credits?.canGenerate) {
+    if ((credits?.totalCredits || 0) < totalCost) {
       Alert.alert(
         'Insufficient Credits',
-        'You need 200 credits to generate a portrait.',
+        `You need ${totalCost} credits to generate ${selectedStyles.length} ${selectedStyles.length === 1 ? 'portrait' : 'portraits'}. You have ${credits?.totalCredits || 0} credits.`,
         [
           { text: 'Get Credits', onPress: () => router.push('/subscription') },
           { text: 'Cancel', style: 'cancel' }
@@ -111,29 +114,29 @@ export default function CategoryDetailScreen() {
       // Navigate to gallery screen immediately
       router.push('/gallery');
       
-      // Start generation in background
+      // Start batch generation in background
       setTimeout(() => {
-        startBackgroundGeneration(result.assets[0].uri, selectedStyle);
+        startBatchGeneration(result.assets[0].uri, selectedStyles);
       }, 100);
     }
   };
 
-  const startBackgroundGeneration = async (imageUri: string, styleKey: string | null) => {
-    if (!styleKey) return;
+  const startBatchGeneration = async (imageUri: string, styleKeys: string[]) => {
+    if (styleKeys.length === 0) return;
     
     try {
-      const { generatePortrait } = await import('../src/services/api');
+      const { generateBatchPortraits } = await import('../src/services/api');
       
-      // Start generation
-      await generatePortrait(
-        imageUri,
-        styleKey,
-        undefined
-      );
+      // Start batch generation
+      await generateBatchPortraits(imageUri, styleKeys);
       
-      // Generation complete - will show in gallery on next refresh
+      console.log(`✅ Batch generation started for ${styleKeys.length} styles`);
+      
+      // Clear selections after starting
+      setSelectedStyles([]);
+      
     } catch (error) {
-      console.error('❌ Background generation failed:', error);
+      console.error('❌ Batch generation failed:', error);
       Alert.alert('Generation Failed', 'Please try again from the gallery.');
     }
   };
@@ -156,7 +159,7 @@ export default function CategoryDetailScreen() {
         />
         
         {/* Selection Indicator */}
-        {selectedStyle === style.key && (
+        {selectedStyles.includes(style.key) && (
           <View style={styles.selectedOverlay}>
             <Ionicons name="checkmark-circle" size={32} color="#6366F1" />
           </View>
@@ -197,15 +200,15 @@ export default function CategoryDetailScreen() {
           columnWrapperStyle={styles.row}
         />
         
-        {/* Continue Button - Only show when style is selected */}
-        {selectedStyle && (
+        {/* Continue Button - Only show when styles are selected */}
+        {selectedStyles.length > 0 && (
           <View style={styles.footer}>
             <TouchableOpacity
               style={styles.continueButton}
               onPress={handleContinue}
             >
               <Text style={styles.continueButtonText}>
-                Continue (200 credits)
+                Continue ({selectedStyles.length} {selectedStyles.length === 1 ? 'style' : 'styles'} • {selectedStyles.length * 200} credits)
               </Text>
             </TouchableOpacity>
           </View>

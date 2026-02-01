@@ -11,8 +11,9 @@ import {
 } from 'react-native';
 import { router, Stack } from 'expo-router';
 import { useAppStore } from '../src/store/useAppStore';
-import { getGenerations } from '../src/services/api';
+import { getBatches } from '../src/services/api';
 import { Ionicons } from '@expo/vector-icons';
+import type { GenerationBatch } from '../src/types';
 
 const { width } = Dimensions.get('window');
 const PADDING = 20;
@@ -20,92 +21,85 @@ const GAP = 16;
 const imageSize = (width - PADDING * 2 - GAP) / 2; // 2 columns with gap
 
 export default function GalleryScreen() {
-  const { generations, setGenerations } = useAppStore();
+  const [batches, setBatches] = useState<GenerationBatch[]>([]);
   const [refreshing, setRefreshing] = useState(false);
 
-  const loadGenerations = async () => {
+  const loadBatches = async () => {
     try {
-      const generationsData = await getGenerations();
-      setGenerations(Array.isArray(generationsData.generations) ? generationsData.generations : []);
+      const batchesData = await getBatches();
+      setBatches(Array.isArray(batchesData.batches) ? batchesData.batches : []);
     } catch (error) {
-      console.error('Failed to load generations:', error);
-      setGenerations([]); // Set empty array on error
+      console.error('Failed to load batches:', error);
+      setBatches([]); // Set empty array on error
     }
   };
 
   useEffect(() => {
-    loadGenerations();
+    loadBatches();
     
-    // Auto-refresh every 3 seconds if there are pending generations
+    // Auto-refresh every 3 seconds if there are pending batches
     const interval = setInterval(() => {
-      const hasPending = Array.isArray(generations) && 
-        generations.some(g => g.status === 'pending' || g.status === 'processing');
+      const hasPending = batches.some(b => b.status === 'pending' || b.status === 'processing');
       
       if (hasPending) {
-        loadGenerations();
+        loadBatches();
       }
     }, 3000);
 
     return () => clearInterval(interval);
-  }, [generations]);
+  }, [batches]);
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await loadGenerations();
+    await loadBatches();
     setRefreshing(false);
   };
 
-  // Show all generations (completed and in-progress)
-  const allGenerations = Array.isArray(generations) ? generations : [];
-
-  const renderItem = ({ item }: { item: any }) => {
+  const renderItem = ({ item }: { item: GenerationBatch }) => {
     const isPending = item.status === 'pending' || item.status === 'processing';
+    const completedCount = item.generations.filter(g => g.status === 'completed').length;
+    
+    // Get first completed generation for thumbnail
+    const firstCompleted = item.generations.find(g => g.status === 'completed' && g.generated_image_url);
     
     // Format the date
     const date = new Date(item.created_at);
     const formattedDate = `${date.getMonth() + 1}/${date.getDate()}/${String(date.getFullYear()).slice(2)} ${date.getHours()}:${String(date.getMinutes()).padStart(2, '0')}`;
     
-    // Get style name from style_key
-    const styleName = item.style_key
-      .split('_')
-      .map((word: string) => word.charAt(0).toUpperCase() + word.slice(1))
-      .join(' ');
-    
     return (
       <TouchableOpacity
         style={styles.gridItem}
         onPress={() => {
-          if (!isPending) {
+          if (!isPending && completedCount > 0) {
+            // Navigate to batch detail screen
             router.push({
-              pathname: '/result',
+              pathname: '/batch-detail',
               params: {
-                id: item.id,
-                generatedUrl: item.generated_image_url || '',
-                originalUrl: item.original_image_url || '',
-                styleKey: item.style_key,
-                customPrompt: item.custom_prompt || '',
+                batchId: item.id,
               },
             });
           }
         }}
-        disabled={isPending}
+        disabled={isPending && completedCount === 0}
       >
         <View style={styles.cardContainer}>
-          {isPending ? (
+          {firstCompleted ? (
+            <Image
+              source={{ uri: firstCompleted.generated_image_url! }}
+              style={styles.gridImage}
+            />
+          ) : (
             <View style={styles.pendingImageContainer}>
               <Ionicons name="hourglass-outline" size={32} color="#6366F1" />
             </View>
-          ) : (
-            <Image
-              source={{ uri: item.generated_image_url! }}
-              style={styles.gridImage}
-            />
           )}
           
           {/* Info section on the right */}
           <View style={styles.infoSection}>
-            <Text style={styles.projectTitle}>{styleName}</Text>
-            <Text style={styles.imageCount}>1 image</Text>
+            <Text style={styles.projectTitle}>Batch Generation</Text>
+            <Text style={styles.imageCount}>
+              {completedCount}/{item.total_count} {item.total_count === 1 ? 'photo' : 'photos'}
+            </Text>
             {isPending ? (
               <View style={styles.statusContainer}>
                 <Ionicons name="sync" size={12} color="#6366F1" />
@@ -119,7 +113,7 @@ export default function GalleryScreen() {
           </View>
           
           {/* Delete button - only show for completed */}
-          {!isPending && (
+          {!isPending && completedCount === item.total_count && (
             <TouchableOpacity style={styles.deleteButton}>
               <Ionicons name="trash-outline" size={20} color="#666666" />
             </TouchableOpacity>
@@ -168,7 +162,7 @@ export default function GalleryScreen() {
       />
       <View style={styles.container}>
         <FlatList
-          data={allGenerations}
+          data={batches}
           renderItem={renderItem}
           keyExtractor={(item) => item.id}
           numColumns={1}

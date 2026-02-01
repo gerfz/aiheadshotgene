@@ -11,7 +11,8 @@ import {
   updateGeneration,
   uploadImage,
   incrementStyleUsage,
-  getMostUsedStyles
+  getMostUsedStyles,
+  supabaseAdmin
 } from '../services/supabase';
 
 const router = Router();
@@ -297,6 +298,133 @@ router.delete(
 
       res.json({ success: true, message: 'Generation deleted successfully' });
     } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  }
+);
+
+// Batch generate portraits (multiple styles at once)
+router.post(
+  '/batch',
+  verifyToken,
+  generationRateLimiter,
+  upload.single('image'),
+  async (req: AuthenticatedRequest, res: Response) => {
+    const userId = req.userId!;
+    
+    try {
+      const { styleKeys } = req.body; // Array of style keys
+      const file = req.file;
+
+      console.log(`📝 [BATCH GENERATE REQUEST] User: ${userId.slice(0, 8)}... | Styles: ${styleKeys}`);
+
+      if (!file) {
+        return res.status(400).json({ error: 'No image uploaded' });
+      }
+
+      if (!styleKeys || !Array.isArray(styleKeys) || styleKeys.length === 0) {
+        return res.status(400).json({ error: 'Style keys array is required' });
+      }
+
+      // Get user profile
+      const profile = await getUserProfile(userId);
+      
+      // Calculate total cost
+      const totalCost = styleKeys.length * 200;
+      
+      // Check if user has enough credits
+      if ((profile.total_credits || 0) < totalCost) {
+        console.log(`❌ [BATCH GENERATE FAILED] User: ${userId.slice(0, 8)}... | Insufficient credits`);
+        return res.status(402).json({ 
+          error: 'Insufficient credits',
+          required: totalCost,
+          available: profile.total_credits || 0
+        });
+      }
+
+      // Deduct credits
+      const { data: decrementResult, error: decrementError } = await supabaseAdmin
+        .rpc('decrement_user_credits_v2', {
+          user_id: userId,
+          cost: totalCost
+        });
+
+      if (decrementError || !decrementResult || !decrementResult[0]?.success) {
+        console.log(`❌ [BATCH GENERATE FAILED] User: ${userId.slice(0, 8)}... | Credit deduction failed`);
+        return res.status(402).json({ error: 'Insufficient credits' });
+      }
+
+      // Upload original image once
+      const originalImageUrl = await uploadImage(file.buffer, userId, 'original');
+
+      // Create batch record
+      const { data: batch, error: batchError } = await supabaseAdmin
+        .from('generation_batches')
+        .insert({
+          user_id: userId,
+          original_image_url: originalImageUrl,
+          total_count: styleKeys.length,
+          status: 'pending'
+        })
+        .select()
+        .single();
+
+      if (batchError || !batch) {
+        console.error('❌ [BATCH CREATE FAILED]', batchError);
+        return res.status(500).json({ error: 'Failed to create batch' });
+      }
+
+      console.log(`✅ [BATCH CREATED] ID: ${batch.id} | Styles: ${styleKeys.length}`);
+
+      // Create generation records for each style
+      const generationPromises = styleKeys.map(async (styleKey: string) => {
+        const generationId = uuidv4();
+        
+        // Create generation record
+        await createGeneration({
+          id: generationId,
+          userId,
+          guestDeviceId: null,
+          styleKey,
+          originalImageUrl,
+          batchId: batch.id
+        });
+
+        // Increment style usage
+        await incrementStyleUsage(styleKey);
+
+        // Start generation asynchronously (don't await)
+        generatePortrait(originalImageUrl, styleKey, null)
+          .then(async (result) => {
+            await updateGeneration(generationId, {
+              generatedImageUrl: result.generatedImageUrl,
+              status: 'completed'
+            });
+            console.log(`✅ [BATCH ITEM COMPLETED] Batch: ${batch.id} | Style: ${styleKey}`);
+          })
+          .catch(async (error) => {
+            console.error(`❌ [BATCH ITEM FAILED] Batch: ${batch.id} | Style: ${styleKey}`, error);
+            await updateGeneration(generationId, {
+              status: 'failed'
+            });
+          });
+
+        return generationId;
+      });
+
+      await Promise.all(generationPromises);
+
+      console.log(`✅ [BATCH STARTED] ID: ${batch.id} | User: ${userId.slice(0, 8)}...`);
+
+      res.json({
+        success: true,
+        batchId: batch.id,
+        totalCount: styleKeys.length,
+        remainingCredits: decrementResult[0].remaining_credits
+      });
+
+    } catch (error: any) {
+      console.error('❌ [BATCH GENERATE ERROR]', error);
       res.status(500).json({ error: error.message });
     }
   }

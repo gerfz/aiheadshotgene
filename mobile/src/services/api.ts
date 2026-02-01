@@ -270,6 +270,78 @@ export async function getGenerations(): Promise<{ generations: Generation[] }> {
   return getUserGenerations();
 }
 
+// Get user batches
+export async function getBatches(): Promise<{ batches: GenerationBatch[] }> {
+  try {
+    const headers = await getHeaders();
+    const response = await fetch(`${API_URL}/api/user/batches`, {
+      headers,
+    });
+    
+    if (!response.ok) {
+      throw new Error('Failed to fetch batches');
+    }
+    
+    return response.json();
+  } catch (error: any) {
+    console.error('Error fetching batches:', error);
+    throw error;
+  }
+}
+
+// Batch generate portraits (multiple styles at once)
+export async function generateBatchPortraits(
+  imageUri: string,
+  styleKeys: string[]
+): Promise<{ success: boolean; batchId: string; totalCount: number; remainingCredits: number }> {
+  try {
+    const headers = await getHeaders();
+    
+    // Create form data
+    const formData = new FormData();
+    
+    // Get file info
+    const fileInfo = await FileSystem.getInfoAsync(imageUri);
+    if (!fileInfo.exists) {
+      throw new Error('Image file not found');
+    }
+    
+    // Determine file type
+    const uriParts = imageUri.split('.');
+    const fileType = uriParts[uriParts.length - 1];
+    const mimeType = fileType === 'png' ? 'image/png' : 'image/jpeg';
+    
+    // Append file
+    formData.append('image', {
+      uri: imageUri,
+      name: `photo.${fileType}`,
+      type: mimeType,
+    } as any);
+    
+    // Append style keys as JSON string
+    formData.append('styleKeys', JSON.stringify(styleKeys));
+    
+    const response = await fetch(`${API_URL}/api/generate/batch`, {
+      method: 'POST',
+      headers: {
+        ...headers,
+        'Content-Type': 'multipart/form-data',
+      },
+      body: formData,
+    });
+    
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ message: 'Failed to generate batch' }));
+      throw new Error(error.message || error.error || 'Failed to generate batch');
+    }
+    
+    return response.json();
+  } catch (error: any) {
+    console.error('Batch generation error:', error);
+    throw error;
+  }
+}
+
 // Generate portrait (authenticated users only)
 export async function generatePortrait(
   imageUri: string,
