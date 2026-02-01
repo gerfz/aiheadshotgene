@@ -53,6 +53,7 @@ export default function SubscriptionScreen() {
   const [purchasing, setPurchasing] = useState(false);
   const [selectedPackage, setSelectedPackage] = useState<string | null>(null);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [freeTrialEnabled, setFreeTrialEnabled] = useState(true); // Default to enabled
   const { setCredits } = useAppStore();
   const scrollX = useRef(new Animated.Value(0)).current;
   const scrollViewRef = useRef<any>(null);
@@ -480,26 +481,20 @@ export default function SubscriptionScreen() {
               </Text>
             </View>
             
-            <View style={styles.creditBreakdown}>
-              <View style={styles.breakdownRow}>
-                <Ionicons name="checkmark-circle" size={20} color="#10B981" />
-                <Text style={styles.breakdownText}>15 AI Headshots (200 credits each)</Text>
+            {/* Free Trial Toggle */}
+            <TouchableOpacity 
+              style={styles.freeTrialToggle}
+              onPress={() => setFreeTrialEnabled(!freeTrialEnabled)}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.freeTrialText}>Free Trial Enabled</Text>
+              <View style={[styles.toggleSwitch, freeTrialEnabled && styles.toggleSwitchActive]}>
+                <View style={[styles.toggleKnob, freeTrialEnabled && styles.toggleKnobActive]} />
               </View>
-              <View style={styles.breakdownRow}>
-                <Ionicons name="checkmark-circle" size={20} color="#10B981" />
-                <Text style={styles.breakdownText}>60 Photo Edits (50 credits each)</Text>
-              </View>
-              <View style={styles.breakdownRow}>
-                <Ionicons name="checkmark-circle" size={20} color="#10B981" />
-                <Text style={styles.breakdownText}>Credits never expire</Text>
-              </View>
-            </View>
+            </TouchableOpacity>
           </View>
 
-          {/* Plans */}
-          <View style={styles.plansContainer}>
-            {renderPackage(weeklyPkg, 'Weekly Pro', '3-Day Free Trial')}
-          </View>
+          {/* Plans section removed - price shows on button instead */}
 
           {/* Bottom Action */}
           <View style={styles.bottomSection}>
@@ -514,10 +509,17 @@ export default function SubscriptionScreen() {
                 <ActivityIndicator color="#FFF" />
               ) : (
                 <Text style={styles.ctaText}>
-                  {hasIntroOffer(weeklyPkg) ? 'Start 3-Day Free Trial' : 'Subscribe Now'}
+                  {freeTrialEnabled 
+                    ? 'Start Free Trial' 
+                    : `Subscribe Now • ${weeklyPkg?.product?.priceString || '$7.79'}`
+                  }
                 </Text>
               )}
             </TouchableOpacity>
+
+            {freeTrialEnabled && (
+              <Text style={styles.noPaymentText}>No Payment Now</Text>
+            )}
 
             <Text style={styles.renewalText}>{getRenewalText()}</Text>
           </View>
@@ -709,17 +711,40 @@ const styles = StyleSheet.create({
     color: '#94A3B8',
     marginTop: 4,
   },
-  creditBreakdown: {
-    gap: 12,
-  },
-  breakdownRow: {
+  // Free Trial Toggle
+  freeTrialToggle: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    justifyContent: 'space-between',
+    backgroundColor: '#1E293B',
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 20,
   },
-  breakdownText: {
-    fontSize: 14,
-    color: '#E2E8F0',
+  freeTrialText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  toggleSwitch: {
+    width: 56,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#334155',
+    justifyContent: 'center',
+    padding: 2,
+  },
+  toggleSwitchActive: {
+    backgroundColor: '#F59E0B',
+  },
+  toggleKnob: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#FFFFFF',
+  },
+  toggleKnobActive: {
+    alignSelf: 'flex-end',
   },
 
   // Plans
@@ -833,6 +858,13 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 18,
     fontWeight: 'bold',
+  },
+  noPaymentText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+    textAlign: 'center',
+    marginTop: 12,
   },
   renewalText: {
     color: '#94A3B8',

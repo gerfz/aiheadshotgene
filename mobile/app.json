@@ -1,8 +1,8 @@
 {
   "expo": {
-    "name": "AI Portrait Studio",
+    "name": "AI Headshot Generator & Studio",
     "slug": "ai-portrait-studio",
-    "version": "1.0.0",
+    "version": "1.5.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
@@ -21,40 +21,62 @@
       "buildNumber": "1"
     },
     "android": {
-      "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#0F172A"
-      },
+      "icon": "./assets/icon.png",
       "package": "com.aiportrait.studio",
-      "versionCode": 1,
+      "versionCode": 81,
       "permissions": [
         "android.permission.READ_EXTERNAL_STORAGE",
         "android.permission.WRITE_EXTERNAL_STORAGE",
         "android.permission.CAMERA",
         "android.permission.READ_MEDIA_IMAGES",
         "android.permission.READ_MEDIA_VISUAL_USER_SELECTED",
-        "android.permission.ACCESS_MEDIA_LOCATION",
+        "com.android.vending.BILLING",
         "android.permission.READ_MEDIA_VIDEO",
         "android.permission.READ_MEDIA_AUDIO",
         "android.permission.RECORD_AUDIO"
       ],
       "blockedPermissions": [
         "ACCESS_FINE_LOCATION",
-        "ACCESS_COARSE_LOCATION"
-      ]
+        "ACCESS_COARSE_LOCATION",
+        "android.permission.READ_MEDIA_AUDIO",
+        "android.permission.RECORD_AUDIO"
+      ],
+      "enableProguardInReleaseBuilds": true,
+      "enableShrinkResourcesInReleaseBuilds": true
     },
     "web": {
       "favicon": "./assets/favicon.png",
       "bundler": "metro"
     },
     "plugins": [
+      "./plugins/withTikTokSDK.js",
+      [
+        "react-native-appsflyer",
+        {}
+      ],
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "kotlinVersion": "2.0.21",
+            "compileSdkVersion": 35,
+            "targetSdkVersion": 35,
+            "minSdkVersion": 24,
+            "usesCleartextTraffic": false,
+            "enableProguardInReleaseBuilds": true,
+            "enableShrinkResourcesInReleaseBuilds": true,
+            "enableMinifyInReleaseBuilds": true
+          }
+        }
+      ],
       "expo-router",
       [
         "expo-media-library",
         {
           "photosPermission": "Allow AI Portrait Studio to access your photos to save generated portraits.",
           "savePhotosPermission": "Allow AI Portrait Studio to save photos to your gallery.",
-          "isAccessMediaLocationEnabled": true
+          "isAccessMediaLocationEnabled": false,
+          "legacyExternalStorage": false
         }
       ],
       [
@@ -68,9 +90,9 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "636e8aad-a6d3-48e3-85fc-cb2c62fcb402"
+        "projectId": "ca5a8852-6029-4793-be6e-83375af5cb60"
       }
     },
-    "owner": "gerfz"
+    "owner": "gerfzz"
   }
 }

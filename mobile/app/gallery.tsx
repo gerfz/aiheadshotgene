@@ -10,7 +10,7 @@ import {
   Dimensions,
   Alert,
 } from 'react-native';
-import { router, Stack } from 'expo-router';
+import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useAppStore } from '../src/store/useAppStore';
 import { getBatches, deleteBatch } from '../src/services/api';
 import { Ionicons } from '@expo/vector-icons';
@@ -22,22 +22,63 @@ const GAP = 16;
 const imageSize = (width - PADDING * 2 - GAP) / 2; // 2 columns with gap
 
 export default function GalleryScreen() {
+  const params = useLocalSearchParams<{ newGeneration?: string }>();
+  const isNewGeneration = params.newGeneration === 'true';
+  
   const { cachedBatches, setCachedBatches } = useAppStore();
+  // Start with cached batches if available
   const [batches, setBatches] = useState<GenerationBatch[]>(cachedBatches || []);
   const [refreshing, setRefreshing] = useState(false);
-  const [initialLoading, setInitialLoading] = useState(!cachedBatches);
+  const [initialLoading, setInitialLoading] = useState(false);
+  const [showDummyProcessing, setShowDummyProcessing] = useState(isNewGeneration);
+  const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
+  
+  // Create a dummy batch that shows immediately
+  const dummyBatch: GenerationBatch = {
+    id: 'dummy-processing',
+    user_id: '',
+    original_image_url: '',
+    status: 'processing',
+    total_count: 1,
+    completed_count: 0,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+    generations: [{
+      id: 'dummy',
+      user_id: '',
+      batch_id: 'dummy-processing',
+      original_image_url: '',
+      generated_image_url: null,
+      style_key: 'processing',
+      status: 'processing',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    }],
+  };
 
   const loadBatches = async () => {
     try {
       const batchesData = await getBatches();
       const batchesArray = Array.isArray(batchesData.batches) ? batchesData.batches : [];
+      
       setBatches(batchesArray);
       setCachedBatches(batchesArray); // Cache the batches
+      setHasLoadedOnce(true);
+      
+      // Only hide dummy if we have at least one real processing/completed batch
+      const hasRealBatch = batchesArray.some(b => b.id !== 'dummy-processing');
+      if (hasRealBatch) {
+        // Wait 1 second before hiding dummy to ensure smooth transition
+        setTimeout(() => {
+          setShowDummyProcessing(false);
+        }, 1000);
+      }
+      
       setInitialLoading(false);
     } catch (error) {
       console.error('Failed to load batches:', error);
-      setBatches([]); // Set empty array on error
       setInitialLoading(false);
+      setHasLoadedOnce(true);
     }
   };
 
@@ -50,7 +91,15 @@ export default function GalleryScreen() {
       loadBatches();
     }, 3000);
 
-    return () => clearInterval(interval);
+    // Hide dummy processing after 10 seconds max (in case API is slow)
+    const dummyTimeout = setTimeout(() => {
+      setShowDummyProcessing(false);
+    }, 10000);
+
+    return () => {
+      clearInterval(interval);
+      clearTimeout(dummyTimeout);
+    };
   }, []);
 
   const onRefresh = async () => {
@@ -90,14 +139,22 @@ export default function GalleryScreen() {
     // Get first completed generation for thumbnail
     const firstCompleted = item.generations?.find(g => g.status === 'completed' && g.generated_image_url);
     
-    // Get style names from generations
-    const styleNames = item.generations
-      ?.map(g => g.style_key
-        .split('_')
-        .map((word: string) => word.charAt(0).toUpperCase() + word.slice(1))
-        .join(' ')
-      )
-      .join(', ') || 'Batch Generation';
+    // Get style names from generations - show "Loading..." for dummy, "Edited Photo" for edited
+    const styleNames = item.id === 'dummy-processing' 
+      ? 'Loading...'
+      : item.generations
+          ?.map(g => {
+            // Check if this is an edited photo
+            if (g.is_edited) {
+              return 'Edited Photo';
+            }
+            // Otherwise show the style name
+            return g.style_key
+              .split('_')
+              .map((word: string) => word.charAt(0).toUpperCase() + word.slice(1))
+              .join(' ');
+          })
+          .join(', ') || 'Batch Generation';
     
     // Format the date with error handling
     let formattedDate = 'Just now';
@@ -118,12 +175,27 @@ export default function GalleryScreen() {
         onPress={() => {
           // Allow clicking if at least one photo is completed
           if (completedCount > 0) {
-            router.push({
-              pathname: '/batch-detail',
-              params: {
-                batchId: item.id,
-              },
-            });
+            // If only 1 photo, open directly in result screen
+            if (item.total_count === 1 && firstCompleted) {
+              router.push({
+                pathname: '/result',
+                params: {
+                  id: firstCompleted.id,
+                  generatedUrl: firstCompleted.generated_image_url || '',
+                  originalUrl: firstCompleted.original_image_url || '',
+                  styleKey: firstCompleted.style_key,
+                  customPrompt: '',
+                },
+              });
+            } else {
+              // Multiple photos, open batch detail
+              router.push({
+                pathname: '/batch-detail',
+                params: {
+                  batchId: item.id,
+                },
+              });
+            }
           }
         }}
         disabled={completedCount === 0}
@@ -170,6 +242,7 @@ export default function GalleryScreen() {
       </TouchableOpacity>
     );
   };
+
 
   const renderEmpty = () => {
     if (initialLoading) {
@@ -224,12 +297,12 @@ export default function GalleryScreen() {
       />
       <View style={styles.container}>
         <FlatList
-          data={batches}
+          data={showDummyProcessing && !hasLoadedOnce ? [dummyBatch, ...batches] : batches}
           renderItem={renderItem}
           keyExtractor={(item) => item.id}
           numColumns={1}
           contentContainerStyle={styles.content}
-          ListEmptyComponent={renderEmpty}
+          ListEmptyComponent={!showDummyProcessing ? renderEmpty : null}
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#6366F1" />
           }

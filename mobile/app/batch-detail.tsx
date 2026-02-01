@@ -42,11 +42,13 @@ export default function BatchDetailScreen() {
   const renderItem = ({ item }: { item: Generation }) => {
     const isPending = item.status === 'pending' || item.status === 'processing';
     
-    // Get style name from style_key
-    const styleName = item.style_key
-      .split('_')
-      .map((word: string) => word.charAt(0).toUpperCase() + word.slice(1))
-      .join(' ');
+    // Get style name from style_key - show "Edited Photo" for edited images
+    const styleName = item.is_edited 
+      ? 'Edited Photo'
+      : item.style_key
+          .split('_')
+          .map((word: string) => word.charAt(0).toUpperCase() + word.slice(1))
+          .join(' ');
     
     return (
       <TouchableOpacity

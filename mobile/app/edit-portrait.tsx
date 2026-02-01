@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -11,6 +11,8 @@ import {
   Platform,
   Alert,
   Dimensions,
+  Keyboard,
+  Animated,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
@@ -32,6 +34,21 @@ export default function EditPortraitScreen() {
   const { credits } = useAppStore();
 
   const [editPrompt, setEditPrompt] = useState('');
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
+
+  useEffect(() => {
+    const keyboardDidShowListener = Keyboard.addListener('keyboardDidShow', () => {
+      setKeyboardVisible(true);
+    });
+    const keyboardDidHideListener = Keyboard.addListener('keyboardDidHide', () => {
+      setKeyboardVisible(false);
+    });
+
+    return () => {
+      keyboardDidShowListener.remove();
+      keyboardDidHideListener.remove();
+    };
+  }, []);
 
   const handleEdit = () => {
     if (!editPrompt.trim()) {
@@ -81,7 +98,7 @@ export default function EditPortraitScreen() {
   ];
 
   return (
-    <SafeAreaView style={styles.container}>
+    <>
       <Stack.Screen
         options={{
           headerShown: true,
@@ -97,12 +114,12 @@ export default function EditPortraitScreen() {
         }}
       />
       
-      <KeyboardAvoidingView 
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.keyboardAvoidingView}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 100 : 0}
+      <ScrollView 
+        style={styles.container}
+        contentContainerStyle={styles.content} 
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
       >
-        <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
           
           {/* Image Preview Section */}
           <View style={styles.imageContainer}>
@@ -129,6 +146,8 @@ export default function EditPortraitScreen() {
                 multiline
                 numberOfLines={3}
                 textAlignVertical="top"
+                returnKeyType="done"
+                blurOnSubmit={true}
               />
               {editPrompt.length > 0 && (
                 <TouchableOpacity 
@@ -157,8 +176,7 @@ export default function EditPortraitScreen() {
             Modifies only what you ask, keeps the rest.
           </Text>
         </View>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+    </>
   );
 }
 
@@ -167,24 +185,22 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#000000',
   },
-  keyboardAvoidingView: {
-    flex: 1,
-  },
   content: {
     padding: 20,
-    paddingBottom: 100, // Space for footer
+    paddingTop: 10,
+    paddingBottom: 120, // Space for footer
   },
   
   // Image Preview
   imageContainer: {
     alignItems: 'center',
-    marginBottom: 24,
+    marginBottom: 20,
     position: 'relative',
   },
   previewImage: {
-    width: width * 0.65,
-    height: width * 0.65 * 1.3,
-    borderRadius: 20,
+    width: width * 0.5,
+    height: width * 0.5 * 1.3,
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: '#1A1A1A',
   },
@@ -206,6 +222,9 @@ const styles = StyleSheet.create({
   // Input
   inputContainer: {
     marginBottom: 20,
+  },
+  inputContainerKeyboardActive: {
+    marginTop: 20,
   },
   label: {
     fontSize: 16,
@@ -231,7 +250,8 @@ const styles = StyleSheet.create({
     paddingRight: 40,
     color: '#FFFFFF',
     fontSize: 16,
-    height: 100,
+    minHeight: 120,
+    maxHeight: 200,
     borderWidth: 1,
     borderColor: '#333333',
   },

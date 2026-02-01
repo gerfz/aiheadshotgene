@@ -287,51 +287,23 @@ export default function GeneratingScreen() {
               <TouchableOpacity
                 style={styles.keepEditedButton}
                 onPress={() => {
-                  // Navigate to result with edited version, using push so back goes to home
-                  router.push({
-                    pathname: '/result',
-                    params: {
-                      generatedUrl: editedResult.generatedImageUrl,
-                      originalUrl: params.originalUrl!,
-                      styleKey: params.styleKey!,
-                      id: editedResult.id,
-                      isEdited: 'true',
-                    },
-                  });
+                  // Navigate to gallery - the edited photo is already saved in the batch
+                  router.push('/gallery');
                 }}
               >
                 <Text style={styles.keepEditedButtonText}>✓ Keep Edited</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
-                style={styles.keepOriginalButton}
+                style={styles.tryAgainButton}
                 onPress={() => {
-                  // Navigate to result with original version
-                  router.push({
-                    pathname: '/result',
-                    params: {
-                      generatedUrl: params.originalGeneratedUrl!,
-                      originalUrl: params.originalUrl!,
-                      styleKey: params.styleKey!,
-                      id: params.originalId!,
-                      isEdited: 'false',
-                    },
-                  });
+                  // Go back to edit screen to try different changes
+                  router.back();
                 }}
               >
-                <Text style={styles.keepOriginalButtonText}>Keep Original</Text>
+                <Text style={styles.tryAgainButtonText}>← Try Different Edits</Text>
               </TouchableOpacity>
             </View>
-
-            <TouchableOpacity
-              style={styles.tryAgainButton}
-              onPress={() => {
-                // Go back to edit screen to try different changes
-                router.back();
-              }}
-            >
-              <Text style={styles.tryAgainButtonText}>← Try Different Edits</Text>
-            </TouchableOpacity>
           </View>
         </SafeAreaView>
       </>

@@ -111,8 +111,11 @@ export default function CategoryDetailScreen() {
       setSelectedImage(result.assets[0].uri);
       analytics.photoUploaded('gallery');
       
-      // Navigate to gallery screen immediately
-      router.push('/gallery');
+      // Navigate to gallery screen with flag indicating new generation
+      router.push({
+        pathname: '/gallery',
+        params: { newGeneration: 'true' }
+      });
       
       // Start batch generation in background
       setTimeout(() => {

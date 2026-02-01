@@ -43,8 +43,8 @@ export default function WelcomeScreen() {
       // Track Complete Registration in TikTok (key conversion event)
       tiktokService.trackCompleteRegistration();
       
-      // Navigate to home page
-      router.replace('/home');
+      // Navigate to subscription screen first
+      router.replace('/subscription');
     }
   };
 

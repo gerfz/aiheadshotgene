@@ -87,7 +87,7 @@ export default function ProfileScreen() {
         options={{ 
           headerShown: true,
           title: 'Settings',
-          headerStyle: { backgroundColor: '#0F172A' },
+          headerStyle: { backgroundColor: '#000000' },
           headerTintColor: '#FFFFFF',
           headerTitleStyle: { fontWeight: '600', fontSize: 20 },
         }} 
@@ -137,7 +137,7 @@ export default function ProfileScreen() {
           <View style={styles.actionsCard}>
             <TouchableOpacity style={styles.actionButton}>
               <View style={styles.actionIconContainer}>
-                <Ionicons name="star" size={24} color="#6366F1" />
+                <Ionicons name="star" size={24} color="#FFFFFF" />
               </View>
               <Text style={styles.actionButtonText}>Rate Us</Text>
               <Ionicons name="chevron-forward" size={20} color="#64748B" />
@@ -147,7 +147,7 @@ export default function ProfileScreen() {
             
             <TouchableOpacity style={styles.actionButton}>
               <View style={styles.actionIconContainer}>
-                <Ionicons name="share-social" size={24} color="#6366F1" />
+                <Ionicons name="share-social" size={24} color="#FFFFFF" />
               </View>
               <Text style={styles.actionButtonText}>Share App</Text>
               <Ionicons name="chevron-forward" size={20} color="#64748B" />
@@ -230,13 +230,6 @@ export default function ProfileScreen() {
             </TouchableOpacity>
           </View>
 
-          {/* Logout Button (if not guest) */}
-          {!isGuest && (
-            <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-              <Text style={styles.logoutButtonText}>Logout</Text>
-            </TouchableOpacity>
-          )}
-
           {/* Sign Up Button (if guest) */}
           {isGuest && (
             <TouchableOpacity style={styles.signUpButton} onPress={handleSignUp}>
@@ -255,7 +248,7 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0F172A',
+    backgroundColor: '#000000',
   },
   content: {
     padding: 20,
@@ -264,7 +257,7 @@ const styles = StyleSheet.create({
   
   // Premium Card
   premiumCard: {
-    backgroundColor: '#6366F1',
+    backgroundColor: '#4F46E5',
     borderRadius: 20,
     padding: 24,
     marginBottom: 20,
@@ -300,7 +293,7 @@ const styles = StyleSheet.create({
   
   // Action Buttons
   actionsCard: {
-    backgroundColor: '#1E293B',
+    backgroundColor: '#1A1A1A',
     borderRadius: 16,
     padding: 4,
     marginBottom: 20,
@@ -315,7 +308,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#0F172A',
+    backgroundColor: '#2A2A2A',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -337,7 +330,7 @@ const styles = StyleSheet.create({
     marginLeft: 4,
   },
   settingsCard: {
-    backgroundColor: '#1E293B',
+    backgroundColor: '#1A1A1A',
     borderRadius: 16,
     padding: 4,
     marginBottom: 20,
@@ -370,7 +363,7 @@ const styles = StyleSheet.create({
   },
   divider: {
     height: 1,
-    backgroundColor: '#334155',
+    backgroundColor: '#2A2A2A',
     marginHorizontal: 16,
   },
   
