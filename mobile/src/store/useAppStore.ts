@@ -23,6 +23,10 @@ interface AppState {
   cachedAllStyles: string[] | null;
   stylesLoadedAt: number | null;
   
+  // Cached batches state
+  cachedBatches: any[] | null;
+  batchesLoadedAt: number | null;
+  
   // Actions
   setUser: (user: User | null) => void;
   setIsLoading: (isLoading: boolean) => void;
@@ -34,6 +38,7 @@ interface AppState {
   setGenerations: (generations: Generation[]) => void;
   setIsGenerating: (isGenerating: boolean) => void;
   setCachedStyles: (categories: any[], allStyles: string[]) => void;
+  setCachedBatches: (batches: any[]) => void;
   reset: () => void;
 }
 
@@ -51,6 +56,8 @@ const initialState = {
   cachedCategories: null,
   cachedAllStyles: null,
   stylesLoadedAt: null,
+  cachedBatches: null,
+  batchesLoadedAt: null,
 };
 
 export const useAppStore = create<AppState>((set, get) => ({
@@ -81,6 +88,11 @@ export const useAppStore = create<AppState>((set, get) => ({
     cachedCategories: categories,
     cachedAllStyles: allStyles,
     stylesLoadedAt: Date.now()
+  }),
+  
+  setCachedBatches: (batches) => set({
+    cachedBatches: batches,
+    batchesLoadedAt: Date.now()
   }),
   
   reset: () => set(initialState),

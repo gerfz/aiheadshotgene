@@ -149,6 +149,20 @@ router.post(
         
         const remainingCredits = creditResult[0].remaining_credits;
         console.log(`💰 [CREDITS USED] User: ${userId.slice(0, 8)}... | Cost: ${creditCost} | Remaining: ${remainingCredits}`);
+        
+        // Sync credits across device_id after deduction
+        const { data: userProfile } = await require('../services/supabase').supabaseAdmin
+          .from('profiles')
+          .select('device_id')
+          .eq('id', userId)
+          .single();
+        
+        if (userProfile?.device_id) {
+          await require('../services/supabase').supabaseAdmin
+            .from('profiles')
+            .update({ total_credits: remainingCredits })
+            .eq('device_id', userProfile.device_id);
+        }
       } catch (creditError: any) {
         console.log(`❌ [GENERATE FAILED] User: ${userId.slice(0, 8)}... | Reason: Credit deduction failed - ${creditError.message}`);
         
@@ -361,6 +375,20 @@ router.post(
       if (decrementError || !decrementResult || !decrementResult[0]?.success) {
         console.log(`❌ [BATCH GENERATE FAILED] User: ${userId.slice(0, 8)}... | Credit deduction failed`);
         return res.status(402).json({ error: 'Insufficient credits' });
+      }
+
+      // Sync credits across device_id after deduction
+      const { data: userProfile } = await supabaseAdmin
+        .from('profiles')
+        .select('device_id, total_credits')
+        .eq('id', userId)
+        .single();
+      
+      if (userProfile?.device_id) {
+        await supabaseAdmin
+          .from('profiles')
+          .update({ total_credits: decrementResult[0].remaining_credits })
+          .eq('device_id', userProfile.device_id);
       }
 
       // Upload original image once

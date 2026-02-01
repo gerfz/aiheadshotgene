@@ -22,14 +22,17 @@ const GAP = 16;
 const imageSize = (width - PADDING * 2 - GAP) / 2; // 2 columns with gap
 
 export default function GalleryScreen() {
-  const [batches, setBatches] = useState<GenerationBatch[]>([]);
+  const { cachedBatches, setCachedBatches } = useAppStore();
+  const [batches, setBatches] = useState<GenerationBatch[]>(cachedBatches || []);
   const [refreshing, setRefreshing] = useState(false);
-  const [initialLoading, setInitialLoading] = useState(true);
+  const [initialLoading, setInitialLoading] = useState(!cachedBatches);
 
   const loadBatches = async () => {
     try {
       const batchesData = await getBatches();
-      setBatches(Array.isArray(batchesData.batches) ? batchesData.batches : []);
+      const batchesArray = Array.isArray(batchesData.batches) ? batchesData.batches : [];
+      setBatches(batchesArray);
+      setCachedBatches(batchesArray); // Cache the batches
       setInitialLoading(false);
     } catch (error) {
       console.error('Failed to load batches:', error);
