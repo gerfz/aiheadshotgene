@@ -355,7 +355,14 @@ router.post(
       }
 
       // Upload original image once
-      const originalImageUrl = await uploadImage(file.buffer, userId, 'original');
+      const folderPath = userId;
+      const originalFileName = `${folderPath}/${uuidv4()}-original.${file.mimetype.split('/')[1]}`;
+      const originalImageUrl = await uploadImage(
+        'portraits',
+        originalFileName,
+        file.buffer,
+        file.mimetype
+      );
 
       // Create batch record
       const { data: batch, error: batchError } = await supabaseAdmin
@@ -380,26 +387,41 @@ router.post(
       const generationPromises = styleKeys.map(async (styleKey: string) => {
         const generationId = uuidv4();
         
-        // Create generation record
-        await createGeneration({
-          id: generationId,
-          userId,
-          guestDeviceId: null,
-          styleKey,
-          originalImageUrl,
-          batchId: batch.id
-        });
+        // Create generation record manually (createGeneration doesn't support batch_id)
+        await supabaseAdmin
+          .from('generations')
+          .insert({
+            id: generationId,
+            user_id: userId,
+            guest_device_id: null,
+            style_key: styleKey,
+            original_image_url: originalImageUrl,
+            status: 'pending',
+            batch_id: batch.id
+          });
 
         // Increment style usage
         await incrementStyleUsage(styleKey);
 
         // Start generation asynchronously (don't await)
-        generatePortrait(originalImageUrl, styleKey, null)
-          .then(async (result) => {
+        // Convert image URL to base64 for nanoBanana API
+        fetch(originalImageUrl)
+          .then(res => res.arrayBuffer())
+          .then(buffer => Buffer.from(buffer).toString('base64'))
+          .then(async (imageBase64) => {
+            // Generate portrait
+            const generatedImageUrl = await generatePortrait(
+              imageBase64,
+              styleKey,
+              file.mimetype
+            );
+            
+            // Update generation with result
             await updateGeneration(generationId, {
-              generatedImageUrl: result.generatedImageUrl,
+              generated_image_url: generatedImageUrl,
               status: 'completed'
             });
+            
             console.log(`✅ [BATCH ITEM COMPLETED] Batch: ${batch.id} | Style: ${styleKey}`);
           })
           .catch(async (error) => {
