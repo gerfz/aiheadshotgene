@@ -45,7 +45,7 @@ export function CreditsHeader({ showHistory = true, onHistoryPress }: CreditsHea
       </TouchableOpacity>
 
       {/* Center: App Title */}
-      <Text style={styles.title}>AI Headshot Studio</Text>
+      <Text style={styles.title}>Act</Text>
 
       {/* Right: History Button */}
       {showHistory && (

@@ -1,8 +1,8 @@
 {
   "expo": {
-    "name": "AI Headshot Generator & Studio",
+    "name": "Act: AI Headshot Generator",
     "slug": "ai-portrait-studio",
-    "version": "1.5.1",
+    "version": "1.5.2",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
@@ -23,7 +23,7 @@
     "android": {
       "icon": "./assets/icon.png",
       "package": "com.aiportrait.studio",
-      "versionCode": 82,
+      "versionCode": 84,
       "permissions": [
         "android.permission.READ_EXTERNAL_STORAGE",
         "android.permission.WRITE_EXTERNAL_STORAGE",
@@ -73,8 +73,8 @@
       [
         "expo-media-library",
         {
-          "photosPermission": "Allow AI Portrait Studio to access your photos to save generated portraits.",
-          "savePhotosPermission": "Allow AI Portrait Studio to save photos to your gallery.",
+          "photosPermission": "Allow Act to access your photos to save generated portraits.",
+          "savePhotosPermission": "Allow Act to save photos to your gallery.",
           "isAccessMediaLocationEnabled": false,
           "legacyExternalStorage": false
         }
@@ -82,8 +82,8 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "Allow AI Portrait Studio to access your photos to upload for portrait generation.",
-          "cameraPermission": "Allow AI Portrait Studio to take photos for portrait generation."
+          "photosPermission": "Allow Act to access your photos to upload for portrait generation.",
+          "cameraPermission": "Allow Act to take photos for portrait generation."
         }
       ]
     ],

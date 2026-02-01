@@ -8,7 +8,7 @@ interface LoadingScreenProps {
 }
 
 const LOADING_MESSAGES = [
-  'Initializing AI Studio...',
+  'Initializing Act...',
   'Loading your workspace...',
   'Preparing magic...',
   'Almost ready...',

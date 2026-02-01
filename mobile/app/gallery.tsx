@@ -86,21 +86,33 @@ export default function GalleryScreen() {
     // Load batches immediately when screen mounts
     loadBatches();
     
-    // Set up auto-refresh interval (always running)
-    const interval = setInterval(() => {
-      loadBatches();
-    }, 3000);
-
     // Hide dummy processing after 10 seconds max (in case API is slow)
     const dummyTimeout = setTimeout(() => {
       setShowDummyProcessing(false);
     }, 10000);
 
     return () => {
-      clearInterval(interval);
       clearTimeout(dummyTimeout);
     };
   }, []);
+
+  // Auto-refresh only when there are pending batches
+  useEffect(() => {
+    const hasPending = batches.some(b => b.status === 'pending' || b.status === 'processing');
+    
+    if (!hasPending) {
+      return; // No pending batches, don't set up interval
+    }
+
+    // Set up auto-refresh interval only for pending batches
+    const interval = setInterval(() => {
+      loadBatches();
+    }, 3000);
+
+    return () => {
+      clearInterval(interval);
+    };
+  }, [batches]); // Re-run when batches change
 
   const onRefresh = async () => {
     setRefreshing(true);
