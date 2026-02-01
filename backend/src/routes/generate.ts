@@ -130,8 +130,32 @@ router.post(
         ? req.body.originalStyleKey 
         : styleKey;
       
+      // Create a batch for the edited photo (so it shows in history)
+      let batchId = null;
+      if (isEdited) {
+        const { data: batch, error: batchError } = await supabaseAdmin
+          .from('generation_batches')
+          .insert({
+            user_id: userId,
+            original_image_url: originalImageUrl,
+            status: 'processing',
+            total_count: 1,
+            completed_count: 0,
+          })
+          .select()
+          .single();
+        
+        if (batchError) {
+          console.log(`❌ [BATCH CREATE FAILED] User: ${userId.slice(0, 8)}... | Error: ${batchError.message}`);
+          throw new Error('Failed to create batch for edited photo');
+        }
+        
+        batchId = batch.id;
+        console.log(`📦 [BATCH CREATED] User: ${userId.slice(0, 8)}... | Batch ID: ${batchId}`);
+      }
+      
       // Create generation record with 'queued' status
-      const generation = await createGeneration(userId, actualStyleKey, originalImageUrl, customPrompt, isEdited);
+      const generation = await createGeneration(userId, actualStyleKey, originalImageUrl, customPrompt, isEdited, batchId);
 
       // Decrement credits using new v2 function with specific cost
       try {

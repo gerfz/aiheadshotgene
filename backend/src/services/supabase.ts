@@ -102,7 +102,8 @@ export async function createGeneration(
   styleKey: string,
   originalImageUrl: string,
   customPrompt?: string,
-  isEdited: boolean = false
+  isEdited: boolean = false,
+  batchId?: string | null
 ) {
   const insertData: any = {
     user_id: userId,
@@ -114,6 +115,10 @@ export async function createGeneration(
 
   if (customPrompt) {
     insertData.custom_prompt = customPrompt;
+  }
+
+  if (batchId) {
+    insertData.batch_id = batchId;
   }
 
   const { data, error } = await supabaseAdmin
