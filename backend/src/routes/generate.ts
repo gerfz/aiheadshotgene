@@ -313,8 +313,17 @@ router.post(
     const userId = req.userId!;
     
     try {
-      const { styleKeys } = req.body; // Array of style keys
+      let styleKeys = req.body.styleKeys;
       const file = req.file;
+
+      // Parse styleKeys if it's a JSON string
+      if (typeof styleKeys === 'string') {
+        try {
+          styleKeys = JSON.parse(styleKeys);
+        } catch (e) {
+          return res.status(400).json({ error: 'Invalid styleKeys format' });
+        }
+      }
 
       console.log(`📝 [BATCH GENERATE REQUEST] User: ${userId.slice(0, 8)}... | Styles: ${styleKeys}`);
 
