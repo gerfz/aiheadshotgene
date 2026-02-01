@@ -194,7 +194,7 @@ router.post(
       // Get the user's profile
       const { data: profile, error: profileError } = await supabaseAdmin
         .from('profiles')
-        .select('device_id, is_trial_active, total_credits')
+        .select('device_id, is_trial_active, total_credits, is_subscribed')
         .eq('id', userId)
         .single();
 
@@ -211,7 +211,7 @@ router.post(
         // Weekly renewal: add 3000 credits
         creditsToAdd = 3000;
         console.log(`🔄 Weekly renewal for user ${userId}: adding ${creditsToAdd} credits`);
-      } else if (isSubscribed && !profile.is_subscribed) {
+      } else if (isSubscribed && !profile?.is_subscribed) {
         // New subscription (not from trial): add 3000 credits
         creditsToAdd = 3000;
         console.log(`✨ New subscription for user ${userId}: adding ${creditsToAdd} credits`);

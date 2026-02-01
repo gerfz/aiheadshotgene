@@ -140,7 +140,7 @@ const STATIC_CATEGORIES = [
 type ViewMode = 'categories' | 'all';
 
 export default function HomeScreen() {
-  const { selectedStyle, setSelectedStyle, customPrompt, setCustomPrompt, credits, setSelectedImage } = useAppStore();
+  const { selectedStyle, setSelectedStyle, customPrompt, setCustomPrompt, credits, setSelectedImage, setCredits } = useAppStore();
   const [categories, setCategories] = useState(STATIC_CATEGORIES);
   const [loading, setLoading] = useState(true);
   const [showCustomPrompt, setShowCustomPrompt] = useState(false);
@@ -150,7 +150,20 @@ export default function HomeScreen() {
   // Load most used styles on mount
   useEffect(() => {
     loadMostUsedStyles();
+    // Debug: Refresh credits on mount
+    refreshCredits();
   }, []);
+
+  const refreshCredits = async () => {
+    try {
+      const { getCredits } = await import('../src/services/api');
+      const creditsData = await getCredits();
+      console.log('🔄 Credits refreshed from API:', creditsData);
+      setCredits(creditsData);
+    } catch (error) {
+      console.error('❌ Failed to refresh credits:', error);
+    }
+  };
 
   const loadMostUsedStyles = async () => {
     try {
