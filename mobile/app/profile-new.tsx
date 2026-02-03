@@ -8,16 +8,26 @@ import {
   RefreshControl,
   Alert,
   Linking,
+  Share,
 } from 'react-native';
+import * as Clipboard from 'expo-clipboard';
+import * as Application from 'expo-application';
 import { router, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAppStore } from '../src/store/useAppStore';
 import { signOut } from '../src/services/supabase';
 import { getCredits, getGenerations } from '../src/services/api';
+import { restorePurchases, checkProStatus } from '../src/services/purchases';
+import { FeedbackModal } from '../src/components/FeedbackModal';
+import { trackEvent } from '../src/services/posthog';
 
 export default function ProfileScreen() {
   const { user, setUser, credits, setCredits, isGuest, generations, setGenerations } = useAppStore();
   const [refreshing, setRefreshing] = useState(false);
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
+
+  // Define userId early so it can be used in functions
+  const userId = user?.id?.slice(0, 13) || 'guest';
 
   const refreshData = async () => {
     setRefreshing(true);
@@ -72,18 +82,129 @@ export default function ProfileScreen() {
   };
 
   const handleContactUs = () => {
-    Linking.openURL('mailto:support@aiportrait.app');
+    // Track feedback request
+    trackEvent('feedback_requested', {
+      source: 'profile_contact_us',
+    });
+    
+    // Show feedback modal
+    setShowFeedbackModal(true);
   };
 
   const handlePrivacyPolicy = () => {
-    Linking.openURL('https://aiportraitapp.netlify.app/');
+    router.push('/privacy-policy');
+  };
+
+  const handleTermsOfUse = () => {
+    router.push('/terms-of-use');
+  };
+
+  const handleRateUs = async () => {
+    try {
+      const packageName = Application.applicationId || 'com.aiportrait.studio';
+      const playStoreUrl = `market://details?id=${packageName}`;
+      const webUrl = `https://play.google.com/store/apps/details?id=${packageName}`;
+      
+      // Try to open Play Store app first
+      const canOpen = await Linking.canOpenURL(playStoreUrl);
+      if (canOpen) {
+        await Linking.openURL(playStoreUrl);
+      } else {
+        // Fallback to web browser
+        await Linking.openURL(webUrl);
+      }
+    } catch (error) {
+      console.error('Failed to open Play Store:', error);
+      Alert.alert('Error', 'Could not open Play Store');
+    }
+  };
+
+  const handleShareApp = async () => {
+    try {
+      const packageName = Application.applicationId || 'com.aiportrait.studio';
+      const shareUrl = `https://play.google.com/store/apps/details?id=${packageName}`;
+      const message = `Check out Act! Create stunning professional portraits with AI.\n\n${shareUrl}`;
+      
+      // Use the Share API
+      await Share.share({
+        message: message,
+        title: 'Act',
+      });
+    } catch (error) {
+      console.error('Failed to share app:', error);
+    }
+  };
+
+  const handleCopyUserId = async () => {
+    try {
+      await Clipboard.setStringAsync(userId);
+      Alert.alert('Copied!', 'User ID copied to clipboard');
+    } catch (error) {
+      console.error('Failed to copy:', error);
+      Alert.alert('Error', 'Failed to copy User ID');
+    }
+  };
+
+  const handleRestorePurchases = async () => {
+    try {
+      setRefreshing(true);
+      
+      // Restore purchases from Google Play
+      const customerInfo = await restorePurchases();
+      
+      if (!customerInfo) {
+        Alert.alert('Error', 'Failed to restore purchases. Please try again.');
+        return;
+      }
+      
+      // Check if user has active subscription
+      const isPro = await checkProStatus();
+      
+      if (isPro) {
+        // Update subscription status in backend
+        try {
+          const response = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/api/user/subscription`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${user?.id}`,
+            },
+            body: JSON.stringify({ isSubscribed: true }),
+          });
+          
+          if (response.ok) {
+            // Refresh credits to show updated subscription status
+            const creditsData = await getCredits();
+            setCredits(creditsData);
+            
+            Alert.alert(
+              '✅ Subscription Restored!',
+              'Your subscription has been successfully restored.',
+              [{ text: 'OK' }]
+            );
+          }
+        } catch (error) {
+          console.error('Failed to update subscription status:', error);
+          Alert.alert('⚠️ Partially Restored', 'Subscription found but failed to sync. Please restart the app.');
+        }
+      } else {
+        Alert.alert(
+          'No Subscription Found',
+          'No active subscription was found for this account. If you recently purchased, please wait a few minutes and try again.',
+          [{ text: 'OK' }]
+        );
+      }
+    } catch (error) {
+      console.error('Failed to restore purchases:', error);
+      Alert.alert('Error', 'Failed to restore purchases. Please check your internet connection and try again.');
+    } finally {
+      setRefreshing(false);
+    }
   };
 
   const completedCount = Array.isArray(generations) 
     ? generations.filter(g => g.status === 'completed').length 
     : 0;
-
-  const userId = user?.id?.slice(0, 13) || 'guest';
 
   return (
     <>
@@ -128,7 +249,7 @@ export default function ProfileScreen() {
 
           {/* Action Buttons */}
           <View style={styles.actionsCard}>
-            <TouchableOpacity style={styles.actionButton}>
+            <TouchableOpacity style={styles.actionButton} onPress={handleRateUs}>
               <View style={styles.actionIconContainer}>
                 <Ionicons name="star" size={24} color="#FFFFFF" />
               </View>
@@ -138,7 +259,7 @@ export default function ProfileScreen() {
             
             <View style={styles.divider} />
             
-            <TouchableOpacity style={styles.actionButton}>
+            <TouchableOpacity style={styles.actionButton} onPress={handleShareApp}>
               <View style={styles.actionIconContainer}>
                 <Ionicons name="share-social" size={24} color="#FFFFFF" />
               </View>
@@ -181,26 +302,26 @@ export default function ProfileScreen() {
             
             <View style={styles.divider} />
             
-            <TouchableOpacity style={styles.settingRow}>
+            <TouchableOpacity style={styles.settingRow} onPress={handleTermsOfUse}>
               <View style={styles.settingLeft}>
                 <Ionicons name="document-text" size={24} color="#FFFFFF" />
-                <Text style={styles.settingText}>Terms of use</Text>
+                <Text style={styles.settingText}>Terms of Use</Text>
               </View>
               <Ionicons name="chevron-forward" size={20} color="#64748B" />
             </TouchableOpacity>
             
             <View style={styles.divider} />
             
-            <View style={styles.settingRow}>
+            <TouchableOpacity style={styles.settingRow} onPress={handleCopyUserId}>
               <View style={styles.settingLeft}>
                 <Ionicons name="person" size={24} color="#FFFFFF" />
-                <Text style={styles.settingText}>User Id</Text>
+                <Text style={styles.settingText}>User ID</Text>
               </View>
               <View style={styles.userIdContainer}>
                 <Text style={styles.userIdText}>{userId}</Text>
                 <Ionicons name="copy" size={16} color="#64748B" />
               </View>
-            </View>
+            </TouchableOpacity>
             
             <View style={styles.divider} />
             
@@ -214,17 +335,7 @@ export default function ProfileScreen() {
             
             <View style={styles.divider} />
             
-            <TouchableOpacity style={styles.settingRow}>
-              <View style={styles.settingLeft}>
-                <Ionicons name="refresh" size={24} color="#FFFFFF" />
-                <Text style={styles.settingText}>Format App</Text>
-              </View>
-              <Ionicons name="chevron-forward" size={20} color="#64748B" />
-            </TouchableOpacity>
-            
-            <View style={styles.divider} />
-            
-            <TouchableOpacity style={styles.settingRow}>
+            <TouchableOpacity style={styles.settingRow} onPress={handleRestorePurchases}>
               <View style={styles.settingLeft}>
                 <Ionicons name="reload" size={24} color="#FFFFFF" />
                 <Text style={styles.settingText}>Restore Subscriptions</Text>
@@ -243,6 +354,13 @@ export default function ProfileScreen() {
           {/* Version */}
           <Text style={styles.version}>1.3.0 (81)</Text>
         </ScrollView>
+
+        {/* Feedback Modal */}
+        <FeedbackModal
+          visible={showFeedbackModal}
+          onClose={() => setShowFeedbackModal(false)}
+          userId={user?.id}
+        />
       </View>
     </>
   );

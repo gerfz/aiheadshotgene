@@ -20,7 +20,7 @@ export default function TermsOfUseScreen() {
       />
       <SafeAreaView style={styles.container}>
         <ScrollView contentContainerStyle={styles.content}>
-          <Text style={styles.lastUpdated}>Last Updated: December 26, 2024</Text>
+          <Text style={styles.lastUpdated}>Last Updated: February 3, 2026</Text>
 
           <Text style={styles.sectionTitle}>1. Acceptance of Terms</Text>
           <Text style={styles.paragraph}>
@@ -114,7 +114,7 @@ export default function TermsOfUseScreen() {
 
           <Text style={styles.sectionTitle}>14. Contact</Text>
           <Text style={styles.paragraph}>
-            For questions about these terms, please contact us through the app's Contact Us page.
+            For questions about these terms, please contact us at support@aigen.com or through the app's Contact Us page.
           </Text>
         </ScrollView>
       </SafeAreaView>

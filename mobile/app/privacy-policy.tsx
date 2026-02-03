@@ -20,7 +20,7 @@ export default function PrivacyPolicyScreen() {
       />
       <SafeAreaView style={styles.container}>
         <ScrollView contentContainerStyle={styles.content}>
-          <Text style={styles.lastUpdated}>Last Updated: December 26, 2024</Text>
+          <Text style={styles.lastUpdated}>Last Updated: February 3, 2026</Text>
 
           <Text style={styles.sectionTitle}>1. Information We Collect</Text>
           <Text style={styles.paragraph}>
@@ -85,7 +85,7 @@ export default function PrivacyPolicyScreen() {
 
           <Text style={styles.sectionTitle}>10. Contact Us</Text>
           <Text style={styles.paragraph}>
-            If you have questions about this privacy policy, please contact us through the app's Contact Us page.
+            If you have questions about this privacy policy, please contact us at support@aigen.com or through the app's Contact Us page.
           </Text>
         </ScrollView>
       </SafeAreaView>

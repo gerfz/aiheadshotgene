@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
-import posthog from '../services/posthog';
+import { trackEvent } from '../services/posthog';
 
 interface FeedbackModalProps {
   visible: boolean;
@@ -46,7 +46,7 @@ export function FeedbackModal({ visible, onClose, userId }: FeedbackModalProps) 
       console.log('📝 Submitting feedback to PostHog:', feedbackData);
 
       // Send feedback to PostHog
-      posthog.capture('feedback_submitted', feedbackData);
+      trackEvent('feedback_submitted', feedbackData);
 
       console.log('✅ Feedback submitted successfully');
 
@@ -68,7 +68,7 @@ export function FeedbackModal({ visible, onClose, userId }: FeedbackModalProps) 
       console.error('Failed to submit feedback:', error);
       Alert.alert(
         'Error',
-        'Failed to submit feedback. Please try again or email us at support@aiportrait.app'
+        'Failed to submit feedback. Please try again or email us at support@aigen.com'
       );
     } finally {
       setIsSubmitting(false);

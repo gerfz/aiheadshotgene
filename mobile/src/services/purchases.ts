@@ -243,35 +243,77 @@ export async function getCreditPackOfferings(): Promise<PurchasesPackage[]> {
     
     console.log('💳 RevenueCat Credit Pack Offerings:', {
       all: Object.keys(offerings.all),
+      current: offerings.current?.identifier,
+      currentPackages: offerings.current?.availablePackages.length || 0,
     });
     
-    // Look for credit pack offerings (could be in a separate offering or mixed with subscriptions)
+    // Log all available packages for debugging
+    if (offerings.current) {
+      console.log('📦 Current offering packages:', offerings.current.availablePackages.map(p => ({
+        identifier: p.identifier,
+        productId: p.product.identifier,
+        productType: p.product.productType,
+      })));
+    }
+    
+    // Log all offerings
+    Object.entries(offerings.all).forEach(([key, offering]) => {
+      console.log(`📦 Offering "${key}":`, offering.availablePackages.map(p => ({
+        identifier: p.identifier,
+        productId: p.product.identifier,
+        productType: p.product.productType,
+      })));
+    });
+    
+    // Look for credit pack offerings
     let creditPacks: PurchasesPackage[] = [];
     
-    // Check current offering for credit packs
-    if (offerings.current) {
+    // First, try to find a dedicated "credits" or "credit_packs" offering
+    const creditsOffering = offerings.all['credits'] || offerings.all['credit_packs'];
+    if (creditsOffering) {
+      console.log('🔍 Found dedicated credits offering');
+      creditPacks = creditsOffering.availablePackages;
+    }
+    
+    // If no dedicated offering, check current offering for credit packs
+    if (creditPacks.length === 0 && offerings.current) {
+      console.log('🔍 Checking current offering for credit packs...');
       creditPacks = offerings.current.availablePackages.filter(pkg => 
         pkg.product.identifier.includes('credits') || 
         pkg.identifier.includes('credits')
       );
+      console.log(`🔍 Found ${creditPacks.length} credit packs in current offering`);
     }
     
-    // If no credit packs found in current, check all offerings
+    // If still no credit packs found, check all offerings
     if (creditPacks.length === 0) {
-      Object.values(offerings.all).forEach(offering => {
+      console.log('🔍 No credit packs found yet, checking all offerings...');
+      Object.entries(offerings.all).forEach(([key, offering]) => {
         const packs = offering.availablePackages.filter(pkg => 
           pkg.product.identifier.includes('credits') || 
           pkg.identifier.includes('credits')
         );
+        if (packs.length > 0) {
+          console.log(`🔍 Found ${packs.length} credit packs in offering "${key}"`);
+        }
         creditPacks = [...creditPacks, ...packs];
       });
     }
     
-    console.log('✅ Available credit packs:', creditPacks.map(p => ({
-      identifier: p.identifier,
-      product: p.product.identifier,
-      price: p.product.priceString
-    })));
+    if (creditPacks.length === 0) {
+      console.warn('⚠️ No credit packs found in any offering!');
+      console.warn('⚠️ Make sure:');
+      console.warn('  1. Products are created in Google Play Console (5000credits, 15000credits, 50000credits)');
+      console.warn('  2. Products are imported/synced to RevenueCat');
+      console.warn('  3. Products are added to an Offering in RevenueCat');
+      console.warn('  4. The offering is published');
+    } else {
+      console.log('✅ Available credit packs:', creditPacks.map(p => ({
+        identifier: p.identifier,
+        product: p.product.identifier,
+        price: p.product.priceString
+      })));
+    }
     
     return creditPacks;
   } catch (error) {
