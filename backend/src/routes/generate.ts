@@ -459,7 +459,7 @@ router.post(
             style_key: styleKey,
             original_image_url: originalImageUrl,
             custom_prompt: styleKey === 'custom' ? customPrompt : null,
-            status: 'queued',
+            status: 'pending',
             batch_id: batch.id
           });
 
