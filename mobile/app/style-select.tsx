@@ -188,6 +188,7 @@ export default function StyleSelectScreen() {
   };
 
   const handleStyleSelect = useCallback((styleKey: string) => {
+    console.log('Selected style:', styleKey);
     setSelectedStyle(styleKey);
     
     // Track style selection
@@ -197,6 +198,7 @@ export default function StyleSelectScreen() {
     // Show custom prompt input if custom style is selected
     if (styleKey === 'custom') {
       setShowCustomPrompt(true);
+      console.log('Custom style selected, showing prompt input');
     } else {
       setShowCustomPrompt(false);
       // Clear custom prompt when selecting a non-custom style
@@ -205,31 +207,37 @@ export default function StyleSelectScreen() {
   }, [setSelectedStyle, setCustomPrompt, categories]);
 
   const handleContinue = useCallback(async () => {
-    if (selectedStyle) {
-      // Check if user is authenticated before proceeding
-      try {
-        const session = await getSession();
-        if (!session) {
-          Alert.alert(
-            'Session Error',
-            'Please restart the app to continue.',
-            [{ text: 'OK' }]
-          );
-          return;
-        }
-      } catch (error) {
-        console.error('❌ Failed to check session:', error);
+    if (!selectedStyle) return;
+    
+    // For custom style, require custom prompt
+    if (selectedStyle === 'custom' && (!customPrompt || customPrompt.trim().length === 0)) {
+      Alert.alert('Custom Prompt Required', 'Please enter a description for your custom portrait.');
+      return;
+    }
+    
+    // Check if user is authenticated before proceeding
+    try {
+      const session = await getSession();
+      if (!session) {
         Alert.alert(
-          'Connection Error',
-          'Please check your internet connection and try again.',
+          'Session Error',
+          'Please restart the app to continue.',
           [{ text: 'OK' }]
         );
         return;
       }
-      
-      router.push('/generating');
+    } catch (error) {
+      console.error('❌ Failed to check session:', error);
+      Alert.alert(
+        'Connection Error',
+        'Please check your internet connection and try again.',
+        [{ text: 'OK' }]
+      );
+      return;
     }
-  }, [selectedStyle]);
+    
+    router.push('/generating');
+  }, [selectedStyle, customPrompt]);
 
   const handleCategoryPress = useCallback((categoryId: string) => {
     // Toggle: if clicking the active category, deselect it
@@ -357,7 +365,7 @@ export default function StyleSelectScreen() {
             </ScrollView>
 
             {/* Custom Prompt Input - Show when custom style is selected */}
-            {showCustomPrompt && selectedStyle === 'custom' && (
+            {selectedStyle === 'custom' && (
               <View style={styles.customPromptContainer}>
                 <View style={styles.customPromptHeader}>
                   <Ionicons name="create-outline" size={24} color="#6366F1" />
@@ -365,35 +373,49 @@ export default function StyleSelectScreen() {
                 </View>
                 <TextInput
                   style={styles.customPromptInput}
-                  placeholder="E.g., Professional headshot in a modern office, wearing a navy suit..."
+                  placeholder="E.g., with bunny ears, professional headshot, modern office..."
                   placeholderTextColor="#64748B"
                   multiline
                   numberOfLines={4}
                   value={customPrompt || ''}
-                  onChangeText={setCustomPrompt}
+                  onChangeText={(text) => {
+                    console.log('Custom prompt changed:', text);
+                    setCustomPrompt(text);
+                  }}
                   textAlignVertical="top"
+                  autoFocus
                 />
                 <Text style={styles.customPromptHint}>
-                  💡 Tip: Be specific about clothing, background, lighting, and mood
+                  💡 Tip: Be specific about what you want to see in your portrait
                 </Text>
               </View>
             )}
 
             {/* Continue Button - Only show when style is selected */}
-            {selectedStyle && (
-              <View style={styles.footer}>
-                <TouchableOpacity
-                  style={[
-                    styles.continueButton,
-                    selectedStyle === 'custom' && (!customPrompt || customPrompt.trim().length === 0) && styles.continueButtonDisabled
-                  ]}
-                  onPress={handleContinue}
-                  disabled={selectedStyle === 'custom' && (!customPrompt || customPrompt.trim().length === 0)}
-                >
-                  <Text style={styles.continueButtonText}>Continue</Text>
-                </TouchableOpacity>
-              </View>
-            )}
+            {selectedStyle && (() => {
+              const isCustom = selectedStyle === 'custom';
+              const hasPrompt = customPrompt && customPrompt.trim().length > 0;
+              const isDisabled = isCustom && !hasPrompt;
+              
+              console.log('Button render - selectedStyle:', selectedStyle, 'customPrompt:', customPrompt, 'isDisabled:', isDisabled);
+              
+              return (
+                <View style={styles.footer}>
+                  <TouchableOpacity
+                    style={[
+                      styles.continueButton,
+                      isDisabled && styles.continueButtonDisabled
+                    ]}
+                    onPress={handleContinue}
+                    disabled={isDisabled}
+                  >
+                    <Text style={styles.continueButtonText}>
+                      {isDisabled ? 'Enter prompt to continue' : 'Continue'}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              );
+            })()}
           </>
         )}
       </SafeAreaView>

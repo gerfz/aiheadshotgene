@@ -417,71 +417,64 @@ export default function SubscriptionScreen() {
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.contentContainer}>
           
-          {/* Header */}
-          <View style={styles.header}>
-            <TouchableOpacity 
-              style={styles.closeButton} 
-              onPress={async () => {
-                // Clear the subscription flag
-                await SecureStore.deleteItemAsync(SHOW_SUBSCRIPTION_KEY);
-                
-                // Always navigate to home screen when closing subscription
-                router.replace('/home');
-              }}
-              hitSlop={{ top: 20, bottom: 20, left: 20, right: 20 }}
-            >
-              <Ionicons name="close" size={24} color="#FFFFFF" opacity={0.8} />
-            </TouchableOpacity>
-            
-            <View style={styles.titleContainer}>
-              <Text style={styles.title}>Unlock <Text style={styles.titleHighlight}>Pro Access</Text></Text>
-            </View>
-          </View>
+          {/* Close Button - top right */}
+          <TouchableOpacity 
+            style={styles.closeButton} 
+            onPress={async () => {
+              // Clear the subscription flag
+              await SecureStore.deleteItemAsync(SHOW_SUBSCRIPTION_KEY);
+              
+              // Always navigate to home screen when closing subscription
+              router.replace('/home');
+            }}
+            hitSlop={{ top: 20, bottom: 20, left: 20, right: 20 }}
+          >
+            <Ionicons name="close" size={20} color="#FFFFFF" opacity={0.4} />
+          </TouchableOpacity>
 
-          {/* Infographics / Feature Boxes */}
-          <View style={styles.featuresContainer}>
-            <View style={styles.featureBox}>
-              <View style={styles.featureIcon}>
-                <Ionicons name="infinite" size={24} color="#6366F1" />
+          {/* Spacer to push content down */}
+          <View style={styles.spacer} />
+
+          {/* Plans section removed - price shows on button instead */}
+
+          {/* Bottom Action */}
+          <View style={styles.bottomSection}>
+            {/* Title - moved above features */}
+            <Text style={styles.title}>Become Pro</Text>
+
+            {/* Compact Feature Tags - moved to bottom */}
+            <View style={styles.featureTagsContainer}>
+              <View style={styles.featureTag}>
+                <Ionicons name="person" size={14} color="#FFFFFF" />
+                <Text style={styles.featureTagText}>AI Profiles</Text>
               </View>
-              <View style={styles.featureTextContainer}>
-                <Text style={styles.featureTitle}>Unlimited Generations</Text>
-                <Text style={styles.featureDescription}>Create as many portraits as you want</Text>
+              <View style={styles.featureTag}>
+                <Ionicons name="book" size={14} color="#FFFFFF" />
+                <Text style={styles.featureTagText}>Personalized looks</Text>
+              </View>
+              <View style={styles.featureTag}>
+                <Ionicons name="checkmark-circle" size={14} color="#FFFFFF" />
+                <Text style={styles.featureTagText}>Realistic results</Text>
+              </View>
+              <View style={styles.featureTag}>
+                <Ionicons name="star" size={14} color="#FFFFFF" />
+                <Text style={styles.featureTagText}>Stunning collections</Text>
+              </View>
+              <View style={styles.featureTag}>
+                <Ionicons name="color-wand" size={14} color="#FFFFFF" />
+                <Text style={styles.featureTagText}>Custom prompts</Text>
+              </View>
+              <View style={styles.featureTag}>
+                <Ionicons name="brush" size={14} color="#FFFFFF" />
+                <Text style={styles.featureTagText}>Custom styles</Text>
+              </View>
+              <View style={styles.featureTag}>
+                <Ionicons name="create" size={14} color="#FFFFFF" />
+                <Text style={styles.featureTagText}>Edit feature</Text>
               </View>
             </View>
 
-            <View style={styles.featureBox}>
-              <View style={styles.featureIcon}>
-                <Ionicons name="color-wand" size={24} color="#6366F1" />
-              </View>
-              <View style={styles.featureTextContainer}>
-                <Text style={styles.featureTitle}>Custom Style Prompts</Text>
-                <Text style={styles.featureDescription}>Write your own unique prompts</Text>
-              </View>
-            </View>
-
-            <View style={styles.featureBox}>
-              <View style={styles.featureIcon}>
-                <Ionicons name="create" size={24} color="#6366F1" />
-              </View>
-              <View style={styles.featureTextContainer}>
-                <Text style={styles.featureTitle}>Edit & Refine Results</Text>
-                <Text style={styles.featureDescription}>Perfect your portraits with AI editing</Text>
-              </View>
-            </View>
-          </View>
-
-          {/* Credit Info */}
-          <View style={styles.creditInfoContainer}>
-            <View style={styles.creditInfoCard}>
-              <Ionicons name="diamond" size={32} color="#A78BFA" />
-              <Text style={styles.creditInfoTitle}>3000 Credits Every Week</Text>
-              <Text style={styles.creditInfoSubtitle}>
-                Unused credits carry over to next week
-              </Text>
-            </View>
-            
-            {/* Free Trial Toggle */}
+            {/* Free Trial Toggle - moved here */}
             <TouchableOpacity 
               style={styles.freeTrialToggle}
               onPress={() => setFreeTrialEnabled(!freeTrialEnabled)}
@@ -492,12 +485,7 @@ export default function SubscriptionScreen() {
                 <View style={[styles.toggleKnob, freeTrialEnabled && styles.toggleKnobActive]} />
               </View>
             </TouchableOpacity>
-          </View>
 
-          {/* Plans section removed - price shows on button instead */}
-
-          {/* Bottom Action */}
-          <View style={styles.bottomSection}>
             <TouchableOpacity
               style={[styles.ctaButton, purchasing && styles.ctaButtonDisabled]}
               onPress={() => {
@@ -517,11 +505,27 @@ export default function SubscriptionScreen() {
               )}
             </TouchableOpacity>
 
-            {freeTrialEnabled && (
-              <Text style={styles.noPaymentText}>No Payment Now</Text>
-            )}
+            {/* Fixed height container for dynamic text to prevent layout shift */}
+            <View style={styles.dynamicTextContainer}>
+              {freeTrialEnabled && (
+                <Text style={styles.noPaymentText}>No Payment Now</Text>
+              )}
+            </View>
 
-            <Text style={styles.renewalText}>{getRenewalText()}</Text>
+            {/* Footer Links */}
+            <View style={styles.footerLinks}>
+              <TouchableOpacity>
+                <Text style={styles.footerLinkText}>Terms of Use</Text>
+              </TouchableOpacity>
+              <Text style={styles.footerSeparator}>|</Text>
+              <TouchableOpacity>
+                <Text style={styles.footerLinkText}>Privacy Policy</Text>
+              </TouchableOpacity>
+              <Text style={styles.footerSeparator}>|</Text>
+              <TouchableOpacity>
+                <Text style={styles.footerLinkText}>Already Subscribed?</Text>
+              </TouchableOpacity>
+            </View>
           </View>
 
         </View>
@@ -622,115 +626,68 @@ const styles = StyleSheet.create({
     paddingBottom: Platform.OS === 'android' ? 20 : 10,
     paddingTop: Platform.OS === 'android' ? 40 : 10,
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 10,
-  },
   closeButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: 'rgba(255,255,255,0.15)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 16,
-  },
-  titleContainer: {
-    flex: 1,
+    position: 'absolute',
+    top: Platform.OS === 'android' ? 40 : 10,
+    right: 20,
+    zIndex: 10,
+    padding: 8,
   },
   title: {
-    fontSize: 28,
+    fontSize: 32,
     fontWeight: '800',
     color: '#FFFFFF',
     letterSpacing: 0.5,
-  },
-  titleHighlight: {
-    color: '#6366F1',
+    textAlign: 'center',
+    marginBottom: 16,
   },
   
-  // Features (Infographics)
-  featuresContainer: {
-    gap: 10,
-    marginBottom: 20,
-    flex: 1, // Take up available space
+  spacer: {
+    flex: 1, // Pushes bottom section down
   },
-  featureBox: {
-    backgroundColor: 'rgba(30, 41, 59, 0.7)',
-    borderRadius: 12,
-    padding: 12,
+  // Compact Feature Tags
+  featureTagsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 20,
+    width: '100%',
+  },
+  featureTag: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 14,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
-  },
-  featureIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(99, 102, 241, 0.15)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  featureTextContainer: {
-    flex: 1,
-  },
-  featureTitle: {
-    color: '#FFFFFF',
-    fontSize: 15,
-    fontWeight: '700',
-    marginBottom: 2,
-  },
-  featureDescription: {
-    color: '#94A3B8',
-    fontSize: 13,
-  },
-
-  // Credit Info
-  creditInfoContainer: {
-    marginBottom: 24,
-  },
-  creditInfoCard: {
-    backgroundColor: 'rgba(167, 139, 250, 0.1)',
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
     borderRadius: 16,
-    padding: 20,
-    alignItems: 'center',
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(167, 139, 250, 0.3)',
+    gap: 6,
   },
-  creditInfoTitle: {
-    fontSize: 20,
-    fontWeight: '700',
+  featureTagText: {
     color: '#FFFFFF',
-    marginTop: 8,
-  },
-  creditInfoSubtitle: {
-    fontSize: 13,
-    color: '#94A3B8',
-    marginTop: 4,
+    fontSize: 12,
+    fontWeight: '500',
   },
   // Free Trial Toggle
   freeTrialToggle: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#1E293B',
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 20,
+    backgroundColor: 'rgba(30, 41, 59, 0.8)',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+    width: '100%',
   },
   freeTrialText: {
-    fontSize: 18,
-    fontWeight: '600',
+    fontSize: 16,
+    fontWeight: '500',
     color: '#FFFFFF',
   },
   toggleSwitch: {
-    width: 56,
-    height: 32,
+    width: 51,
+    height: 31,
     borderRadius: 16,
-    backgroundColor: '#334155',
+    backgroundColor: '#64748B',
     justifyContent: 'center',
     padding: 2,
   },
@@ -738,8 +695,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#F59E0B',
   },
   toggleKnob: {
-    width: 28,
-    height: 28,
+    width: 27,
+    height: 27,
     borderRadius: 14,
     backgroundColor: '#FFFFFF',
   },
@@ -837,15 +794,16 @@ const styles = StyleSheet.create({
   // Bottom Section
   bottomSection: {
     alignItems: 'center',
+    width: '100%',
   },
   ctaButton: {
     width: '100%',
-    backgroundColor: '#6366F1',
-    paddingVertical: 16,
-    borderRadius: 14,
+    backgroundColor: '#F59E0B',
+    paddingVertical: 18,
+    borderRadius: 12,
     alignItems: 'center',
-    marginBottom: 12,
-    shadowColor: '#6366F1',
+    marginBottom: 8,
+    shadowColor: '#F59E0B',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
@@ -855,22 +813,45 @@ const styles = StyleSheet.create({
     opacity: 0.7,
   },
   ctaText: {
-    color: '#FFFFFF',
+    color: '#000000',
     fontSize: 18,
-    fontWeight: 'bold',
+    fontWeight: '700',
+  },
+  dynamicTextContainer: {
+    height: 24, // Fixed height to prevent layout shift
+    justifyContent: 'center',
+    alignItems: 'center',
+    width: '100%',
+    marginBottom: 8,
   },
   noPaymentText: {
     color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: 14,
+    fontWeight: '500',
     textAlign: 'center',
-    marginTop: 12,
   },
   renewalText: {
     color: '#94A3B8',
     fontSize: 12,
     textAlign: 'center',
     marginTop: 4,
+  },
+  footerLinks: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexWrap: 'wrap',
+    marginTop: 8,
+  },
+  footerLinkText: {
+    color: '#94A3B8',
+    fontSize: 12,
+    fontWeight: '400',
+  },
+  footerSeparator: {
+    color: '#64748B',
+    fontSize: 12,
+    marginHorizontal: 8,
   },
 
   // Success Modal

@@ -352,6 +352,7 @@ router.post(
     
     try {
       let styleKeys = req.body.styleKeys;
+      const { customPrompt } = req.body;
       const file = req.file;
 
       // Parse styleKeys if it's a JSON string
@@ -363,7 +364,7 @@ router.post(
         }
       }
 
-      console.log(`📝 [BATCH GENERATE REQUEST] User: ${userId.slice(0, 8)}... | Styles: ${styleKeys}`);
+      console.log(`📝 [BATCH GENERATE REQUEST] User: ${userId.slice(0, 8)}... | Styles: ${styleKeys} | Custom Prompt: ${customPrompt || 'N/A'}`);
 
       if (!file) {
         return res.status(400).json({ error: 'No image uploaded' });
@@ -444,7 +445,7 @@ router.post(
 
       console.log(`✅ [BATCH CREATED] ID: ${batch.id} | Styles: ${styleKeys.length}`);
 
-      // Create generation records for each style
+      // Create generation records and jobs for each style
       const generationPromises = styleKeys.map(async (styleKey: string) => {
         const generationId = uuidv4();
         
@@ -457,57 +458,43 @@ router.post(
             guest_device_id: null,
             style_key: styleKey,
             original_image_url: originalImageUrl,
-            status: 'pending',
+            custom_prompt: styleKey === 'custom' ? customPrompt : null,
+            status: 'queued',
             batch_id: batch.id
+          });
+
+        // Create job in queue for worker to process
+        await supabaseAdmin
+          .from('generation_jobs')
+          .insert({
+            user_id: userId,
+            generation_id: generationId,
+            status: 'queued',
+            style_key: styleKey,
+            custom_prompt: styleKey === 'custom' ? customPrompt : null,
+            original_image_url: originalImageUrl
           });
 
         // Increment style usage
         await incrementStyleUsage(styleKey);
 
-        // Start generation asynchronously (don't await)
-        // Convert image URL to base64 for nanoBanana API
-        fetch(originalImageUrl)
-          .then(res => res.arrayBuffer())
-          .then(buffer => Buffer.from(buffer).toString('base64'))
-          .then(async (imageBase64) => {
-            // Generate portrait (returns base64)
-            const generatedBase64 = await generatePortrait(
-              imageBase64,
-              styleKey,
-              file.mimetype
-            );
-            
-            // Upload the generated image to storage
-            const generatedFileName = `${userId}/${generationId}-${styleKey}.jpg`;
-            const generatedImageBuffer = Buffer.from(generatedBase64, 'base64');
-            const generatedImageUrl = await uploadImage(
-              'portraits',
-              generatedFileName,
-              generatedImageBuffer,
-              'image/jpeg'
-            );
-            
-            // Update generation with result
-            await updateGeneration(generationId, {
-              generated_image_url: generatedImageUrl,
-              status: 'completed'
-            });
-            
-            console.log(`✅ [BATCH ITEM COMPLETED] Batch: ${batch.id} | Style: ${styleKey}`);
-          })
-          .catch(async (error) => {
-            console.error(`❌ [BATCH ITEM FAILED] Batch: ${batch.id} | Style: ${styleKey}`, error);
-            await updateGeneration(generationId, {
-              status: 'failed'
-            });
-          });
+        console.log(`✅ [BATCH JOB QUEUED] Batch: ${batch.id} | Gen ID: ${generationId} | Style: ${styleKey}`);
 
         return generationId;
       });
 
       await Promise.all(generationPromises);
 
-      console.log(`✅ [BATCH STARTED] ID: ${batch.id} | User: ${userId.slice(0, 8)}...`);
+      console.log(`✅ [BATCH STARTED] ID: ${batch.id} | User: ${userId.slice(0, 8)}... | Jobs: ${styleKeys.length}`);
+
+      // Trigger worker to process these jobs immediately
+      try {
+        const { triggerWorker } = await import('../index');
+        triggerWorker();
+      } catch (e) {
+        console.warn('⚠️ Could not trigger worker:', e);
+        // Not critical, worker will pick it up on next interval
+      }
 
       res.json({
         success: true,

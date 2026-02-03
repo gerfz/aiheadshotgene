@@ -9,6 +9,9 @@ import {
   ActivityIndicator,
   TextInput,
   Alert,
+  Modal,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
@@ -176,19 +179,20 @@ export default function HomeScreen() {
     }
   };
 
-  const startBatchGeneration = async (imageUri: string, styleKeys: string[]) => {
+  const startBatchGeneration = async (imageUri: string, styleKeys: string[], prompt?: string | null) => {
     if (styleKeys.length === 0) return;
     
     try {
       const { generateBatchPortraits } = await import('../src/services/api');
       
-      // Start batch generation
-      await generateBatchPortraits(imageUri, styleKeys);
+      // Start batch generation with custom prompt if provided
+      await generateBatchPortraits(imageUri, styleKeys, prompt);
       
-      console.log(`✅ Batch generation started for ${styleKeys.length} styles`);
+      console.log(`✅ Batch generation started for ${styleKeys.length} styles`, prompt ? `with custom prompt: ${prompt}` : '');
       
       // Clear selections after starting
       setSelectedStyles([]);
+      setCustomPrompt(null);
       
     } catch (error) {
       console.error('❌ Batch generation failed:', error);
@@ -274,9 +278,29 @@ export default function HomeScreen() {
     // Multi-select logic
     setSelectedStyles(prev => {
       const isSelected = prev.includes(styleKey);
+      
+      // If selecting custom, clear all other selections
+      if (styleKey === 'custom' && !isSelected) {
+        setShowCustomPrompt(true);
+        return ['custom'];
+      }
+      
+      // If custom is already selected and user selects another style, deselect custom
+      if (prev.includes('custom') && styleKey !== 'custom') {
+        setShowCustomPrompt(false);
+        setCustomPrompt(null);
+        return [styleKey];
+      }
+      
       if (isSelected) {
         // Deselect
-        return prev.filter(k => k !== styleKey);
+        const newSelection = prev.filter(k => k !== styleKey);
+        // Hide custom prompt if custom is deselected
+        if (styleKey === 'custom') {
+          setShowCustomPrompt(false);
+          setCustomPrompt(null);
+        }
+        return newSelection;
       } else {
         // Select (add to array)
         return [...prev, styleKey];
@@ -286,14 +310,6 @@ export default function HomeScreen() {
     // Track style selection
     const category = categories.find(cat => cat.styles.includes(styleKey))?.name || 'Unknown';
     analytics.styleSelected(styleKey, category);
-    
-    // Show custom prompt if custom is selected
-    if (styleKey === 'custom') {
-      setShowCustomPrompt(true);
-    } else if (!selectedStyles.includes('custom') && styleKey !== 'custom') {
-      setShowCustomPrompt(false);
-      setCustomPrompt(null);
-    }
   }, [selectedStyles, setCustomPrompt, categories]);
 
   const handleContinue = useCallback(async () => {
@@ -372,7 +388,7 @@ export default function HomeScreen() {
       
       // Start batch generation in background
       setTimeout(() => {
-        startBatchGeneration(result.assets[0].uri, selectedStyles);
+        startBatchGeneration(result.assets[0].uri, selectedStyles, customPrompt);
       }, 100);
     }
   }, [selectedStyles, customPrompt, credits, setSelectedImage]);
@@ -512,28 +528,6 @@ export default function HomeScreen() {
               </ScrollView>
             )}
 
-            {/* Custom Prompt Input - Show when custom style is selected */}
-            {showCustomPrompt && selectedStyle === 'custom' && (
-              <View style={styles.customPromptContainer}>
-                <View style={styles.customPromptHeader}>
-                  <Ionicons name="create-outline" size={24} color="#6366F1" />
-                  <Text style={styles.customPromptTitle}>Describe Your Portrait</Text>
-                </View>
-                <TextInput
-                  style={styles.customPromptInput}
-                  placeholder="E.g., Professional headshot in a modern office, wearing a navy suit..."
-                  placeholderTextColor="#64748B"
-                  multiline
-                  numberOfLines={4}
-                  value={customPrompt || ''}
-                  onChangeText={setCustomPrompt}
-                  textAlignVertical="top"
-                />
-                <Text style={styles.customPromptHint}>
-                  💡 Tip: Be specific about clothing, background, lighting, and mood
-                </Text>
-              </View>
-            )}
 
             {/* Continue Button - Only show when styles are selected */}
             {selectedStyles.length > 0 && (
@@ -555,6 +549,124 @@ export default function HomeScreen() {
           </>
         )}
       </SafeAreaView>
+
+      {/* Custom Prompt Modal */}
+      <Modal
+        visible={selectedStyles.includes('custom')}
+        transparent
+        animationType="slide"
+        onRequestClose={() => {
+          // Remove custom from selection if user closes modal
+          setSelectedStyles(prev => prev.filter(k => k !== 'custom'));
+          setShowCustomPrompt(false);
+          setCustomPrompt(null);
+        }}
+      >
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.modalContainer}
+        >
+          <TouchableOpacity
+            style={styles.modalBackdrop}
+            activeOpacity={1}
+            onPress={() => {
+              // Remove custom from selection if user taps backdrop
+              setSelectedStyles(prev => prev.filter(k => k !== 'custom'));
+              setShowCustomPrompt(false);
+              setCustomPrompt(null);
+            }}
+          />
+          <View style={styles.modalContent}>
+            {/* Header */}
+            <View style={styles.modalHeader}>
+              <View style={styles.modalTitleRow}>
+                <Ionicons name="sparkles" size={28} color="#6366F1" />
+                <Text style={styles.modalTitle}>Custom Portrait</Text>
+              </View>
+              <TouchableOpacity
+                onPress={() => {
+                  setSelectedStyles(prev => prev.filter(k => k !== 'custom'));
+                  setShowCustomPrompt(false);
+                  setCustomPrompt(null);
+                }}
+                style={styles.modalCloseButton}
+              >
+                <Ionicons name="close" size={24} color="#94A3B8" />
+              </TouchableOpacity>
+            </View>
+
+            <Text style={styles.modalDescription}>
+              Describe exactly what you want to see in your portrait
+            </Text>
+
+            {/* Text Input */}
+            <TextInput
+              style={styles.modalTextInput}
+              placeholder="E.g., with bunny ears, wearing a red hoodie, in a cozy coffee shop..."
+              placeholderTextColor="#64748B"
+              multiline
+              value={customPrompt || ''}
+              onChangeText={setCustomPrompt}
+              textAlignVertical="top"
+              autoFocus
+            />
+
+            {/* Examples */}
+            <View style={styles.examplesContainer}>
+              <Text style={styles.examplesTitle}>💡 Examples:</Text>
+              <TouchableOpacity
+                style={styles.exampleChip}
+                onPress={() => setCustomPrompt('with bunny ears, smiling')}
+              >
+                <Text style={styles.exampleText}>with bunny ears, smiling</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.exampleChip}
+                onPress={() => setCustomPrompt('wearing a crown, royal background')}
+              >
+                <Text style={styles.exampleText}>wearing a crown, royal background</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.exampleChip}
+                onPress={() => setCustomPrompt('as a superhero with cape')}
+              >
+                <Text style={styles.exampleText}>as a superhero with cape</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Action Buttons */}
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={styles.modalCancelButton}
+                onPress={() => {
+                  setSelectedStyles(prev => prev.filter(k => k !== 'custom'));
+                  setShowCustomPrompt(false);
+                  setCustomPrompt(null);
+                }}
+              >
+                <Text style={styles.modalCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.modalConfirmButton,
+                  (!customPrompt || customPrompt.trim().length === 0) && styles.modalConfirmButtonDisabled
+                ]}
+                onPress={async () => {
+                  if (customPrompt && customPrompt.trim().length > 0) {
+                    // Close modal and trigger continue (photo picker)
+                    await handleContinue();
+                  }
+                }}
+                disabled={!customPrompt || customPrompt.trim().length === 0}
+              >
+                <Text style={styles.modalConfirmText}>
+                  {customPrompt && customPrompt.trim().length > 0 ? 'Choose Photo' : 'Enter prompt'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </>
   );
 }
@@ -788,6 +900,114 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
   continueButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+
+  // Modal Styles
+  modalContainer: {
+    flex: 1,
+    justifyContent: 'flex-end',
+  },
+  modalBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+  },
+  modalContent: {
+    backgroundColor: '#1E293B',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 24,
+    paddingBottom: Platform.OS === 'ios' ? 40 : 24,
+    maxHeight: '80%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  modalTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  modalTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  modalCloseButton: {
+    padding: 4,
+  },
+  modalDescription: {
+    fontSize: 15,
+    color: '#94A3B8',
+    marginBottom: 20,
+    lineHeight: 22,
+  },
+  modalTextInput: {
+    backgroundColor: '#0F172A',
+    borderRadius: 12,
+    padding: 16,
+    color: '#FFFFFF',
+    fontSize: 16,
+    minHeight: 120,
+    maxHeight: 180,
+    borderWidth: 2,
+    borderColor: '#334155',
+    marginBottom: 16,
+  },
+  examplesContainer: {
+    marginBottom: 20,
+  },
+  examplesTitle: {
+    fontSize: 14,
+    color: '#94A3B8',
+    fontWeight: '600',
+    marginBottom: 12,
+  },
+  exampleChip: {
+    backgroundColor: '#334155',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 20,
+    marginBottom: 8,
+    alignSelf: 'flex-start',
+  },
+  exampleText: {
+    color: '#E2E8F0',
+    fontSize: 14,
+  },
+  modalActions: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  modalCancelButton: {
+    flex: 1,
+    backgroundColor: '#334155',
+    paddingVertical: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  modalCancelText: {
+    color: '#E2E8F0',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  modalConfirmButton: {
+    flex: 1,
+    backgroundColor: '#6366F1',
+    paddingVertical: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  modalConfirmButtonDisabled: {
+    backgroundColor: '#475569',
+    opacity: 0.5,
+  },
+  modalConfirmText: {
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',

@@ -312,7 +312,8 @@ export async function deleteBatch(batchId: string): Promise<{ success: boolean }
 // Batch generate portraits (multiple styles at once)
 export async function generateBatchPortraits(
   imageUri: string,
-  styleKeys: string[]
+  styleKeys: string[],
+  customPrompt?: string | null
 ): Promise<{ success: boolean; batchId: string; totalCount: number; remainingCredits: number }> {
   try {
     const headers = await getHeaders();
@@ -340,6 +341,12 @@ export async function generateBatchPortraits(
     
     // Append style keys as JSON string
     formData.append('styleKeys', JSON.stringify(styleKeys));
+    
+    // Add custom prompt if provided (for custom style)
+    if (customPrompt && styleKeys.includes('custom')) {
+      console.log('Adding customPrompt to batch request:', customPrompt);
+      formData.append('customPrompt', customPrompt);
+    }
     
     const response = await fetch(`${API_URL}/api/generate/batch`, {
       method: 'POST',
