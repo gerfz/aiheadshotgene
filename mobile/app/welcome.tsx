@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   View,
   Text,
@@ -7,7 +7,6 @@ import {
   TouchableOpacity,
   Dimensions,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, Stack } from 'expo-router';
 import * as SecureStore from 'expo-secure-store';
 import { analytics } from '../src/services/posthog';
@@ -17,128 +16,117 @@ const { width, height } = Dimensions.get('window');
 const FIRST_TIME_KEY = 'has_seen_welcome';
 const SHOW_SUBSCRIPTION_KEY = 'show_subscription_after_onboarding';
 
-const onboardingImages = [
-  require('../assets/onboarding/onboarding_1.png'),
-  require('../assets/onboarding/onboarding_2.png'),
-  require('../assets/onboarding/onboarding_3.png'),
-  require('../assets/onboarding/onboarding_4.png'),
-];
-
 export default function WelcomeScreen() {
-  const [currentIndex, setCurrentIndex] = useState(0);
+  // Track when onboarding screen is viewed
+  React.useEffect(() => {
+    analytics.onboardingScreenViewed();
+  }, []);
 
   const handleContinue = async () => {
-    if (currentIndex < onboardingImages.length - 1) {
-      // Go to next screen
-      setCurrentIndex(currentIndex + 1);
-    } else {
-      // Mark that user has seen welcome screen
-      await SecureStore.setItemAsync(FIRST_TIME_KEY, 'true');
-      // Set flag to show subscription after first generation
-      await SecureStore.setItemAsync(SHOW_SUBSCRIPTION_KEY, 'true');
-      
-      // Track onboarding completion
-      analytics.onboardingCompleted();
-      
-      // Track Complete Registration in TikTok (key conversion event)
-      tiktokService.trackCompleteRegistration();
-      
-      // Navigate to subscription screen first
-      router.replace('/subscription');
-    }
+    // Track dive in button clicked
+    analytics.onboardingDiveInClicked();
+    
+    // Mark that user has seen welcome screen
+    await SecureStore.setItemAsync(FIRST_TIME_KEY, 'true');
+    // Set flag to show subscription after first generation
+    await SecureStore.setItemAsync(SHOW_SUBSCRIPTION_KEY, 'true');
+    
+    // Track onboarding completion
+    analytics.onboardingCompleted();
+    
+    // Track Complete Registration in TikTok (key conversion event)
+    tiktokService.trackCompleteRegistration();
+    
+    // Navigate to subscription screen first
+    router.replace('/subscription');
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       <Stack.Screen options={{ headerShown: false }} />
       
-      {/* Onboarding Image */}
-      <View style={styles.imageContainer}>
-        <Image
-          source={onboardingImages[currentIndex]}
-          style={styles.onboardingImage}
-          resizeMode="contain"
-        />
-      </View>
+      {/* Onboarding Image - Full Screen Background */}
+      <Image
+        source={require('../assets/onboarding.png')}
+        style={styles.backgroundImage}
+        resizeMode="cover"
+      />
 
-      {/* Page Indicators */}
-      <View style={styles.indicatorContainer}>
-        {onboardingImages.map((_, index) => (
-          <View
-            key={index}
-            style={[
-              styles.indicator,
-              index === currentIndex && styles.indicatorActive,
-            ]}
-          />
-        ))}
-      </View>
+      {/* Overlay Content */}
+      <View style={styles.overlay}>
+        {/* Text at Bottom */}
+        <View style={styles.textContainer}>
+          <Text style={styles.title}>Your creative journey{'\n'}starts here</Text>
+          
+          {/* Continue Button */}
+          <TouchableOpacity style={styles.continueButton} onPress={handleContinue}>
+            <Text style={styles.continueButtonText}>Dive in</Text>
+          </TouchableOpacity>
 
-      {/* Continue Button */}
-      <View style={styles.footer}>
-        <TouchableOpacity style={styles.continueButton} onPress={handleContinue}>
-          <Text style={styles.continueButtonText}>
-            {currentIndex === onboardingImages.length - 1 ? 'Get Started' : 'Continue'}
+          {/* Terms and Privacy */}
+          <Text style={styles.termsText}>
+            By continuing I agree with the{' '}
+            <Text style={styles.link}>Terms & Conditions</Text>
+            {' '}and{' '}
+            <Text style={styles.link}>Privacy Policy</Text>
           </Text>
-        </TouchableOpacity>
+        </View>
       </View>
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0F172A',
+    backgroundColor: '#000000',
   },
-  imageContainer: {
+  backgroundImage: {
+    width: width,
+    height: height,
+    position: 'absolute',
+  },
+  overlay: {
     flex: 1,
-    justifyContent: 'center',
+    justifyContent: 'flex-end',
+  },
+  textContainer: {
+    paddingHorizontal: 32,
+    paddingBottom: 50,
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: 60,
-    paddingBottom: 20,
   },
-  onboardingImage: {
-    width: width - 40,
-    height: height * 0.7,
-  },
-  indicatorContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingVertical: 20,
-    gap: 8,
-  },
-  indicator: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#334155',
-  },
-  indicatorActive: {
-    width: 24,
-    backgroundColor: '#6366F1',
-  },
-  footer: {
-    paddingHorizontal: 20,
-    paddingBottom: 30,
+  title: {
+    fontSize: 32,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    textAlign: 'center',
+    marginBottom: 32,
+    lineHeight: 40,
   },
   continueButton: {
-    backgroundColor: '#6366F1',
-    paddingVertical: 18,
-    borderRadius: 14,
+    backgroundColor: '#F59E0B',
+    paddingVertical: 16,
+    paddingHorizontal: 80,
+    borderRadius: 25,
     alignItems: 'center',
-    shadowColor: '#6366F1',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 6,
+    marginBottom: 24,
+    width: '100%',
+    maxWidth: 300,
   },
   continueButtonText: {
-    color: '#FFFFFF',
+    color: '#000000',
     fontSize: 18,
-    fontWeight: 'bold',
+    fontWeight: '600',
+  },
+  termsText: {
+    fontSize: 12,
+    color: '#FFFFFF',
+    textAlign: 'center',
+    paddingHorizontal: 20,
+    lineHeight: 18,
+  },
+  link: {
+    textDecorationLine: 'underline',
   },
 });
 

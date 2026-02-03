@@ -44,6 +44,10 @@ export default function ProfileScreen() {
     router.push('/subscription');
   };
 
+  const handleBuyCredits = () => {
+    router.push('/credit-packs');
+  };
+
   const handleSignUp = () => {
     router.push({ pathname: '/login', params: { mode: 'signup' } });
   };
@@ -112,22 +116,11 @@ export default function ProfileScreen() {
               activeOpacity={0.9}
             >
               <View style={styles.premiumContent}>
-                <View style={styles.benefitsContainer}>
-                  <View style={styles.benefitRow}>
-                    <Ionicons name="checkmark-circle" size={20} color="#FFFFFF" />
-                    <Text style={styles.benefitText}>Multiple Results</Text>
-                  </View>
-                  <View style={styles.benefitRow}>
-                    <Ionicons name="checkmark-circle" size={20} color="#FFFFFF" />
-                    <Text style={styles.benefitText}>Fast processing</Text>
-                  </View>
-                  <View style={styles.benefitRow}>
-                    <Ionicons name="checkmark-circle" size={20} color="#FFFFFF" />
-                    <Text style={styles.benefitText}>Remove all ads</Text>
-                  </View>
-                </View>
+                <Text style={styles.premiumTitle}>Become Pro</Text>
+                <Text style={styles.premiumSubtitle}>Get full access to all features</Text>
+                
                 <TouchableOpacity style={styles.tryProButton} onPress={handleSubscription}>
-                  <Text style={styles.tryProButtonText}>Try Pro Now</Text>
+                  <Text style={styles.tryProButtonText}>Try Now</Text>
                 </TouchableOpacity>
               </View>
             </TouchableOpacity>
@@ -158,6 +151,16 @@ export default function ProfileScreen() {
           <Text style={styles.sectionTitle}>General</Text>
           
           <View style={styles.settingsCard}>
+            <TouchableOpacity style={styles.settingRow} onPress={handleBuyCredits}>
+              <View style={styles.settingLeft}>
+                <Ionicons name="wallet" size={24} color="#F59E0B" />
+                <Text style={styles.settingText}>Buy Credits</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color="#64748B" />
+            </TouchableOpacity>
+            
+            <View style={styles.divider} />
+            
             <TouchableOpacity style={styles.settingRow} onPress={handleContactUs}>
               <View style={styles.settingLeft}>
                 <Ionicons name="mail" size={24} color="#FFFFFF" />
@@ -258,13 +261,27 @@ const styles = StyleSheet.create({
   // Premium Card
   premiumCard: {
     backgroundColor: '#4F46E5',
-    borderRadius: 20,
-    padding: 24,
+    borderRadius: 24,
+    padding: 32,
     marginBottom: 20,
     overflow: 'hidden',
   },
   premiumContent: {
-    gap: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  premiumTitle: {
+    fontSize: 28,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  premiumSubtitle: {
+    fontSize: 16,
+    color: 'rgba(255, 255, 255, 0.9)',
+    textAlign: 'center',
+    marginBottom: 24,
   },
   benefitsContainer: {
     gap: 12,
@@ -280,13 +297,14 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   tryProButton: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
+    backgroundColor: '#000000',
+    borderRadius: 25,
+    paddingHorizontal: 40,
     paddingVertical: 14,
     alignItems: 'center',
   },
   tryProButtonText: {
-    color: '#6366F1',
+    color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
   },

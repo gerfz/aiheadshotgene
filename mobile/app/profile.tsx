@@ -314,49 +314,16 @@ export default function ProfileScreen() {
             <TouchableOpacity 
               style={styles.premiumCardWrapper}
               onPress={handleSubscription}
-              activeOpacity={0.95}
+              activeOpacity={0.9}
             >
-              <ImageBackground
-                source={{ uri: 'https://pyziuothzjdijkvdryht.supabase.co/storage/v1/object/public/style-previews/victoriasecret/G6TSEqzWYAIvaf9.jpg' }}
-                style={styles.premiumBackground}
-                imageStyle={{ borderRadius: 24, opacity: 0.6 }}
-              >
-                <View style={styles.premiumOverlay}>
-                  <View style={styles.premiumHeader}>
-                    <Text style={styles.premiumTitle}>Unlock Pro Access</Text>
-                    <View style={styles.proBadge}>
-                      <Text style={styles.proBadgeText}>PRO</Text>
-                    </View>
-                  </View>
-                  
-                  <View style={styles.premiumFeatures}>
-                    <View style={styles.featureItem}>
-                      <View style={styles.featureIconBox}>
-                        <Ionicons name="infinite" size={20} color="#FFFFFF" />
-                      </View>
-                      <View>
-                        <Text style={styles.featureTitle}>Unlimited Generations</Text>
-                        <Text style={styles.featureSubtitle}>Create as many portraits as you want</Text>
-                      </View>
-                    </View>
-                    
-                    <View style={styles.featureItem}>
-                      <View style={[styles.featureIconBox, { backgroundColor: 'rgba(236, 72, 153, 0.2)' }]}>
-                        <Ionicons name="sparkles" size={20} color="#F472B6" />
-                      </View>
-                      <View>
-                        <Text style={styles.featureTitle}>Custom Style Prompts</Text>
-                        <Text style={styles.featureSubtitle}>Write your own unique prompts</Text>
-                      </View>
-                    </View>
-                  </View>
-
-                  <TouchableOpacity style={styles.upgradeButton} onPress={handleSubscription}>
-                    <Text style={styles.upgradeButtonText}>Upgrade Now</Text>
-                    <Ionicons name="arrow-forward" size={20} color="#FFFFFF" />
-                  </TouchableOpacity>
-                </View>
-              </ImageBackground>
+              <View style={styles.premiumGradient}>
+                <Text style={styles.premiumTitle}>Become Pro</Text>
+                <Text style={styles.premiumSubtitle}>Get full access to all features</Text>
+                
+                <TouchableOpacity style={styles.upgradeButton} onPress={handleSubscription}>
+                  <Text style={styles.upgradeButtonText}>Try Now</Text>
+                </TouchableOpacity>
+              </View>
             </TouchableOpacity>
           )}
 
@@ -551,18 +518,15 @@ const styles = StyleSheet.create({
   premiumCardWrapper: {
     marginBottom: 24,
     borderRadius: 24,
-    backgroundColor: '#000',
     overflow: 'hidden',
   },
-  premiumBackground: {
-    width: '100%',
-    minHeight: 280,
-  },
-  premiumOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.75)',
+  premiumGradient: {
+    backgroundColor: '#4F46E5', // Blue gradient color
     padding: 24,
-    justifyContent: 'space-between',
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 140,
   },
   premiumHeader: {
     flexDirection: 'row',
@@ -619,19 +583,31 @@ const styles = StyleSheet.create({
     color: '#94A3B8',
     fontSize: 12,
   },
+  premiumTitle: {
+    fontSize: 28,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  premiumSubtitle: {
+    fontSize: 16,
+    color: 'rgba(255, 255, 255, 0.9)',
+    textAlign: 'center',
+    marginBottom: 20,
+  },
   upgradeButton: {
-    backgroundColor: '#6366F1',
-    flexDirection: 'row',
+    backgroundColor: '#000000',
+    paddingHorizontal: 40,
+    paddingVertical: 14,
+    borderRadius: 25,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 16,
-    borderRadius: 16,
-    gap: 8,
   },
   upgradeButtonText: {
     color: '#FFFFFF',
-    fontSize: 18,
-    fontWeight: '700',
+    fontSize: 16,
+    fontWeight: '600',
   },
   
   // Action Buttons

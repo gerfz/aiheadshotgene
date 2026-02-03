@@ -333,7 +333,96 @@ router.post(
   }
 );
 
-// Purchase credit pack
+// Add credits from credit pack purchase
+router.post(
+  '/add-credits',
+  verifyToken,
+  async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const userId = req.userId!;
+      const { credits, transactionId, productId } = req.body;
+      
+      if (!credits || !transactionId || !productId) {
+        return res.status(400).json({ error: 'Missing required fields' });
+      }
+      
+      console.log(`💳 Processing credit pack purchase: ${credits} credits for user ${userId.slice(0, 8)}...`);
+      
+      // Verify transaction hasn't been processed already
+      const { data: existingTransaction } = await supabaseAdmin
+        .from('credit_transactions')
+        .select('id')
+        .eq('transaction_id', transactionId)
+        .single();
+      
+      if (existingTransaction) {
+        console.log(`⚠️ Transaction ${transactionId} already processed, skipping`);
+        // Get current credits and return
+        const profile = await getUserProfile(userId);
+        return res.json({
+          success: true,
+          totalCredits: profile.total_credits || 0,
+          alreadyProcessed: true
+        });
+      }
+      
+      // Get current profile
+      const profile = await getUserProfile(userId);
+      const newTotal = (profile.total_credits || 0) + credits;
+      
+      // Update profile with new credits
+      const { error: updateError } = await supabaseAdmin
+        .from('profiles')
+        .update({
+          total_credits: newTotal
+        })
+        .eq('id', userId);
+      
+      if (updateError) throw updateError;
+      
+      // Log transaction
+      await supabaseAdmin
+        .from('credit_transactions')
+        .insert({
+          user_id: userId,
+          transaction_id: transactionId,
+          pack_id: productId,
+          credits_added: credits,
+          transaction_type: 'purchase'
+        });
+      
+      // If device_id exists, sync credits to all profiles with same device_id
+      if (profile.device_id) {
+        const { error: syncError } = await supabaseAdmin
+          .from('profiles')
+          .update({ 
+            total_credits: newTotal
+          })
+          .eq('device_id', profile.device_id)
+          .neq('id', userId);
+
+        if (syncError) {
+          console.error('Failed to sync credits across device_id:', syncError);
+        } else {
+          console.log(`✅ Synced ${credits} credits across device_id: ${profile.device_id}`);
+        }
+      }
+      
+      console.log(`✅ Added ${credits} credits to user ${userId.slice(0, 8)}... (product: ${productId}). New total: ${newTotal}`);
+      
+      res.json({
+        success: true,
+        totalCredits: newTotal,
+        creditsAdded: credits
+      });
+    } catch (error: any) {
+      console.error('Error adding credits:', error);
+      res.status(500).json({ error: error.message });
+    }
+  }
+);
+
+// Purchase credit pack (DEPRECATED - kept for backward compatibility)
 router.post(
   '/credits/purchase',
   verifyToken,

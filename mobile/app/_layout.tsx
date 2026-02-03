@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import { AppState } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 import { useAppStore } from '../src/store/useAppStore';
 import { supabase } from '../src/services/supabase';
@@ -10,7 +11,7 @@ import { getCredits, updateSubscriptionStatus, waitForBackendReady } from '../sr
 import { ErrorBoundary } from '../src/components/ErrorBoundary';
 import { Toast, LoadingScreen } from '../src/components';
 import { posthog, identifyUser, analytics } from '../src/services/posthog';
-import { clearCache } from '../src/services/cache';
+import { clearCache, getCachedUserProfile, getCachedCredits, cacheUserProfile, getCachedSubscriptionStatus } from '../src/services/cache';
 import tiktokService from '../src/services/tiktok';
 import appsFlyerService from '../src/services/appsflyer';
 
@@ -33,18 +34,56 @@ export default function RootLayout() {
   const [initializing, setInitializing] = useState(true);
   const [appReady, setAppReady] = useState(false);
   const [showVerificationToast, setShowVerificationToast] = useState(false);
+  const loadingStartTimeRef = useRef<number>(0);
+  const lastLoadingStepRef = useRef<string>('init');
 
   useEffect(() => {
     let isInitializing = true; // Flag to prevent duplicate user creation
     let initTimeout: NodeJS.Timeout;
     
     const initApp = async () => {
+      const loadingStartTime = Date.now();
+      loadingStartTimeRef.current = loadingStartTime;
+      
       try {
         console.log('🚀 Starting app initialization...');
+        
+        // Track app launched and loading started
+        analytics.appLaunched();
+        analytics.loadingStarted(loadingStartTime);
+        
+        // ========================================
+        // 🚀 INSTANT STARTUP: Load cached data FIRST
+        // ========================================
+        lastLoadingStepRef.current = 'loading_cache';
+        console.log('⚡ [0/6] Loading cached data for instant startup...');
+        try {
+          const [cachedProfile, cachedCredits] = await Promise.all([
+            getCachedUserProfile(),
+            getCachedCredits()
+          ]);
+          
+          if (cachedProfile) {
+            console.log('✅ Restored cached user profile instantly');
+            setUser({ id: cachedProfile.userId, email: cachedProfile.email });
+            
+            if (cachedCredits) {
+              console.log('✅ Restored cached credits instantly');
+              useAppStore.setState({ credits: cachedCredits });
+            }
+            
+            // Show app immediately with cached data
+            setAppReady(true);
+            console.log('⚡ App ready with cached data - showing UI now!');
+          }
+        } catch (cacheError) {
+          console.warn('⚠️ Could not load cached data:', cacheError);
+        }
         
         // ========================================
         // 🎯 STEP 1: Initialize AppsFlyer MMP FIRST (required for TikTok attribution)
         // ========================================
+        lastLoadingStepRef.current = 'init_appsflyer';
         console.log('📱 [1/6] Initializing AppsFlyer MMP...');
         try {
           await withTimeout(appsFlyerService.initialize(), 5000, 'AppsFlyer timeout');
@@ -119,6 +158,7 @@ export default function RootLayout() {
         // ========================================
         // 🎯 STEP 6: Get device ID
         // ========================================
+        lastLoadingStepRef.current = 'get_device_id';
         console.log('📱 [6/6] Getting device ID...');
         let deviceId: string;
         try {
@@ -218,10 +258,14 @@ export default function RootLayout() {
               await SecureStore.setItemAsync(DEVICE_USER_ID_KEY, newData.user.id);
               console.log('💾 Stored user ID for device:', newData.user.id);
               
+              const userEmail = `device-${deviceId}@anonymous.local`;
               setUser({
                 id: newData.user.id,
-                email: `device-${deviceId}@anonymous.local`,
+                email: userEmail,
               });
+              
+              // Cache user profile for next app start
+              cacheUserProfile(newData.user.id, userEmail).catch(() => {});
               
               // Identify user in TikTok and AppsFlyer (non-blocking)
               tiktokService.identifyUser(newData.user.id, `device-${deviceId}@anonymous.local`).catch(() => {});
@@ -272,10 +316,14 @@ export default function RootLayout() {
           }
           
           // Valid session found
+          const userEmail = session.user.email || `device-${deviceId}@anonymous.local`;
           setUser({
             id: session.user.id,
-            email: session.user.email || `device-${deviceId}@anonymous.local`,
+            email: userEmail,
           });
+          
+          // Cache user profile for next app start
+          cacheUserProfile(session.user.id, userEmail).catch(() => {});
           
           // Identify user in TikTok and AppsFlyer (non-blocking)
           tiktokService.identifyUser(
@@ -340,10 +388,14 @@ export default function RootLayout() {
               await SecureStore.setItemAsync(DEVICE_USER_ID_KEY, data.user.id);
               console.log('💾 Stored user ID for device:', data.user.id);
               
+              const userEmail = `device-${deviceId}@anonymous.local`;
               setUser({
                 id: data.user.id,
-                email: `device-${deviceId}@anonymous.local`,
+                email: userEmail,
               });
+              
+              // Cache user profile for next app start
+              cacheUserProfile(data.user.id, userEmail).catch(() => {});
               
               // Identify user in TikTok and AppsFlyer (non-blocking)
               tiktokService.identifyUser(data.user.id, `device-${deviceId}@anonymous.local`).catch(() => {});
@@ -389,8 +441,13 @@ export default function RootLayout() {
       } finally {
         isInitializing = false;
         clearTimeout(initTimeout);
-        console.log('✅ App initialization complete - signaling ready');
-        setAppReady(true); // Signal that app is ready
+        console.log('✅ App initialization complete - ensuring app is ready');
+        
+        // Track loading finished
+        const loadingDuration = Date.now() - loadingStartTime;
+        analytics.loadingFinished(loadingDuration, true);
+        
+        setAppReady(true); // Ensure app is ready (might already be true from cache)
       }
     };
 
@@ -509,12 +566,22 @@ export default function RootLayout() {
       }
     });
 
+    // Track if user backgrounds app during loading
+    const appStateSubscription = AppState.addEventListener('change', (nextAppState) => {
+      if (nextAppState === 'background' && !appReady && loadingStartTimeRef.current > 0) {
+        const abandonedDuration = Date.now() - loadingStartTimeRef.current;
+        analytics.loadingAbandoned(abandonedDuration, lastLoadingStepRef.current);
+        console.log(`⚠️ User backgrounded app during loading at step: ${lastLoadingStepRef.current}`);
+      }
+    });
+
     return () => {
       subscription.unsubscribe();
       if (customerInfoListener) {
         customerInfoListener.remove();
       }
       if (initTimeout) clearTimeout(initTimeout);
+      appStateSubscription.remove();
     };
   }, []);
 

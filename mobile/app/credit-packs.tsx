@@ -1,460 +1,785 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
-  ScrollView,
   ActivityIndicator,
   Alert,
+  Image,
+  Dimensions,
+  Animated,
+  Platform,
+  StatusBar,
+  Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAppStore } from '../src/store/useAppStore';
-import { purchaseCredits } from '../src/services/api';
+import { supabase } from '../src/services/supabase';
+import { API_URL } from '../src/constants/config';
 import { analytics } from '../src/services/posthog';
+import tiktokService from '../src/services/tiktok';
+import appsFlyerService from '../src/services/appsflyer';
+import { 
+  getCreditPackOfferings, 
+  purchaseCreditPack,
+  CREDIT_PACK_IDS 
+} from '../src/services/purchases';
+import type { PurchasesPackage } from 'react-native-purchases';
 
-interface CreditPack {
-  id: string;
-  credits: number;
-  price: string;
-  priceValue: number;
-  popular?: boolean;
-  bonus?: string;
-}
+const { width, height } = Dimensions.get('window');
 
-const CREDIT_PACKS: CreditPack[] = [
-  {
-    id: 'credits_500',
-    credits: 500,
-    price: '$2.99',
-    priceValue: 2.99,
-  },
-  {
-    id: 'credits_1500',
-    credits: 1500,
-    price: '$7.99',
-    priceValue: 7.99,
-    popular: true,
-    bonus: '+100 bonus',
-  },
-  {
-    id: 'credits_3500',
-    credits: 3500,
-    price: '$14.99',
-    priceValue: 14.99,
-    bonus: '+500 bonus',
-  },
+// Sample images from your style folders - Now hosted on Supabase
+const SAMPLE_IMAGES = [
+  { uri: 'https://pyziuothzjdijkvdryht.supabase.co/storage/v1/object/public/style-previews/business/518559229-793ad242-7867-4709-bdc6-55021f5eb78f.png' },
+  { uri: 'https://pyziuothzjdijkvdryht.supabase.co/storage/v1/object/public/style-previews/emotionalfilm/518559958-243d1b11-9ef0-4d4f-b308-97d67b5d3bc3.png' },
+  { uri: 'https://pyziuothzjdijkvdryht.supabase.co/storage/v1/object/public/style-previews/victoriasecret/G6TSEqzWYAIvaf9.jpg' },
+  { uri: 'https://pyziuothzjdijkvdryht.supabase.co/storage/v1/object/public/style-previews/victoriasecret/G6TSEscXQAAm3Lo.jpg' },
+  { uri: 'https://pyziuothzjdijkvdryht.supabase.co/storage/v1/object/public/style-previews/victoriasecret/G6TSEuEWEAAaR7N.jpg' },
+  { uri: 'https://pyziuothzjdijkvdryht.supabase.co/storage/v1/object/public/style-previews/professionalheadshot/example1.png' },
+  { uri: 'https://pyziuothzjdijkvdryht.supabase.co/storage/v1/object/public/style-previews/1990s%20camera%20style/example1.png' },
+  { uri: 'https://pyziuothzjdijkvdryht.supabase.co/storage/v1/object/public/style-previews/withpuppy/example1.png' },
 ];
 
-export default function CreditPacksScreen() {
-  const { credits, setCredits } = useAppStore();
-  const [purchasing, setPurchasing] = useState<string | null>(null);
+// Credit pack metadata
+const CREDIT_PACK_META = {
+  '5000credits': { credits: 5000, popular: false, best: false },
+  '15000credits': { credits: 15000, popular: true, best: false },
+  '50000credits': { credits: 50000, popular: false, best: true },
+};
 
-  const handlePurchase = async (pack: CreditPack) => {
+export default function CreditPacksScreen() {
+  const [packages, setPackages] = useState<PurchasesPackage[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [purchasing, setPurchasing] = useState(false);
+  const [selectedPack, setSelectedPack] = useState<string | null>(null);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [purchasedCredits, setPurchasedCredits] = useState<number>(0);
+  const { setCredits, user } = useAppStore();
+  const scrollX = useRef(new Animated.Value(0)).current;
+  const scrollViewRef = useRef<any>(null);
+  const successScale = useRef(new Animated.Value(0)).current;
+  const successOpacity = useRef(new Animated.Value(0)).current;
+  const screenViewTimeRef = useRef<number>(Date.now());
+
+  useEffect(() => {
+    screenViewTimeRef.current = Date.now();
+    loadCreditPacks();
+    
+    // Track credit pack screen viewed
+    analytics.trackEvent('credit_pack_screen_viewed');
+  }, []);
+
+  const loadCreditPacks = async () => {
     try {
-      setPurchasing(pack.id);
+      setLoading(true);
+      const availablePackages = await getCreditPackOfferings();
+      setPackages(availablePackages);
       
-      // Track purchase intent
-      analytics.creditPackSelected(pack.id, pack.credits, pack.priceValue);
-      
-      // TODO: Integrate with actual payment processor (Stripe, RevenueCat, etc.)
-      // For now, show alert
-      Alert.alert(
-        'Purchase Credits',
-        `Purchase ${pack.credits} credits for ${pack.price}?`,
-        [
-          { text: 'Cancel', style: 'cancel' },
-          {
-            text: 'Buy Now',
-            onPress: async () => {
-              try {
-                // Generate transaction ID
-                const transactionId = `txn_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-                
-                // Call backend to add credits
-                const result = await purchaseCredits(pack.id, pack.credits, transactionId);
-                
-                if (result.success) {
-                  // Update local state
-                  if (credits) {
-                    setCredits({
-                      ...credits,
-                      totalCredits: result.totalCredits,
-                      hasCredits: true,
-                    });
-                  }
-                  
-                  // Track successful purchase
-                  analytics.creditPackPurchased(pack.id, pack.credits, pack.priceValue);
-                  
-                  Alert.alert(
-                    'Success!',
-                    `${pack.credits} credits added to your account!`,
-                    [{ text: 'OK', onPress: () => router.back() }]
-                  );
-                }
-              } catch (error) {
-                console.error('Purchase failed:', error);
-                Alert.alert('Purchase Failed', 'Please try again later.');
-              }
-            }
-          }
-        ]
+      // Auto-select the popular pack (15000 credits)
+      const popularPack = availablePackages.find(p => 
+        p.product.identifier === CREDIT_PACK_IDS.MEDIUM
       );
+      if (popularPack) {
+        setSelectedPack(popularPack.identifier);
+      } else if (availablePackages.length > 0) {
+        setSelectedPack(availablePackages[0].identifier);
+      }
     } catch (error) {
-      console.error('Error initiating purchase:', error);
-      Alert.alert('Error', 'Failed to initiate purchase');
+      console.error('❌ Failed to load credit packs:', error);
+      Alert.alert('Error', 'Failed to load credit packs. Please try again.');
     } finally {
-      setPurchasing(null);
+      setLoading(false);
     }
   };
 
-  const getGenerationsCount = (credits: number) => {
-    return Math.floor(credits / 200);
+  // Auto-scroll background images
+  useEffect(() => {
+    let currentIndex = 0;
+    const interval = setInterval(() => {
+      currentIndex = (currentIndex + 1) % SAMPLE_IMAGES.length;
+      if (scrollViewRef.current) {
+        scrollViewRef.current.scrollTo({
+          x: currentIndex * width,
+          animated: true,
+        });
+      }
+    }, 4000); 
+
+    return () => clearInterval(interval);
+  }, []);
+
+  const handlePurchase = async () => {
+    if (!selectedPack) return;
+    
+    setPurchasing(true);
+    try {
+      const pkg = packages.find(p => p.identifier === selectedPack);
+      if (!pkg) {
+        Alert.alert('Error', 'Selected pack not found');
+        return;
+      }
+
+      const meta = CREDIT_PACK_META[pkg.product.identifier as keyof typeof CREDIT_PACK_META];
+      const credits = meta?.credits || 0;
+
+      // Track purchase attempt
+      analytics.trackEvent('credit_pack_clicked', {
+        pack_id: pkg.identifier,
+        product_id: pkg.product.identifier,
+        credits: credits,
+        price: pkg.product.priceString,
+      });
+
+      // Purchase the pack
+      const customerInfo = await purchaseCreditPack(pkg);
+      
+      if (customerInfo) {
+        // Get the transaction to verify purchase
+        const transaction = customerInfo.nonSubscriptionTransactions.find(
+          t => t.productIdentifier === pkg.product.identifier
+        );
+        
+        if (transaction) {
+          console.log('💳 Transaction confirmed:', transaction);
+          
+          // Update backend with new credits
+          try {
+            const session = await supabase.auth.getSession();
+            const response = await fetch(`${API_URL}/api/user/add-credits`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${session.data.session?.access_token}`,
+              },
+              body: JSON.stringify({ 
+                credits: credits,
+                transactionId: transaction.transactionIdentifier,
+                productId: pkg.product.identifier,
+              }),
+            });
+
+            if (response.ok) {
+              const data = await response.json();
+              console.log('✅ Credits added to backend:', data);
+              
+              // Update local state
+              setCredits({ 
+                totalCredits: data.totalCredits,
+                hasCredits: true,
+              });
+
+              // Track successful purchase
+              analytics.trackEvent('credit_pack_purchased', {
+                pack_id: pkg.identifier,
+                product_id: pkg.product.identifier,
+                credits: credits,
+                price: pkg.product.priceString,
+              });
+
+              // Track in TikTok and AppsFlyer
+              await tiktokService.trackEvent('credit_pack_purchased', {
+                credits: credits,
+                price: pkg.product.price,
+                currency: pkg.product.currencyCode,
+              });
+              await appsFlyerService.trackEvent('credit_pack_purchased', {
+                credits: credits,
+                revenue: pkg.product.price,
+                currency: pkg.product.currencyCode,
+              });
+
+              // Show success modal
+              setPurchasedCredits(credits);
+              setShowSuccessModal(true);
+              
+              // Animate success modal
+              Animated.parallel([
+                Animated.spring(successScale, {
+                  toValue: 1,
+                  tension: 50,
+                  friction: 7,
+                  useNativeDriver: true,
+                }),
+                Animated.timing(successOpacity, {
+                  toValue: 1,
+                  duration: 300,
+                  useNativeDriver: true,
+                }),
+              ]).start();
+            } else {
+              throw new Error('Failed to update backend');
+            }
+          } catch (backendError) {
+            console.error('❌ Failed to update backend:', backendError);
+            Alert.alert(
+              'Purchase Successful',
+              'Your purchase was successful, but we had trouble updating your account. Please restart the app.',
+              [{ text: 'OK' }]
+            );
+          }
+        }
+      }
+    } catch (error: any) {
+      if (!error.userCancelled) {
+        Alert.alert('Purchase Failed', 'Please try again.');
+        analytics.trackEvent('credit_pack_purchase_failed', {
+          error: error.message || 'Unknown error',
+        });
+      }
+    } finally {
+      setPurchasing(false);
+    }
   };
 
-  const getEditsCount = (credits: number) => {
-    return Math.floor(credits / 50);
+  const handleSuccessClose = () => {
+    setShowSuccessModal(false);
+    successScale.setValue(0);
+    successOpacity.setValue(0);
+    router.back();
+  };
+
+  const renderCreditPack = (pkg: PurchasesPackage) => {
+    const isSelected = selectedPack === pkg.identifier;
+    const meta = CREDIT_PACK_META[pkg.product.identifier as keyof typeof CREDIT_PACK_META];
+    
+    if (!meta) return null;
+    
+    return (
+      <TouchableOpacity 
+        key={pkg.identifier}
+        style={[styles.packCard, isSelected && styles.packCardSelected]} 
+        onPress={() => setSelectedPack(pkg.identifier)}
+        activeOpacity={0.9}
+      >
+        {meta.popular && (
+          <View style={[styles.packBadge, { backgroundColor: '#F59E0B' }]}>
+            <Text style={styles.packBadgeText}>Popular</Text>
+          </View>
+        )}
+        {meta.best && (
+          <View style={[styles.packBadge, { backgroundColor: '#10B981' }]}>
+            <Text style={styles.packBadgeText}>Best</Text>
+          </View>
+        )}
+        <View style={styles.packContent}>
+          <View style={styles.packTextContainer}>
+             <Text style={[styles.packName, isSelected && styles.textSelected]}>
+               {meta.credits.toLocaleString()} Credits
+             </Text>
+          </View>
+          <View style={styles.priceContainer}>
+             <Text style={[styles.packPrice, isSelected && styles.textSelected]}>
+               {pkg.product.priceString}
+             </Text>
+             <View style={[styles.radioButton, isSelected && styles.radioButtonSelected]}>
+                {isSelected && <View style={styles.radioButtonInner} />}
+             </View>
+          </View>
+        </View>
+      </TouchableOpacity>
+    );
   };
 
   return (
-    <>
-      <Stack.Screen
-        options={{
-          title: 'Buy Credits',
-          headerStyle: { backgroundColor: '#0F172A' },
-          headerTintColor: '#FFFFFF',
-          headerTitleStyle: { fontWeight: '600' },
-        }}
-      />
-      <SafeAreaView style={styles.container}>
-        <ScrollView 
-          contentContainerStyle={styles.content}
-          showsVerticalScrollIndicator={false}
+    <View style={styles.container}>
+      <StatusBar barStyle="light-content" />
+      <Stack.Screen options={{ headerShown: false }} />
+
+      {/* Background */}
+      <View style={styles.backgroundContainer}>
+        <Animated.ScrollView
+          ref={scrollViewRef}
+          horizontal
+          pagingEnabled
+          showsHorizontalScrollIndicator={false}
+          scrollEnabled={false}
+          style={styles.imageScroll}
         >
-          {/* Header */}
-          <View style={styles.header}>
-            <View style={styles.iconContainer}>
-              <Ionicons name="diamond" size={48} color="#A78BFA" />
-            </View>
-            <Text style={styles.title}>Buy Credits</Text>
+          {SAMPLE_IMAGES.map((image, index) => (
+            <Image
+              key={index}
+              source={image}
+              style={styles.backgroundImage}
+              resizeMode="cover"
+            />
+          ))}
+        </Animated.ScrollView>
+        <View style={styles.overlay} />
+      </View>
+
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.contentContainer}>
+          
+          {/* Close Button - top right */}
+          <TouchableOpacity 
+            style={styles.closeButton} 
+            onPress={() => {
+              const duration = (Date.now() - screenViewTimeRef.current) / 1000;
+              analytics.trackEvent('credit_pack_screen_closed', {
+                method: 'x_button',
+                duration_seconds: duration,
+              });
+              router.back();
+            }}
+            hitSlop={{ top: 20, bottom: 20, left: 20, right: 20 }}
+          >
+            <Ionicons name="close" size={20} color="#FFFFFF" opacity={0.4} />
+          </TouchableOpacity>
+
+          {/* Spacer to push content down */}
+          <View style={styles.spacer} />
+
+          {/* Bottom Action */}
+          <View style={styles.bottomSection}>
+            {/* Title */}
+            <Text style={styles.title}>Upgrade Your Plan</Text>
             <Text style={styles.subtitle}>
-              Choose a credit pack that works for you
+              Unlock more creative possibilities with extra credits. Pick an option that fits your needs.
             </Text>
-            <View style={styles.currentCredits}>
-              <Text style={styles.currentCreditsLabel}>Current Balance:</Text>
-              <Text style={styles.currentCreditsValue}>
-                {credits?.totalCredits?.toLocaleString() || '0'} credits
-              </Text>
-            </View>
-          </View>
 
-          {/* Credit Packs */}
-          <View style={styles.packsContainer}>
-            {CREDIT_PACKS.map((pack) => (
-              <TouchableOpacity
-                key={pack.id}
-                style={[
-                  styles.packCard,
-                  pack.popular && styles.packCardPopular
-                ]}
-                onPress={() => handlePurchase(pack)}
-                disabled={purchasing !== null}
-                activeOpacity={0.8}
-              >
-                {pack.popular && (
-                  <View style={styles.popularBadge}>
-                    <Text style={styles.popularText}>MOST POPULAR</Text>
-                  </View>
-                )}
-
-                <View style={styles.packHeader}>
-                  <Ionicons 
-                    name="diamond" 
-                    size={32} 
-                    color={pack.popular ? '#A78BFA' : '#6366F1'} 
-                  />
-                  <Text style={styles.packCredits}>
-                    {pack.credits.toLocaleString()}
-                  </Text>
-                  <Text style={styles.packCreditsLabel}>credits</Text>
-                  {pack.bonus && (
-                    <View style={styles.bonusBadge}>
-                      <Text style={styles.bonusText}>{pack.bonus}</Text>
-                    </View>
-                  )}
-                </View>
-
-                <View style={styles.packDetails}>
-                  <View style={styles.detailRow}>
-                    <Ionicons name="images-outline" size={16} color="#94A3B8" />
-                    <Text style={styles.detailText}>
-                      {getGenerationsCount(pack.credits)} generations
-                    </Text>
-                  </View>
-                  <View style={styles.detailRow}>
-                    <Ionicons name="color-wand-outline" size={16} color="#94A3B8" />
-                    <Text style={styles.detailText}>
-                      {getEditsCount(pack.credits)} edits
-                    </Text>
-                  </View>
-                </View>
-
-                <View style={styles.packFooter}>
-                  <Text style={styles.packPrice}>{pack.price}</Text>
-                  {purchasing === pack.id ? (
-                    <ActivityIndicator size="small" color="#FFFFFF" />
-                  ) : (
-                    <View style={styles.buyButton}>
-                      <Text style={styles.buyButtonText}>Buy Now</Text>
-                    </View>
-                  )}
-                </View>
-              </TouchableOpacity>
-            ))}
-          </View>
-
-          {/* Info Section */}
-          <View style={styles.infoSection}>
-            <Text style={styles.infoTitle}>Credit Usage</Text>
-            <View style={styles.infoRow}>
-              <Ionicons name="image-outline" size={20} color="#6366F1" />
-              <Text style={styles.infoText}>Generation: 200 credits</Text>
-            </View>
-            <View style={styles.infoRow}>
-              <Ionicons name="color-wand-outline" size={20} color="#6366F1" />
-              <Text style={styles.infoText}>Edit: 50 credits</Text>
-            </View>
-          </View>
-
-          {/* Or Subscribe */}
-          <View style={styles.subscribeSection}>
-            <Text style={styles.orText}>OR</Text>
-            <TouchableOpacity
-              style={styles.subscribeCard}
-              onPress={() => router.push('/subscription')}
-              activeOpacity={0.8}
-            >
-              <View style={styles.subscribeContent}>
-                <Ionicons name="infinite" size={32} color="#10B981" />
-                <View style={styles.subscribeText}>
-                  <Text style={styles.subscribeTitle}>Subscribe Weekly</Text>
-                  <Text style={styles.subscribeSubtitle}>
-                    3000 credits every week
-                  </Text>
-                </View>
+            {/* Compact Feature Tags */}
+            <View style={styles.featureTagsContainer}>
+              <View style={styles.featureTag}>
+                <Ionicons name="lock-open" size={14} color="#FFFFFF" />
+                <Text style={styles.featureTagText}>AI Profiles</Text>
               </View>
-              <Ionicons name="chevron-forward" size={24} color="#94A3B8" />
-            </TouchableOpacity>
+              <View style={styles.featureTag}>
+                <Ionicons name="lock-open" size={14} color="#FFFFFF" />
+                <Text style={styles.featureTagText}>Personalized looks</Text>
+              </View>
+              <View style={styles.featureTag}>
+                <Ionicons name="checkmark-circle" size={14} color="#FFFFFF" />
+                <Text style={styles.featureTagText}>Realistic results</Text>
+              </View>
+              <View style={styles.featureTag}>
+                <Ionicons name="sparkles" size={14} color="#FFFFFF" />
+                <Text style={styles.featureTagText}>Stunning collections</Text>
+              </View>
+            </View>
+
+            {/* Credit Packs */}
+            {loading ? (
+              <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color="#6366F1" />
+                <Text style={styles.loadingText}>Loading credit packs...</Text>
+              </View>
+            ) : packages.length === 0 ? (
+              <View style={styles.errorContainer}>
+                <Ionicons name="alert-circle" size={48} color="#EF4444" />
+                <Text style={styles.errorText}>No credit packs available</Text>
+                <Text style={styles.errorSubtext}>Please try again later</Text>
+              </View>
+            ) : (
+              <>
+                <View style={styles.packsContainer}>
+                  {packages.map(pack => renderCreditPack(pack))}
+                </View>
+
+                {/* Purchase Button */}
+                <TouchableOpacity
+                  style={[styles.ctaButton, (purchasing || !selectedPack) && styles.ctaButtonDisabled]}
+                  onPress={handlePurchase}
+                  disabled={purchasing || !selectedPack}
+                >
+                  {purchasing ? (
+                    <ActivityIndicator color="#000" />
+                  ) : (
+                    <Text style={styles.ctaText}>Add Credits</Text>
+                  )}
+                </TouchableOpacity>
+              </>
+            )}
+
+            {/* Easy to cancel text */}
+            <Text style={styles.easyToCancelText}>Easy to cancel.</Text>
+
+            {/* Footer Links */}
+            <View style={styles.footerLinks}>
+              <TouchableOpacity>
+                <Text style={styles.footerLinkText}>Terms of Use</Text>
+              </TouchableOpacity>
+              <Text style={styles.footerSeparator}>|</Text>
+              <TouchableOpacity>
+                <Text style={styles.footerLinkText}>Privacy Policy</Text>
+              </TouchableOpacity>
+              <Text style={styles.footerSeparator}>|</Text>
+              <TouchableOpacity>
+                <Text style={styles.footerLinkText}>Already Subscribed?</Text>
+              </TouchableOpacity>
+            </View>
           </View>
-        </ScrollView>
+
+        </View>
       </SafeAreaView>
-    </>
+
+      {/* Success Modal */}
+      <Modal
+        visible={showSuccessModal}
+        transparent
+        animationType="none"
+        statusBarTranslucent
+      >
+        <View style={styles.successOverlay}>
+          <Animated.View
+            style={[
+              styles.successModal,
+              {
+                transform: [{ scale: successScale }],
+                opacity: successOpacity,
+              },
+            ]}
+          >
+            {/* Success Icon */}
+            <View style={styles.successIconContainer}>
+              <Text style={styles.successEmoji}>💳</Text>
+              <View style={styles.successGlow} />
+            </View>
+
+            {/* Success Title */}
+            <Text style={styles.successTitle}>Credits Added!</Text>
+            
+            {/* Success Message */}
+            <Text style={styles.successMessage}>
+              {purchasedCredits.toLocaleString()} credits have been added to your account. Start creating amazing portraits!
+            </Text>
+
+            {/* CTA Button */}
+            <TouchableOpacity
+              style={styles.successButton}
+              onPress={handleSuccessClose}
+              activeOpacity={0.9}
+            >
+              <Text style={styles.successButtonText}>Start Creating</Text>
+              <Ionicons name="arrow-forward" size={20} color="#FFFFFF" />
+            </TouchableOpacity>
+          </Animated.View>
+        </View>
+      </Modal>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0F172A',
+    backgroundColor: '#000',
   },
-  content: {
-    padding: 20,
-    paddingBottom: 40,
+  backgroundContainer: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 0,
   },
-  header: {
-    alignItems: 'center',
-    marginBottom: 32,
+  imageScroll: {
+    flex: 1,
+    height: '100%',
   },
-  iconContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: 'rgba(167, 139, 250, 0.1)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 16,
+  backgroundImage: {
+    width: width,
+    height: height,
+    opacity: 0.6,
+  },
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+  },
+  safeArea: {
+    flex: 1,
+    zIndex: 1,
+  },
+  contentContainer: {
+    flex: 1,
+    paddingHorizontal: 20,
+    paddingBottom: Platform.OS === 'android' ? 20 : 10,
+    paddingTop: Platform.OS === 'android' ? 40 : 10,
+  },
+  closeButton: {
+    position: 'absolute',
+    top: Platform.OS === 'android' ? 40 : 10,
+    right: 20,
+    zIndex: 10,
+    padding: 8,
   },
   title: {
-    fontSize: 28,
-    fontWeight: '700',
+    fontSize: 32,
+    fontWeight: '800',
     color: '#FFFFFF',
+    letterSpacing: 0.5,
+    textAlign: 'center',
     marginBottom: 8,
   },
   subtitle: {
-    fontSize: 15,
+    fontSize: 14,
     color: '#94A3B8',
     textAlign: 'center',
     marginBottom: 16,
+    lineHeight: 20,
   },
-  currentCredits: {
+  
+  spacer: {
+    flex: 1,
+  },
+  
+  // Compact Feature Tags
+  featureTagsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 20,
+    justifyContent: 'center',
+    width: '100%',
+  },
+  featureTag: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    backgroundColor: '#1E293B',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 16,
+    gap: 6,
   },
-  currentCreditsLabel: {
-    fontSize: 14,
+  featureTagText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '500',
+  },
+
+  // Loading & Error states
+  loadingContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 40,
+    gap: 12,
+  },
+  loadingText: {
     color: '#94A3B8',
+    fontSize: 14,
   },
-  currentCreditsValue: {
+  errorContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 40,
+    gap: 8,
+  },
+  errorText: {
+    color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
-    color: '#A78BFA',
   },
+  errorSubtext: {
+    color: '#94A3B8',
+    fontSize: 14,
+  },
+
+  // Credit Packs
   packsContainer: {
-    gap: 16,
-    marginBottom: 32,
+    gap: 12,
+    marginBottom: 16,
+    width: '100%',
   },
   packCard: {
-    backgroundColor: '#1E293B',
-    borderRadius: 20,
-    padding: 24,
+    backgroundColor: 'rgba(30, 41, 59, 0.6)',
     borderWidth: 2,
-    borderColor: '#334155',
-    position: 'relative',
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 16,
+    paddingHorizontal: 20,
+    paddingVertical: 18,
+    height: 70,
+    justifyContent: 'center',
   },
-  packCardPopular: {
-    borderColor: '#A78BFA',
-    backgroundColor: 'rgba(167, 139, 250, 0.05)',
+  packCardSelected: {
+    backgroundColor: 'rgba(99, 102, 241, 0.15)',
+    borderColor: '#6366F1',
+    borderWidth: 2,
   },
-  popularBadge: {
+  packContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  packTextContainer: {
+    justifyContent: 'center',
+  },
+  packName: {
+    color: '#FFFFFF',
+    fontSize: 17,
+    fontWeight: '700',
+  },
+  priceContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  packPrice: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: '700',
+  },
+  textSelected: {
+    color: '#6366F1',
+  },
+  packBadge: {
     position: 'absolute',
-    top: -12,
-    alignSelf: 'center',
-    backgroundColor: '#A78BFA',
+    top: -8,
+    right: 16,
     paddingHorizontal: 12,
     paddingVertical: 4,
-    borderRadius: 12,
-  },
-  popularText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#FFFFFF',
-  },
-  packHeader: {
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  packCredits: {
-    fontSize: 36,
-    fontWeight: '700',
-    color: '#FFFFFF',
-    marginTop: 8,
-  },
-  packCreditsLabel: {
-    fontSize: 14,
-    color: '#94A3B8',
-    marginTop: 4,
-  },
-  bonusBadge: {
-    backgroundColor: '#10B981',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
     borderRadius: 8,
+    zIndex: 10,
+  },
+  packBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 11,
+    fontWeight: 'bold',
+  },
+  radioButton: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#475569',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  radioButtonSelected: {
+    borderColor: '#6366F1',
+    backgroundColor: 'rgba(99, 102, 241, 0.2)',
+  },
+  radioButtonInner: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: '#6366F1',
+  },
+
+  // Bottom Section
+  bottomSection: {
+    alignItems: 'center',
+    width: '100%',
+  },
+  ctaButton: {
+    width: '100%',
+    backgroundColor: '#F59E0B',
+    paddingVertical: 18,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginBottom: 8,
+    shadowColor: '#F59E0B',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  ctaButtonDisabled: {
+    opacity: 0.7,
+  },
+  ctaText: {
+    color: '#000000',
+    fontSize: 18,
+    fontWeight: '700',
+  },
+  easyToCancelText: {
+    color: '#94A3B8',
+    fontSize: 14,
+    fontWeight: '500',
+    textAlign: 'center',
+    marginBottom: 12,
+  },
+  footerLinks: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexWrap: 'wrap',
     marginTop: 8,
   },
-  bonusText: {
+  footerLinkText: {
+    color: '#94A3B8',
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: '400',
+  },
+  footerSeparator: {
+    color: '#64748B',
+    fontSize: 12,
+    marginHorizontal: 8,
+  },
+
+  // Success Modal
+  successOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.85)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  successModal: {
+    backgroundColor: '#1E293B',
+    borderRadius: 28,
+    padding: 32,
+    width: '100%',
+    maxWidth: 360,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#334155',
+    shadowColor: '#6366F1',
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.4,
+    shadowRadius: 24,
+    elevation: 12,
+  },
+  successIconContainer: {
+    position: 'relative',
+    marginBottom: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  successEmoji: {
+    fontSize: 72,
+    textAlign: 'center',
+  },
+  successGlow: {
+    position: 'absolute',
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: '#6366F1',
+    opacity: 0.15,
+    zIndex: -1,
+  },
+  successTitle: {
+    fontSize: 28,
+    fontWeight: '800',
     color: '#FFFFFF',
+    textAlign: 'center',
+    marginBottom: 12,
+    letterSpacing: 0.5,
   },
-  packDetails: {
-    gap: 12,
-    marginBottom: 20,
+  successMessage: {
+    fontSize: 15,
+    color: '#94A3B8',
+    textAlign: 'center',
+    lineHeight: 22,
+    marginBottom: 24,
   },
-  detailRow: {
+  successButton: {
+    backgroundColor: '#6366F1',
+    paddingVertical: 16,
+    paddingHorizontal: 32,
+    borderRadius: 16,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-  },
-  detailText: {
-    fontSize: 14,
-    color: '#94A3B8',
-  },
-  packFooter: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  packPrice: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#FFFFFF',
-  },
-  buyButton: {
-    backgroundColor: '#6366F1',
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 12,
-  },
-  buyButtonText: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#FFFFFF',
-  },
-  infoSection: {
-    backgroundColor: '#1E293B',
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 24,
-  },
-  infoTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#FFFFFF',
-    marginBottom: 16,
-  },
-  infoRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    marginBottom: 12,
-  },
-  infoText: {
-    fontSize: 14,
-    color: '#94A3B8',
-  },
-  subscribeSection: {
-    alignItems: 'center',
-  },
-  orText: {
-    fontSize: 14,
-    color: '#64748B',
-    fontWeight: '600',
-    marginBottom: 16,
-  },
-  subscribeCard: {
     width: '100%',
-    backgroundColor: '#1E293B',
-    borderRadius: 16,
-    padding: 20,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    borderWidth: 2,
-    borderColor: '#10B981',
+    justifyContent: 'center',
+    shadowColor: '#6366F1',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
+    elevation: 8,
   },
-  subscribeContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 16,
-  },
-  subscribeText: {
-    gap: 4,
-  },
-  subscribeTitle: {
-    fontSize: 18,
-    fontWeight: '600',
+  successButtonText: {
     color: '#FFFFFF',
-  },
-  subscribeSubtitle: {
-    fontSize: 14,
-    color: '#94A3B8',
+    fontSize: 17,
+    fontWeight: 'bold',
   },
 });

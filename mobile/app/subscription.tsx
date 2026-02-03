@@ -59,12 +59,18 @@ export default function SubscriptionScreen() {
   const scrollViewRef = useRef<any>(null);
   const successScale = useRef(new Animated.Value(0)).current;
   const successOpacity = useRef(new Animated.Value(0)).current;
+  const screenViewTimeRef = useRef<number>(Date.now());
 
   useEffect(() => {
+    screenViewTimeRef.current = Date.now();
     loadOfferings();
-    // Track subscription screen view
-    analytics.subscriptionScreenViewed();
-    tiktokService.trackSubscriptionView();
+    
+    // Check if coming from onboarding
+    SecureStore.getItemAsync(SHOW_SUBSCRIPTION_KEY).then(fromOnboarding => {
+      const source = fromOnboarding ? 'onboarding' : 'other';
+      analytics.subscriptionScreenViewed(source as any);
+      tiktokService.trackSubscriptionView();
+    });
   }, []);
 
   // Auto-scroll background images
@@ -114,6 +120,13 @@ export default function SubscriptionScreen() {
       if (customerInfo) {
         const isPro = await checkProStatus();
         if (isPro) {
+          // Track successful purchase
+          analytics.subscriptionPurchased(
+            pkg.identifier,
+            pkg.product.priceString,
+            freeTrialEnabled
+          );
+          
           // Update backend
           try {
             const session = await supabase.auth.getSession();
@@ -164,7 +177,9 @@ export default function SubscriptionScreen() {
         }
       }
     } catch (error: any) {
+      // Track purchase failure
       if (!error.userCancelled) {
+        analytics.subscriptionPurchaseFailed(error.message || 'Unknown error');
         Alert.alert('Purchase Failed', 'Please try again.');
       }
     } finally {
@@ -421,6 +436,10 @@ export default function SubscriptionScreen() {
           <TouchableOpacity 
             style={styles.closeButton} 
             onPress={async () => {
+              // Track subscription screen closed
+              const duration = (Date.now() - screenViewTimeRef.current) / 1000;
+              analytics.subscriptionScreenClosed('x_button', duration);
+              
               // Clear the subscription flag
               await SecureStore.deleteItemAsync(SHOW_SUBSCRIPTION_KEY);
               
@@ -477,7 +496,11 @@ export default function SubscriptionScreen() {
             {/* Free Trial Toggle - moved here */}
             <TouchableOpacity 
               style={styles.freeTrialToggle}
-              onPress={() => setFreeTrialEnabled(!freeTrialEnabled)}
+              onPress={() => {
+                const newState = !freeTrialEnabled;
+                analytics.freeTrialToggled(newState);
+                setFreeTrialEnabled(newState);
+              }}
               activeOpacity={0.8}
             >
               <Text style={styles.freeTrialText}>Free Trial Enabled</Text>
@@ -489,7 +512,14 @@ export default function SubscriptionScreen() {
             <TouchableOpacity
               style={[styles.ctaButton, purchasing && styles.ctaButtonDisabled]}
               onPress={() => {
-                if (weeklyPkg) handlePurchase(weeklyPkg as PurchasesPackage);
+                if (weeklyPkg) {
+                  // Track start free trial clicked
+                  analytics.startFreeTrialClicked(
+                    freeTrialEnabled, 
+                    weeklyPkg.product.priceString
+                  );
+                  handlePurchase(weeklyPkg as PurchasesPackage);
+                }
               }}
               disabled={purchasing}
             >

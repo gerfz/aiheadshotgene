@@ -61,8 +61,18 @@ export { getPostHog as posthog };
 
 // Common events
 export const analytics = {
-  // App lifecycle
+  // App lifecycle - detailed loading tracking
+  appLaunched: () => trackEvent('app_launched'),
+  loadingStarted: (timestamp: number) => trackEvent('loading_started', { timestamp }),
+  loadingFinished: (duration: number, success: boolean) => 
+    trackEvent('loading_finished', { duration_ms: duration, success }),
+  loadingAbandoned: (duration: number, lastStep: string) => 
+    trackEvent('loading_abandoned', { duration_ms: duration, last_step: lastStep }),
   appOpened: () => trackEvent('app_opened'),
+  
+  // Onboarding
+  onboardingScreenViewed: () => trackEvent('onboarding_screen_viewed'),
+  onboardingDiveInClicked: () => trackEvent('onboarding_dive_in_clicked'),
   onboardingCompleted: () => trackEvent('onboarding_completed'),
   
   // Photo upload
@@ -115,12 +125,24 @@ export const analytics = {
   photoEdited: (styleKey: string) => 
     trackEvent('photo_edited', { style_key: styleKey }),
   
-  // Monetization
-  subscriptionScreenViewed: () => 
-    trackEvent('subscription_screen_viewed'),
+  // Monetization - detailed subscription tracking
+  subscriptionScreenViewed: (source: 'onboarding' | 'profile' | 'no_credits' | 'banner' | 'other') => 
+    trackEvent('subscription_screen_viewed', { source }),
   
-  subscriptionPurchased: (plan: string, price: string) => 
-    trackEvent('subscription_purchased', { plan, price }),
+  subscriptionScreenClosed: (method: 'x_button' | 'back_button' | 'backdrop', duration: number) => 
+    trackEvent('subscription_screen_closed', { method, duration_seconds: duration }),
+  
+  freeTrialToggled: (enabled: boolean) => 
+    trackEvent('free_trial_toggled', { enabled }),
+  
+  startFreeTrialClicked: (hasFreeTrial: boolean, price: string) => 
+    trackEvent('start_free_trial_clicked', { has_free_trial: hasFreeTrial, price }),
+  
+  subscriptionPurchased: (plan: string, price: string, hadFreeTrial: boolean) => 
+    trackEvent('subscription_purchased', { plan, price, had_free_trial: hadFreeTrial }),
+  
+  subscriptionPurchaseFailed: (error: string) => 
+    trackEvent('subscription_purchase_failed', { error }),
   
   subscriptionRestored: () => 
     trackEvent('subscription_restored'),

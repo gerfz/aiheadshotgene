@@ -529,6 +529,32 @@ export default function HomeScreen() {
             )}
 
 
+            {/* Become Pro Badge - Always visible at bottom if not subscribed */}
+            {!credits?.isSubscribed && (
+              <View style={styles.becomeProContainer}>
+                <TouchableOpacity 
+                  style={styles.becomeProBadge}
+                  onPress={() => router.push('/subscription')}
+                  activeOpacity={0.9}
+                >
+                  <Ionicons name="star" size={18} color="#FFFFFF" />
+                  <View style={styles.becomeProTextContainer}>
+                    <Text style={styles.becomeProText}>Become Pro</Text>
+                    <Text style={styles.becomeProSubtext}>Get access to all packages</Text>
+                  </View>
+                  <TouchableOpacity 
+                    style={styles.closeBecomePro}
+                    onPress={(e) => {
+                      e.stopPropagation();
+                      // Just close the badge - you could add logic to hide it permanently
+                    }}
+                  >
+                    <Ionicons name="close" size={18} color="#94A3B8" />
+                  </TouchableOpacity>
+                </TouchableOpacity>
+              </View>
+            )}
+
             {/* Continue Button - Only show when styles are selected */}
             {selectedStyles.length > 0 && (
               <View style={styles.footer}>
@@ -879,6 +905,44 @@ const styles = StyleSheet.create({
     fontSize: 13,
     marginTop: 12,
     lineHeight: 18,
+  },
+  
+  // Become Pro Badge Container (fixed at bottom)
+  becomeProContainer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: '#000000',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    paddingBottom: 20,
+    borderTopWidth: 1,
+    borderTopColor: '#1A1A1A',
+  },
+  becomeProBadge: {
+    backgroundColor: '#1E293B',
+    borderRadius: 16,
+    padding: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  becomeProTextContainer: {
+    flex: 1,
+  },
+  becomeProText: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '600',
+    marginBottom: 2,
+  },
+  becomeProSubtext: {
+    color: '#94A3B8',
+    fontSize: 13,
+  },
+  closeBecomePro: {
+    padding: 4,
   },
   
   // Footer

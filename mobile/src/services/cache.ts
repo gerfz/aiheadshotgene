@@ -6,6 +6,8 @@ const CACHE_KEYS = {
   CREDITS: 'cached_credits',
   GENERATIONS: 'cached_generations',
   LAST_SYNC: 'last_sync_timestamp',
+  USER_PROFILE: 'cached_user_profile',
+  SUBSCRIPTION_STATUS: 'cached_subscription_status',
 };
 
 // Cache expiry time (5 minutes)
@@ -112,6 +114,58 @@ export async function clearCreditsCache(): Promise<void> {
     console.log('🗑️ Credits cache cleared');
   } catch (error) {
     console.error('Failed to clear credits cache:', error);
+  }
+}
+
+/**
+ * Cache user profile data for instant app startup
+ */
+export async function cacheUserProfile(userId: string, email: string): Promise<void> {
+  try {
+    await SecureStore.setItemAsync(CACHE_KEYS.USER_PROFILE, JSON.stringify({ userId, email }));
+    console.log('💾 User profile cached');
+  } catch (error) {
+    console.error('Failed to cache user profile:', error);
+  }
+}
+
+/**
+ * Get cached user profile
+ */
+export async function getCachedUserProfile(): Promise<{ userId: string; email: string } | null> {
+  try {
+    const cached = await SecureStore.getItemAsync(CACHE_KEYS.USER_PROFILE);
+    if (!cached) return null;
+    return JSON.parse(cached);
+  } catch (error) {
+    console.error('Failed to get cached user profile:', error);
+    return null;
+  }
+}
+
+/**
+ * Cache subscription status
+ */
+export async function cacheSubscriptionStatus(isSubscribed: boolean): Promise<void> {
+  try {
+    await SecureStore.setItemAsync(CACHE_KEYS.SUBSCRIPTION_STATUS, JSON.stringify(isSubscribed));
+    console.log('💾 Subscription status cached:', isSubscribed);
+  } catch (error) {
+    console.error('Failed to cache subscription status:', error);
+  }
+}
+
+/**
+ * Get cached subscription status
+ */
+export async function getCachedSubscriptionStatus(): Promise<boolean | null> {
+  try {
+    const cached = await SecureStore.getItemAsync(CACHE_KEYS.SUBSCRIPTION_STATUS);
+    if (!cached) return null;
+    return JSON.parse(cached);
+  } catch (error) {
+    console.error('Failed to get cached subscription status:', error);
+    return null;
   }
 }
 

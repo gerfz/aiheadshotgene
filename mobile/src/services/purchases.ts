@@ -25,9 +25,9 @@ export const PACKAGE_IDS = {
 
 // Credit pack identifiers (for one-time purchases)
 export const CREDIT_PACK_IDS = {
-  SMALL: 'credits_500',   // 500 credits
-  MEDIUM: 'credits_1500', // 1500 credits
-  LARGE: 'credits_3500',  // 3500 credits
+  SMALL: '5000credits',    // 5000 credits
+  MEDIUM: '15000credits',  // 15000 credits
+  LARGE: '50000credits',   // 50000 credits
 };
 
 /**
@@ -231,6 +231,76 @@ export function getPackageByIdentifier(
   identifier: string
 ): PurchasesPackage | undefined {
   return packages.find(pkg => pkg.identifier === identifier);
+}
+
+/**
+ * Get credit pack offerings
+ * Returns one-time purchase products for credits
+ */
+export async function getCreditPackOfferings(): Promise<PurchasesPackage[]> {
+  try {
+    const offerings: PurchasesOfferings = await Purchases.getOfferings();
+    
+    console.log('💳 RevenueCat Credit Pack Offerings:', {
+      all: Object.keys(offerings.all),
+    });
+    
+    // Look for credit pack offerings (could be in a separate offering or mixed with subscriptions)
+    let creditPacks: PurchasesPackage[] = [];
+    
+    // Check current offering for credit packs
+    if (offerings.current) {
+      creditPacks = offerings.current.availablePackages.filter(pkg => 
+        pkg.product.identifier.includes('credits') || 
+        pkg.identifier.includes('credits')
+      );
+    }
+    
+    // If no credit packs found in current, check all offerings
+    if (creditPacks.length === 0) {
+      Object.values(offerings.all).forEach(offering => {
+        const packs = offering.availablePackages.filter(pkg => 
+          pkg.product.identifier.includes('credits') || 
+          pkg.identifier.includes('credits')
+        );
+        creditPacks = [...creditPacks, ...packs];
+      });
+    }
+    
+    console.log('✅ Available credit packs:', creditPacks.map(p => ({
+      identifier: p.identifier,
+      product: p.product.identifier,
+      price: p.product.priceString
+    })));
+    
+    return creditPacks;
+  } catch (error) {
+    console.error('❌ Failed to get credit pack offerings:', error);
+    return [];
+  }
+}
+
+/**
+ * Purchase a credit pack (one-time purchase)
+ */
+export async function purchaseCreditPack(pkg: PurchasesPackage): Promise<CustomerInfo | null> {
+  try {
+    console.log('💳 Attempting credit pack purchase:', pkg.identifier);
+    const { customerInfo } = await Purchases.purchasePackage(pkg);
+    
+    console.log('✅ Credit pack purchase successful!');
+    console.log('📦 Purchased products:', customerInfo.allPurchasedProductIdentifiers);
+    console.log('💰 Non-subscription purchases:', customerInfo.nonSubscriptionTransactions);
+    
+    return customerInfo;
+  } catch (error: any) {
+    if (error.userCancelled) {
+      console.log('ℹ️ User cancelled credit pack purchase');
+    } else {
+      console.error('❌ Credit pack purchase failed:', error);
+    }
+    throw error;
+  }
 }
 
 /**
