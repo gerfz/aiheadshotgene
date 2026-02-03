@@ -72,9 +72,9 @@ export default function RootLayout() {
               useAppStore.setState({ credits: cachedCredits });
             }
             
-            // Show app immediately with cached data
-            setAppReady(true);
-            console.log('⚡ App ready with cached data - showing UI now!');
+            // DON'T show app yet - wait for auth session to be restored
+            // This prevents the issue where UI shows but API calls fail due to no auth
+            console.log('⚡ Cached data loaded - continuing with auth...');
           }
         } catch (cacheError) {
           console.warn('⚠️ Could not load cached data:', cacheError);

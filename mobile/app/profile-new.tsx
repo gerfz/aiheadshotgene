@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import * as Application from 'expo-application';
+import Constants from 'expo-constants';
 import { router, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAppStore } from '../src/store/useAppStore';
@@ -206,6 +207,13 @@ export default function ProfileScreen() {
     ? generations.filter(g => g.status === 'completed').length 
     : 0;
 
+  // Get version info from app.json via expo-constants
+  const appVersion = Constants.expoConfig?.version || '1.0.0';
+  const buildNumber = Constants.expoConfig?.android?.versionCode || 
+                      Constants.expoConfig?.ios?.buildNumber || 
+                      '1';
+  const versionString = `${appVersion} (${buildNumber})`;
+
   return (
     <>
       <Stack.Screen 
@@ -352,7 +360,7 @@ export default function ProfileScreen() {
           )}
 
           {/* Version */}
-          <Text style={styles.version}>1.3.0 (81)</Text>
+          <Text style={styles.version}>{versionString}</Text>
         </ScrollView>
 
         {/* Feedback Modal */}
