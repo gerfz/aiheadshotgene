@@ -464,7 +464,7 @@ router.post(
           });
 
         // Create job in queue for worker to process
-        await supabaseAdmin
+        const { error: jobInsertError } = await supabaseAdmin
           .from('generation_jobs')
           .insert({
             user_id: userId,
@@ -474,6 +474,11 @@ router.post(
             custom_prompt: styleKey === 'custom' ? customPrompt : null,
             original_image_url: originalImageUrl
           });
+
+        if (jobInsertError) {
+          console.error(`❌ [JOB INSERT FAILED] Gen: ${generationId} | Error:`, jobInsertError);
+          throw jobInsertError;
+        }
 
         // Increment style usage
         await incrementStyleUsage(styleKey);

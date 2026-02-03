@@ -4,15 +4,15 @@ DROP FUNCTION IF EXISTS get_next_generation_job();
 -- Create function to fetch next job from queue
 CREATE OR REPLACE FUNCTION get_next_generation_job()
 RETURNS TABLE (
-  id uuid,
+  job_id uuid,
   user_id uuid,
   generation_id uuid,
   status text,
   style_key text,
   custom_prompt text,
+  edit_prompt text,
   original_image_url text,
   created_at timestamptz,
-  updated_at timestamptz,
   started_at timestamptz,
   completed_at timestamptz,
   error_message text,
@@ -23,8 +23,7 @@ BEGIN
   UPDATE generation_jobs gj
   SET 
     status = 'processing',
-    started_at = NOW(),
-    updated_at = NOW()
+    started_at = NOW()
   WHERE gj.id = (
     SELECT gj2.id
     FROM generation_jobs gj2
@@ -34,15 +33,15 @@ BEGIN
     FOR UPDATE SKIP LOCKED
   )
   RETURNING 
-    gj.id,
+    gj.id AS job_id,
     gj.user_id,
     gj.generation_id,
     gj.status,
     gj.style_key,
     gj.custom_prompt,
+    gj.edit_prompt,
     gj.original_image_url,
     gj.created_at,
-    gj.updated_at,
     gj.started_at,
     gj.completed_at,
     gj.error_message,
