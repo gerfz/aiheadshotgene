@@ -42,6 +42,7 @@ async function processNextJob(): Promise<boolean> {
     isProcessing = true;
 
     // Get next job from queue
+    console.log('🔍 [WORKER] Checking for queued jobs...');
     const { data: jobs, error: fetchError } = await supabaseAdmin
       .rpc('get_next_generation_job');
 
@@ -51,9 +52,11 @@ async function processNextJob(): Promise<boolean> {
     }
 
     if (!jobs || jobs.length === 0) {
-      // No jobs in queue (this is normal, don't log every time)
+      console.log('⏸️ [WORKER] No jobs in queue');
       return false;
     }
+
+    console.log(`📋 [WORKER] Found ${jobs.length} job(s), processing first one...`);
 
     const job = jobs[0];
     const userIdShort = job.user_id ? job.user_id.slice(0, 8) : 'unknown';
