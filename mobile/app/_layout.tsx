@@ -1,7 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { AppState } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 import { useAppStore } from '../src/store/useAppStore';
 import { supabase } from '../src/services/supabase';
@@ -17,7 +16,8 @@ import appsFlyerService from '../src/services/appsflyer';
 
 const FIRST_TIME_KEY = 'has_seen_welcome';
 const TIKTOK_INSTALL_TRACKED_KEY = 'tiktok_install_tracked';
-const DEVICE_USER_ID_KEY = 'device_user_id'; // Store the user ID for this device
+const DEVICE_USER_ID_KEY = 'device_user_id';
+const TRIAL_TRACKED_KEY = 'trial_activation_tracked'; // Store the user ID for this device
 
 // Helper to wrap promises with timeout
 function withTimeout<T>(promise: Promise<T>, ms: number, errorMessage: string): Promise<T> {
@@ -267,7 +267,13 @@ export default function RootLayout() {
               // Cache user profile for next app start
               cacheUserProfile(newData.user.id, userEmail).catch(() => {});
               
-              // Identify user in TikTok and AppsFlyer (non-blocking)
+              // Identify user in PostHog, TikTok and AppsFlyer (non-blocking)
+              identifyUser(newData.user.id, {
+                device_id: deviceId,
+                user_id: newData.user.id,
+                is_anonymous: true,
+                email: userEmail,
+              });
               tiktokService.identifyUser(newData.user.id, `device-${deviceId}@anonymous.local`).catch(() => {});
               appsFlyerService.setCustomerUserId(newData.user.id);
               // Don't track registration for returning devices
@@ -325,7 +331,13 @@ export default function RootLayout() {
           // Cache user profile for next app start
           cacheUserProfile(session.user.id, userEmail).catch(() => {});
           
-          // Identify user in TikTok and AppsFlyer (non-blocking)
+          // Identify user in PostHog, TikTok and AppsFlyer (non-blocking)
+          identifyUser(session.user.id, {
+            device_id: deviceId,
+            user_id: session.user.id,
+            is_anonymous: !session.user.email,
+            email: userEmail,
+          });
           tiktokService.identifyUser(
             session.user.id,
             session.user.email || `device-${deviceId}@anonymous.local`
@@ -397,7 +409,13 @@ export default function RootLayout() {
               // Cache user profile for next app start
               cacheUserProfile(data.user.id, userEmail).catch(() => {});
               
-              // Identify user in TikTok and AppsFlyer (non-blocking)
+              // Identify user in PostHog, TikTok and AppsFlyer (non-blocking)
+              identifyUser(data.user.id, {
+                device_id: deviceId,
+                user_id: data.user.id,
+                is_anonymous: true,
+                email: userEmail,
+              });
               tiktokService.identifyUser(data.user.id, `device-${deviceId}@anonymous.local`).catch(() => {});
               appsFlyerService.setCustomerUserId(data.user.id);
               // Only track registration for truly new devices
@@ -442,6 +460,23 @@ export default function RootLayout() {
         isInitializing = false;
         clearTimeout(initTimeout);
         console.log('✅ App initialization complete - ensuring app is ready');
+        
+        // Fetch credits one more time to check for trial (non-blocking)
+        getCredits()
+          .then(async (creditsData) => {
+            useAppStore.setState({ credits: creditsData });
+            
+            // Track trial activation for active trials (only once)
+            if (creditsData.isTrialActive) {
+              const hasTrackedTrial = await SecureStore.getItemAsync(TRIAL_TRACKED_KEY).catch(() => null);
+              if (!hasTrackedTrial) {
+                analytics.trialActivated(creditsData.totalCredits, creditsData.trialDaysRemaining);
+                await SecureStore.setItemAsync(TRIAL_TRACKED_KEY, 'true').catch(() => {});
+                console.log('🎁 Trial activation tracked:', creditsData.totalCredits, 'credits,', creditsData.trialDaysRemaining, 'days');
+              }
+            }
+          })
+          .catch(err => console.warn('⚠️ Failed to fetch credits after init:', err));
         
         // Track loading finished
         const loadingDuration = Date.now() - loadingStartTime;
@@ -495,6 +530,16 @@ export default function RootLayout() {
             );
             useAppStore.setState({ credits: creditsData });
             console.log('✅ Credits refreshed:', creditsData);
+            
+            // Track trial activation for new trials (only once per user)
+            if (creditsData.isTrialActive) {
+              const hasTrackedTrial = await SecureStore.getItemAsync(TRIAL_TRACKED_KEY).catch(() => null);
+              if (!hasTrackedTrial) {
+                analytics.trialActivated(creditsData.totalCredits, creditsData.trialDaysRemaining);
+                await SecureStore.setItemAsync(TRIAL_TRACKED_KEY, 'true').catch(() => {});
+                console.log('🎁 Trial activation tracked:', creditsData.totalCredits, 'credits,', creditsData.trialDaysRemaining, 'days');
+              }
+            }
           } catch (error) {
             console.error('❌ Error during auth state change:', error);
           }
@@ -566,22 +611,12 @@ export default function RootLayout() {
       }
     });
 
-    // Track if user backgrounds app during loading
-    const appStateSubscription = AppState.addEventListener('change', (nextAppState) => {
-      if (nextAppState === 'background' && !appReady && loadingStartTimeRef.current > 0) {
-        const abandonedDuration = Date.now() - loadingStartTimeRef.current;
-        analytics.loadingAbandoned(abandonedDuration, lastLoadingStepRef.current);
-        console.log(`⚠️ User backgrounded app during loading at step: ${lastLoadingStepRef.current}`);
-      }
-    });
-
     return () => {
       subscription.unsubscribe();
       if (customerInfoListener) {
         customerInfoListener.remove();
       }
       if (initTimeout) clearTimeout(initTimeout);
-      appStateSubscription.remove();
     };
   }, []);
 

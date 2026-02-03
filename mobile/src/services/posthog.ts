@@ -47,8 +47,18 @@ export const trackEvent = (eventName: string, properties?: Record<string, any>) 
 };
 
 // Identify user (use anonymous ID or user ID)
+// Properties like device_id and user_id will be automatically included in all future events
 export const identifyUser = (userId: string, properties?: Record<string, any>) => {
-  getPostHog().identify(userId, properties);
+  const posthog = getPostHog();
+  posthog.identify(userId, properties);
+  
+  // Register super properties (included in ALL events automatically)
+  if (properties?.device_id) {
+    posthog.register({ 
+      device_id: properties.device_id,
+      user_id: userId,
+    });
+  }
 };
 
 // Reset user (on logout)
@@ -66,8 +76,6 @@ export const analytics = {
   loadingStarted: (timestamp: number) => trackEvent('loading_started', { timestamp }),
   loadingFinished: (duration: number, success: boolean) => 
     trackEvent('loading_finished', { duration_ms: duration, success }),
-  loadingAbandoned: (duration: number, lastStep: string) => 
-    trackEvent('loading_abandoned', { duration_ms: duration, last_step: lastStep }),
   appOpened: () => trackEvent('app_opened'),
   
   // Onboarding
@@ -146,6 +154,17 @@ export const analytics = {
   
   subscriptionRestored: () => 
     trackEvent('subscription_restored'),
+  
+  // Credit pack purchases
+  creditPackPurchased: (packId: string, productId: string, credits: number, price: string) => 
+    trackEvent('credit_pack_purchased', { pack_id: packId, product_id: productId, credits, price }),
+  
+  creditPackPurchaseFailed: (error: string) => 
+    trackEvent('credit_pack_purchase_failed', { error }),
+  
+  // Trial activation (when user receives free trial with credits)
+  trialActivated: (credits: number, durationDays: number) => 
+    trackEvent('trial_activated', { trial_credits: credits, trial_duration_days: durationDays }),
   
   creditsDepletedBannerShown: () => 
     trackEvent('credits_depleted_banner_shown'),

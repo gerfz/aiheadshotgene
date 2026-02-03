@@ -128,15 +128,30 @@ const STATIC_CATEGORIES = [
 ];
 
 export default function StyleSelectScreen() {
-  const { selectedStyle, setSelectedStyle, customPrompt, setCustomPrompt, credits } = useAppStore();
+  const { selectedStyle, setSelectedStyle, customPrompt, setCustomPrompt, credits, cachedCategories, cachedAllStyles, setCachedStyles } = useAppStore();
   const [categories, setCategories] = useState(STATIC_CATEGORIES);
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [showCustomPrompt, setShowCustomPrompt] = useState(false);
 
-  // Load most used styles on mount
+  // Load most used styles on mount (use cache if available and not expired)
   useEffect(() => {
-    loadMostUsedStyles();
+    const CACHE_EXPIRY_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
+    const { stylesLoadedAt } = useAppStore.getState();
+    const isCacheValid = stylesLoadedAt && (Date.now() - stylesLoadedAt < CACHE_EXPIRY_MS);
+    
+    if (cachedCategories && isCacheValid) {
+      // Use cached data (less than 30 days old)
+      console.log('✅ Using cached styles');
+      setCategories(cachedCategories);
+      setLoading(false);
+    } else {
+      // Load fresh data (cache expired or doesn't exist)
+      if (stylesLoadedAt) {
+        console.log('🔄 Cache expired (30+ days old), refreshing styles');
+      }
+      loadMostUsedStyles();
+    }
   }, []);
 
   const loadMostUsedStyles = async () => {
@@ -171,7 +186,13 @@ export default function StyleSelectScreen() {
       };
       
       // Update categories with Most Used at the top
-      setCategories([mostUsedCategory, ...STATIC_CATEGORIES]);
+      const updatedCategories = [mostUsedCategory, ...STATIC_CATEGORIES];
+      setCategories(updatedCategories);
+      
+      // Cache the loaded styles (also cache allStyles for home screen)
+      const allStyleKeys = ['custom', ...Object.keys(STYLE_PRESETS).filter(k => k !== 'custom')];
+      setCachedStyles(updatedCategories, allStyleKeys);
+      
       setLoading(false);
     } catch (error) {
       console.error('Failed to load most used styles:', error);
@@ -182,7 +203,13 @@ export default function StyleSelectScreen() {
         icon: '⚡',
         styles: ['custom', 'business', 'emotional_film', 'victoria_secret', 'professional_headshot'],
       };
-      setCategories([defaultMostUsed, ...STATIC_CATEGORIES]);
+      const fallbackCategories = [defaultMostUsed, ...STATIC_CATEGORIES];
+      setCategories(fallbackCategories);
+      
+      // Cache the fallback data
+      const allStyleKeys = ['custom', ...Object.keys(STYLE_PRESETS).filter(k => k !== 'custom')];
+      setCachedStyles(fallbackCategories, allStyleKeys);
+      
       setLoading(false);
     }
   };

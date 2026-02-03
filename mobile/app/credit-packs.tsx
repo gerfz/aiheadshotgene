@@ -172,12 +172,12 @@ export default function CreditPacksScreen() {
               });
 
               // Track successful purchase
-              analytics.trackEvent('credit_pack_purchased', {
-                pack_id: pkg.identifier,
-                product_id: pkg.product.identifier,
-                credits: credits,
-                price: pkg.product.priceString,
-              });
+              analytics.creditPackPurchased(
+                pkg.identifier,
+                pkg.product.identifier,
+                credits,
+                pkg.product.priceString
+              );
 
               // Track in TikTok and AppsFlyer
               await tiktokService.trackEvent('credit_pack_purchased', {
@@ -225,20 +225,30 @@ export default function CreditPacksScreen() {
     } catch (error: any) {
       if (!error.userCancelled) {
         Alert.alert('Purchase Failed', 'Please try again.');
-        analytics.trackEvent('credit_pack_purchase_failed', {
-          error: error.message || 'Unknown error',
-        });
+        analytics.creditPackPurchaseFailed(error.message || 'Unknown error');
       }
     } finally {
       setPurchasing(false);
     }
   };
 
-  const handleSuccessClose = () => {
+  const handleSuccessClose = async () => {
     setShowSuccessModal(false);
     successScale.setValue(0);
     successOpacity.setValue(0);
-    router.back();
+    
+    // Navigate to home screen
+    router.replace('/home');
+    
+    // Refresh credits in background to show updated balance
+    try {
+      const { getCredits } = await import('../src/services/api');
+      const creditsData = await getCredits();
+      setCredits(creditsData);
+      console.log('✅ Credits refreshed after purchase:', creditsData);
+    } catch (error) {
+      console.error('Failed to refresh credits:', error);
+    }
   };
 
   const renderCreditPack = (pkg: PurchasesPackage) => {

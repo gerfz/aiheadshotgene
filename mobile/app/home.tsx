@@ -153,15 +153,28 @@ export default function HomeScreen() {
   const [allStyles, setAllStyles] = useState<string[]>([]);
   const [selectedStyles, setSelectedStyles] = useState<string[]>([]); // Multi-select support
 
-  // Load most used styles on mount (use cache if available)
+  // Load most used styles on mount (use cache if available and not expired)
   useEffect(() => {
-    if (cachedCategories && cachedAllStyles) {
-      // Use cached data
+    const CACHE_EXPIRY_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
+    const { stylesLoadedAt } = useAppStore.getState();
+    const isCacheValid = stylesLoadedAt && (Date.now() - stylesLoadedAt < CACHE_EXPIRY_MS);
+    
+    // TODO: REMOVE THIS - Force refresh for testing
+    const FORCE_REFRESH = true;
+    
+    if (cachedCategories && cachedAllStyles && isCacheValid && !FORCE_REFRESH) {
+      // Use cached data (less than 30 days old)
+      console.log('✅ Using cached styles');
       setCategories(cachedCategories);
       setAllStyles(cachedAllStyles);
       setLoading(false);
     } else {
-      // Load fresh data
+      // Load fresh data (cache expired or doesn't exist)
+      if (stylesLoadedAt && !FORCE_REFRESH) {
+        console.log('🔄 Cache expired (30+ days old), refreshing styles');
+      } else if (FORCE_REFRESH) {
+        console.log('🔄 FORCE REFRESH - Loading fresh styles from database');
+      }
       loadMostUsedStyles();
     }
     // Debug: Refresh credits on mount
@@ -204,6 +217,9 @@ export default function HomeScreen() {
     try {
       const { mostUsedStyles } = await getMostUsedStyles();
       
+      // Debug: Log what we got from the database
+      console.log('📊 Most used styles from database:', mostUsedStyles.slice(0, 10).map(s => `${s.style_key} (${s.usage_count})`));
+      
       // Custom is always first, then top 9 most used
       const mostUsedStyleKeys = ['custom'];
       
@@ -222,6 +238,9 @@ export default function HomeScreen() {
           mostUsedStyleKeys.push(styleKey);
         }
       }
+      
+      // Debug: Log final order
+      console.log('✅ Final Most Used order:', mostUsedStyleKeys);
       
       // Create the Most Used category
       const mostUsedCategory = {

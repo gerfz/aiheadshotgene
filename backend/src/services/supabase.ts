@@ -61,11 +61,12 @@ export async function incrementStyleUsage(styleKey: string) {
   }
 }
 
-// Get most used styles
+// Get most used styles (ordered by usage_count descending)
 export async function getMostUsedStyles() {
   const { data, error } = await supabaseAdmin
-    .from('most_used_styles')
-    .select('*');
+    .from('style_usage')
+    .select('style_key, usage_count')
+    .order('usage_count', { ascending: false });
   
   if (error) {
     console.error('Error fetching most used styles:', error);
