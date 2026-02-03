@@ -67,12 +67,12 @@ export async function getMostUsedStyles() {
     .from('style_usage')
     .select('style_key, usage_count')
     .order('usage_count', { ascending: false });
-  
+
   if (error) {
     console.error('Error fetching most used styles:', error);
     return [];
   }
-  
+
   return data || [];
 }
 
