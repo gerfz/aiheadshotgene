@@ -450,7 +450,7 @@ router.post(
         const generationId = uuidv4();
         
         // Create generation record manually (createGeneration doesn't support batch_id)
-        await supabaseAdmin
+        const { error: genInsertError } = await supabaseAdmin
           .from('generations')
           .insert({
             id: generationId,
@@ -462,6 +462,11 @@ router.post(
             status: 'queued',
             batch_id: batch.id
           });
+
+        if (genInsertError) {
+          console.error(`❌ [GENERATION INSERT FAILED] Gen: ${generationId} | Error:`, genInsertError);
+          throw genInsertError;
+        }
 
         // Create job in queue for worker to process
         const { error: jobInsertError } = await supabaseAdmin
