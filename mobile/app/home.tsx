@@ -55,7 +55,8 @@ const StyleCard = React.memo(({
           style={styles.styleImage}
           contentFit="cover"
           cachePolicy="memory-disk"
-          transition={200}
+          transition={0}
+          priority="normal"
         />
         
         {/* Black gradient overlay at bottom */}
@@ -146,11 +147,13 @@ type ViewMode = 'categories' | 'all';
 
 export default function HomeScreen() {
   const { selectedStyle, setSelectedStyle, customPrompt, setCustomPrompt, credits, setSelectedImage, setCredits, cachedCategories, cachedAllStyles, setCachedStyles } = useAppStore();
-  const [categories, setCategories] = useState(STATIC_CATEGORIES);
-  const [loading, setLoading] = useState(true);
+  
+  // Initialize with cached data if available (instant load)
+  const [categories, setCategories] = useState(cachedCategories || STATIC_CATEGORIES);
+  const [allStyles, setAllStyles] = useState<string[]>(cachedAllStyles || []);
+  const [loading, setLoading] = useState(!cachedCategories); // Only show loading if no cache
   const [showCustomPrompt, setShowCustomPrompt] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>('categories');
-  const [allStyles, setAllStyles] = useState<string[]>([]);
   const [selectedStyles, setSelectedStyles] = useState<string[]>([]); // Multi-select support
 
   // Load most used styles on mount (use cache if available and not expired)
@@ -159,22 +162,18 @@ export default function HomeScreen() {
     const { stylesLoadedAt } = useAppStore.getState();
     const isCacheValid = stylesLoadedAt && (Date.now() - stylesLoadedAt < CACHE_EXPIRY_MS);
     
-    // TODO: REMOVE THIS - Force refresh for testing
-    const FORCE_REFRESH = true;
-    
-    if (cachedCategories && cachedAllStyles && isCacheValid && !FORCE_REFRESH) {
-      // Use cached data (less than 30 days old)
-      console.log('✅ Using cached styles');
-      setCategories(cachedCategories);
-      setAllStyles(cachedAllStyles);
+    if (cachedCategories && cachedAllStyles && isCacheValid) {
+      // Use cached data (less than 30 days old) - already initialized in useState
+      console.log('✅ Using cached styles (instant)');
       setLoading(false);
     } else {
       // Load fresh data (cache expired or doesn't exist)
-      if (stylesLoadedAt && !FORCE_REFRESH) {
+      if (stylesLoadedAt) {
         console.log('🔄 Cache expired (30+ days old), refreshing styles');
-      } else if (FORCE_REFRESH) {
-        console.log('🔄 FORCE REFRESH - Loading fresh styles from database');
+      } else {
+        console.log('🔄 Loading styles from database (first time)');
       }
+      setLoading(true); // Show loading only when fetching fresh data
       loadMostUsedStyles();
     }
     // Debug: Refresh credits on mount
@@ -418,6 +417,8 @@ export default function HomeScreen() {
       <Stack.Screen 
         options={{ 
           headerShown: false,
+          animation: 'fade',
+          animationDuration: 150,
         }} 
       />
       <SafeAreaView style={styles.container} edges={['top']}>

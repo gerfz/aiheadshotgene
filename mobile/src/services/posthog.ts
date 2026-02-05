@@ -140,11 +140,8 @@ export const analytics = {
   subscriptionScreenClosed: (method: 'x_button' | 'back_button' | 'backdrop', duration: number) => 
     trackEvent('subscription_screen_closed', { method, duration_seconds: duration }),
   
-  freeTrialToggled: (enabled: boolean) => 
-    trackEvent('free_trial_toggled', { enabled }),
-  
-  startFreeTrialClicked: (hasFreeTrial: boolean, price: string) => 
-    trackEvent('start_free_trial_clicked', { has_free_trial: hasFreeTrial, price }),
+  startFreeTrialClicked: (isEligibleForTrial: boolean, price: string) => 
+    trackEvent('start_free_trial_clicked', { is_eligible_for_trial: isEligibleForTrial, price }),
   
   subscriptionPurchased: (plan: string, price: string, hadFreeTrial: boolean) => 
     trackEvent('subscription_purchased', { plan, price, had_free_trial: hadFreeTrial }),

@@ -96,8 +96,7 @@ To measure loading performance, compare `loading_started` vs `loading_finished` 
 | `trial_activated` | `trial_credits`: number, `trial_duration_days`: number | User receives free trial (1000 credits, 3 days) |
 | `subscription_screen_viewed` | `source`: string | User views the subscription/pricing screen |
 | `subscription_screen_closed` | `method`: string, `duration_seconds`: number | User closes subscription screen |
-| `free_trial_toggled` | `enabled`: boolean | User toggles free trial on/off |
-| `start_free_trial_clicked` | `has_free_trial`: boolean, `price`: string | User clicks start free trial button |
+| `start_free_trial_clicked` | `is_eligible_for_trial`: boolean, `price`: string | User clicks CTA (free trial or subscribe) |
 | `subscription_purchased` | `plan`: string, `price`: string, `had_free_trial`: boolean | User completes a subscription purchase |
 | `subscription_purchase_failed` | `error`: string | Subscription purchase fails |
 | `subscription_restored` | - | User restores a previous purchase |

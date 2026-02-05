@@ -255,6 +255,8 @@ export default function GalleryScreen() {
           title: 'History',
           headerStyle: { backgroundColor: '#000000' },
           headerTintColor: '#FFFFFF',
+          animation: 'fade',
+          animationDuration: 150,
           headerTitleStyle: { fontWeight: 600 },
           headerLeft: () => (
             <TouchableOpacity
