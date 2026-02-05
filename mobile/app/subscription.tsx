@@ -53,7 +53,7 @@ export default function SubscriptionScreen() {
   const [purchasing, setPurchasing] = useState(false);
   const [selectedPackage, setSelectedPackage] = useState<string | null>(null);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
-  const [isEligibleForTrial, setIsEligibleForTrial] = useState(true); // Determined by Google Play
+  const [freeTrialEnabled, setFreeTrialEnabled] = useState(true); // Default to enabled
   const { setCredits } = useAppStore();
   const scrollX = useRef(new Animated.Value(0)).current;
   const scrollViewRef = useRef<any>(null);
@@ -94,18 +94,18 @@ export default function SubscriptionScreen() {
       const availablePackages = await getOfferings();
       setPackages(availablePackages);
       
-      // Check if user is eligible for free trial (Google Play determines this)
-      const weeklyPkg = availablePackages.find(pkg => pkg.identifier === PACKAGE_IDS.WEEKLY);
-      if (weeklyPkg) {
-        const hasIntroOffer = weeklyPkg.product.introPrice !== null && 
-                             weeklyPkg.product.introPrice !== undefined;
-        setIsEligibleForTrial(hasIntroOffer);
-        console.log(`🎁 Free trial eligibility: ${hasIntroOffer ? 'ELIGIBLE' : 'NOT ELIGIBLE (already used)'}`);
-        console.log(`  Price: ${weeklyPkg.product.priceString}`);
-        if (hasIntroOffer) {
-          console.log(`  Trial Price: ${weeklyPkg.product.introPrice.priceString}`);
+      // Debug: Log intro offer information
+      availablePackages.forEach(pkg => {
+        console.log(`📦 Package: ${pkg.identifier}`);
+        console.log(`  Price: ${pkg.product.priceString}`);
+        console.log(`  Intro Price:`, pkg.product.introPrice);
+        if (pkg.product.introPrice) {
+          console.log(`    Intro Price String: ${pkg.product.introPrice.priceString}`);
+          console.log(`    Intro Price: ${pkg.product.introPrice.price}`);
+          console.log(`    Period: ${pkg.product.introPrice.period}`);
+          console.log(`    Cycles: ${pkg.product.introPrice.cycles}`);
         }
-      }
+      });
     } catch (error) {
       console.error('❌ Failed to load offerings:', error);
     } finally {
@@ -124,7 +124,7 @@ export default function SubscriptionScreen() {
           analytics.subscriptionPurchased(
             pkg.identifier,
             pkg.product.priceString,
-            isEligibleForTrial
+            freeTrialEnabled
           );
           
           // Update backend
@@ -493,13 +493,29 @@ export default function SubscriptionScreen() {
               </View>
             </View>
 
+            {/* Free Trial Toggle */}
+            <TouchableOpacity 
+              style={styles.freeTrialToggle}
+              onPress={() => {
+                const newState = !freeTrialEnabled;
+                analytics.freeTrialToggled(newState);
+                setFreeTrialEnabled(newState);
+              }}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.freeTrialText}>Free Trial Enabled</Text>
+              <View style={[styles.toggleSwitch, freeTrialEnabled && styles.toggleSwitchActive]}>
+                <View style={[styles.toggleKnob, freeTrialEnabled && styles.toggleKnobActive]} />
+              </View>
+            </TouchableOpacity>
+
             <TouchableOpacity
               style={[styles.ctaButton, purchasing && styles.ctaButtonDisabled]}
               onPress={() => {
                 if (weeklyPkg) {
-                  // Track start free trial or subscription clicked
+                  // Track start free trial clicked
                   analytics.startFreeTrialClicked(
-                    isEligibleForTrial, 
+                    freeTrialEnabled, 
                     weeklyPkg.product.priceString
                   );
                   handlePurchase(weeklyPkg as PurchasesPackage);
@@ -511,7 +527,7 @@ export default function SubscriptionScreen() {
                 <ActivityIndicator color="#FFF" />
               ) : (
                 <Text style={styles.ctaText}>
-                  {isEligibleForTrial 
+                  {freeTrialEnabled 
                     ? 'Start Free Trial' 
                     : `Subscribe Now • ${weeklyPkg?.product?.priceString || '$7.79'}`
                   }
@@ -521,13 +537,8 @@ export default function SubscriptionScreen() {
 
             {/* Fixed height container for dynamic text to prevent layout shift */}
             <View style={styles.dynamicTextContainer}>
-              {isEligibleForTrial && (
-                <>
-                  <Text style={styles.noPaymentText}>No Payment Now</Text>
-                  <Text style={styles.trialInfoText}>
-                    After 3 days {weeklyPkg?.product?.priceString || '$7.79'}/week
-                  </Text>
-                </>
+              {freeTrialEnabled && (
+                <Text style={styles.noPaymentText}>No Payment Now</Text>
               )}
             </View>
 
@@ -539,10 +550,6 @@ export default function SubscriptionScreen() {
               <Text style={styles.footerSeparator}>|</Text>
               <TouchableOpacity onPress={() => router.push('/privacy-policy')}>
                 <Text style={styles.footerLinkText}>Privacy Policy</Text>
-              </TouchableOpacity>
-              <Text style={styles.footerSeparator}>|</Text>
-              <TouchableOpacity onPress={handleRestore}>
-                <Text style={styles.footerLinkText}>Already Subscribed?</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -686,6 +693,43 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '500',
   },
+  // Free Trial Toggle
+  freeTrialToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: 'rgba(30, 41, 59, 0.8)',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+    width: '100%',
+  },
+  freeTrialText: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#FFFFFF',
+  },
+  toggleSwitch: {
+    width: 51,
+    height: 31,
+    borderRadius: 16,
+    backgroundColor: '#64748B',
+    justifyContent: 'center',
+    padding: 2,
+  },
+  toggleSwitchActive: {
+    backgroundColor: '#F59E0B',
+  },
+  toggleKnob: {
+    width: 27,
+    height: 27,
+    borderRadius: 14,
+    backgroundColor: '#FFFFFF',
+  },
+  toggleKnobActive: {
+    alignSelf: 'flex-end',
+  },
+
   // Plans
   plansContainer: {
     gap: 8,
@@ -800,7 +844,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   dynamicTextContainer: {
-    minHeight: 40, // Fixed height to prevent layout shift
+    height: 24, // Fixed height to prevent layout shift
     justifyContent: 'center',
     alignItems: 'center',
     width: '100%',
@@ -811,12 +855,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '500',
     textAlign: 'center',
-  },
-  trialInfoText: {
-    color: '#94A3B8',
-    fontSize: 12,
-    textAlign: 'center',
-    marginTop: 4,
   },
   renewalText: {
     color: '#94A3B8',
