@@ -115,22 +115,41 @@ async function fetchWithRetry<T>(
 
 /**
  * Get headers for authenticated requests
+ * Retries up to 3 times with delays to wait for auth session to be restored
  */
 async function getAuthHeaders(): Promise<Record<string, string>> {
-  try {
-    const token = await getAccessToken();
-    if (token) {
-      return {
-        'Authorization': `Bearer ${token}`,
-      };
+  const MAX_RETRIES = 3;
+  const RETRY_DELAYS = [1000, 2000, 3000]; // 1s, 2s, 3s
+  
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      const token = await getAccessToken();
+      if (token) {
+        return {
+          'Authorization': `Bearer ${token}`,
+        };
+      }
+      
+      // No token yet - session might still be restoring
+      if (attempt < MAX_RETRIES) {
+        console.warn(`⚠️ No auth token (attempt ${attempt + 1}/${MAX_RETRIES + 1}) - waiting for session...`);
+        await new Promise(resolve => setTimeout(resolve, RETRY_DELAYS[attempt]));
+      } else {
+        console.error('❌ No auth token after all retries - user session not available');
+        return {};
+      }
+    } catch (error: any) {
+      if (attempt < MAX_RETRIES) {
+        console.warn(`⚠️ Auth token error (attempt ${attempt + 1}): ${error.message} - retrying...`);
+        await new Promise(resolve => setTimeout(resolve, RETRY_DELAYS[attempt]));
+      } else {
+        console.error('❌ Failed to get auth token after all retries:', error.message);
+        return {};
+      }
     }
-    console.warn('⚠️ No auth token available - user may not be logged in');
-    return {};
-  } catch (error: any) {
-    console.error('❌ Failed to get auth token:', error.message);
-    // Return empty headers to let the backend handle the auth error
-    return {};
   }
+  
+  return {};
 }
 
 /**

@@ -73,25 +73,49 @@ export default function CreditPacksScreen() {
   }, []);
 
   const loadCreditPacks = async () => {
-    try {
-      setLoading(true);
-      const availablePackages = await getCreditPackOfferings();
-      setPackages(availablePackages);
-      
-      // Auto-select the popular pack (15000 credits)
-      const popularPack = availablePackages.find(p => 
-        p.product.identifier === CREDIT_PACK_IDS.MEDIUM
-      );
-      if (popularPack) {
-        setSelectedPack(popularPack.identifier);
-      } else if (availablePackages.length > 0) {
-        setSelectedPack(availablePackages[0].identifier);
+    const MAX_RETRIES = 3;
+    const RETRY_DELAYS = [2000, 3000, 5000]; // 2s, 3s, 5s
+    
+    setLoading(true);
+    for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+      try {
+        const availablePackages = await getCreditPackOfferings();
+        
+        if (availablePackages.length > 0) {
+          setPackages(availablePackages);
+          console.log(`✅ Loaded ${availablePackages.length} credit packs (attempt ${attempt + 1})`);
+          
+          // Auto-select the popular pack (15000 credits)
+          const popularPack = availablePackages.find(p => 
+            p.product.identifier === CREDIT_PACK_IDS.MEDIUM
+          );
+          if (popularPack) {
+            setSelectedPack(popularPack.identifier);
+          } else if (availablePackages.length > 0) {
+            setSelectedPack(availablePackages[0].identifier);
+          }
+          setLoading(false);
+          return; // Success - exit
+        }
+        
+        // Empty packages - RevenueCat might not be ready
+        if (attempt < MAX_RETRIES) {
+          console.warn(`⚠️ No credit packs available (attempt ${attempt + 1}/${MAX_RETRIES + 1}) - retrying in ${RETRY_DELAYS[attempt]}ms...`);
+          await new Promise(resolve => setTimeout(resolve, RETRY_DELAYS[attempt]));
+        } else {
+          console.error('❌ No credit packs available after all retries');
+          setPackages([]);
+          setLoading(false);
+        }
+      } catch (error) {
+        if (attempt < MAX_RETRIES) {
+          console.warn(`⚠️ Failed to load credit packs (attempt ${attempt + 1}): ${error} - retrying...`);
+          await new Promise(resolve => setTimeout(resolve, RETRY_DELAYS[attempt]));
+        } else {
+          console.error('❌ Failed to load credit packs after all retries:', error);
+          setLoading(false);
+        }
       }
-    } catch (error) {
-      console.error('❌ Failed to load credit packs:', error);
-      Alert.alert('Error', 'Failed to load credit packs. Please try again.');
-    } finally {
-      setLoading(false);
     }
   };
 

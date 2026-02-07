@@ -90,26 +90,41 @@ export default function SubscriptionScreen() {
   }, []);
 
   const loadOfferings = async () => {
-    try {
-      const availablePackages = await getOfferings();
-      setPackages(availablePackages);
-      
-      // Debug: Log intro offer information
-      availablePackages.forEach(pkg => {
-        console.log(`📦 Package: ${pkg.identifier}`);
-        console.log(`  Price: ${pkg.product.priceString}`);
-        console.log(`  Intro Price:`, pkg.product.introPrice);
-        if (pkg.product.introPrice) {
-          console.log(`    Intro Price String: ${pkg.product.introPrice.priceString}`);
-          console.log(`    Intro Price: ${pkg.product.introPrice.price}`);
-          console.log(`    Period: ${pkg.product.introPrice.period}`);
-          console.log(`    Cycles: ${pkg.product.introPrice.cycles}`);
+    const MAX_RETRIES = 3;
+    const RETRY_DELAYS = [2000, 3000, 5000]; // 2s, 3s, 5s
+    
+    for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+      try {
+        const availablePackages = await getOfferings();
+        
+        if (availablePackages.length > 0) {
+          setPackages(availablePackages);
+          console.log(`✅ Loaded ${availablePackages.length} packages (attempt ${attempt + 1})`);
+          availablePackages.forEach(pkg => {
+            console.log(`📦 Package: ${pkg.identifier} - ${pkg.product.priceString}`);
+          });
+          setLoading(false);
+          return; // Success - exit
         }
-      });
-    } catch (error) {
-      console.error('❌ Failed to load offerings:', error);
-    } finally {
-      setLoading(false);
+        
+        // Empty packages - RevenueCat might not be initialized yet
+        if (attempt < MAX_RETRIES) {
+          console.warn(`⚠️ No packages available (attempt ${attempt + 1}/${MAX_RETRIES + 1}) - retrying in ${RETRY_DELAYS[attempt]}ms...`);
+          await new Promise(resolve => setTimeout(resolve, RETRY_DELAYS[attempt]));
+        } else {
+          console.error('❌ No packages available after all retries');
+          setPackages([]);
+          setLoading(false);
+        }
+      } catch (error) {
+        if (attempt < MAX_RETRIES) {
+          console.warn(`⚠️ Failed to load offerings (attempt ${attempt + 1}): ${error} - retrying...`);
+          await new Promise(resolve => setTimeout(resolve, RETRY_DELAYS[attempt]));
+        } else {
+          console.error('❌ Failed to load offerings after all retries:', error);
+          setLoading(false);
+        }
+      }
     }
   };
 
