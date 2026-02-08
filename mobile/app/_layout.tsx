@@ -54,10 +54,10 @@ export default function RootLayout() {
         analytics.loadingStarted(loadingStartTime);
         
         // ========================================
-        // 🚀 INSTANT STARTUP: Load cached data FIRST
+        // 🚀 STEP 0: Load cached data FIRST (instant)
         // ========================================
         lastLoadingStepRef.current = 'loading_cache';
-        console.log('⚡ [0/6] Loading cached data for instant startup...');
+        console.log('⚡ [0/4] Loading cached data for instant startup...');
         try {
           const [cachedProfile, cachedCredits] = await Promise.all([
             getCachedUserProfile(),
@@ -72,9 +72,6 @@ export default function RootLayout() {
               console.log('✅ Restored cached credits instantly');
               useAppStore.setState({ credits: cachedCredits });
             }
-            
-            // DON'T show app yet - wait for auth session to be restored
-            // This prevents the issue where UI shows but API calls fail due to no auth
             console.log('⚡ Cached data loaded - continuing with auth...');
           }
         } catch (cacheError) {
@@ -82,85 +79,10 @@ export default function RootLayout() {
         }
         
         // ========================================
-        // 🎯 STEP 1: Initialize AppsFlyer MMP FIRST (required for TikTok attribution)
-        // ========================================
-        lastLoadingStepRef.current = 'init_appsflyer';
-        console.log('📱 [1/6] Initializing AppsFlyer MMP...');
-        try {
-          await withTimeout(appsFlyerService.initialize(), 5000, 'AppsFlyer timeout');
-          console.log('✅ AppsFlyer MMP initialized');
-        } catch (e) {
-          console.error('❌ AppsFlyer init failed:', e);
-        }
-        
-        // ========================================
-        // 🎯 STEP 2: Initialize TikTok SDK (for event tracking)
-        // ========================================
-        console.log('📱 [2/6] Initializing TikTok SDK...');
-        try {
-          await withTimeout(tiktokService.initialize(), 5000, 'TikTok SDK timeout');
-          console.log('✅ TikTok SDK initialized');
-        } catch (e) {
-          console.error('❌ TikTok SDK init failed:', e);
-        }
-        
-        // ========================================
-        // 🎯 STEP 3: Track Install/Launch Event IMMEDIATELY (critical for attribution)
-        // ========================================
-        console.log('📱 [3/6] Tracking install/launch...');
-        try {
-          const hasTrackedInstall = await withTimeout(
-            SecureStore.getItemAsync(TIKTOK_INSTALL_TRACKED_KEY),
-            2000,
-            'SecureStore timeout'
-          );
-          
-          if (!hasTrackedInstall) {
-            // First time install - CRITICAL for attribution
-            console.log('🎯 FIRST INSTALL - Tracking InstallApp event for TikTok attribution');
-            
-            // Wait for install event to complete (don't fire and forget!)
-            await withTimeout(
-              tiktokService.trackAppInstall(),
-              5000,
-              'Install tracking timeout'
-            );
-            
-            // Mark as tracked
-            await SecureStore.setItemAsync(TIKTOK_INSTALL_TRACKED_KEY, 'true');
-            console.log('✅ Install event tracked successfully');
-          } else {
-            // Returning user - track launch
-            console.log('🔄 Returning user - tracking LaunchApp event');
-            tiktokService.trackAppLaunch().catch((e) => {
-              console.warn('⚠️ Launch tracking failed:', e);
-            });
-          }
-        } catch (e) {
-          console.error('❌ Install/Launch tracking failed:', e);
-        }
-        
-        // ========================================
-        // 🎯 STEP 4: Initialize PostHog (after attribution SDKs)
-        // ========================================
-        console.log('📱 [4/6] Initializing analytics...');
-        // Track app opened (triggers PostHog lazy init)
-        analytics.appOpened();
-        
-        // ========================================
-        // 🎯 STEP 5: Start backend warmup in parallel
-        // ========================================
-        console.log('📱 [5/6] Starting backend warmup...');
-        const backendWarmupPromise = waitForBackendReady(20000).catch(err => {
-          console.warn('⚠️ Backend warmup failed:', err);
-          return false;
-        });
-        
-        // ========================================
-        // 🎯 STEP 6: Get device ID
+        // 🎯 STEP 1: Get device ID + stored user (fast, needed for auth)
         // ========================================
         lastLoadingStepRef.current = 'get_device_id';
-        console.log('📱 [6/6] Getting device ID...');
+        console.log('📱 [1/4] Getting device ID...');
         let deviceId: string;
         try {
           deviceId = await withTimeout(getHardwareDeviceId(), 3000, 'Device ID timeout');
@@ -170,7 +92,6 @@ export default function RootLayout() {
           deviceId = `fallback-${Date.now()}`;
         }
         
-        // 🔥 FIX: Check if this device has a stored user ID
         let storedUserId: string | null = null;
         try {
           storedUserId = await withTimeout(
@@ -185,44 +106,55 @@ export default function RootLayout() {
           console.warn('⚠️ Could not read stored user ID');
         }
         
-        // 🔥 FIX: Check for existing auth session WITH TIMEOUT
+        // ========================================
+        // 🎯 STEP 2: AUTHENTICATE USER (critical path - do this FIRST)
+        //    + Start backend warmup in background (non-blocking)
+        // ========================================
+        lastLoadingStepRef.current = 'auth';
+        console.log('🔐 [2/4] Authenticating user...');
+        
+        // Start backend health ping in background - does NOT block anything
+        // This warms up the Render server so API calls are fast when auth completes
+        waitForBackendReady(15000).catch(err => {
+          console.warn('⚠️ Backend warmup failed:', err);
+        });
+        
+        // Authenticate: restore session or create anonymous user
+        let authenticatedUserId: string | null = null;
+        
         let session = null;
         try {
           console.log('🔍 Checking Supabase session...');
           const sessionResult = await withTimeout(
             supabase.auth.getSession(),
-            8000, // 8 second timeout for session
+            8000,
             'Session fetch timeout'
           );
           
-          // If there's an error getting session (e.g., invalid refresh token), clear it
           if (sessionResult.error) {
             console.warn('⚠️ Error getting session, clearing:', sessionResult.error.message);
-            supabase.auth.signOut().catch(() => {}); // Non-blocking signout
+            supabase.auth.signOut().catch(() => {});
             session = null;
           } else {
             session = sessionResult.data.session;
           }
         } catch (sessionError: any) {
           console.warn('⚠️ Session timeout or error:', sessionError.message);
-          // Try to sign out (non-blocking) to clear any stale state
           supabase.auth.signOut().catch(() => {});
           session = null;
         }
         
         if (session?.user) {
-          // User already has an anonymous session
           console.log('✅ Existing anonymous user:', session.user.id);
           
-          // 🔥 FIX: Verify session with timeout
+          // Verify session is still valid
           let validUser = null;
           try {
             const userResult = await withTimeout(
               supabase.auth.getUser(),
-              5000, // 5 second timeout
+              5000,
               'User verification timeout'
             );
-            
             if (!userResult.error && userResult.data.user) {
               validUser = userResult.data.user;
             }
@@ -231,152 +163,41 @@ export default function RootLayout() {
           }
           
           if (!validUser) {
-            // Session is invalid, sign out and recreate user
-            console.warn('⚠️ Invalid session detected, will recreate user for this device');
-            supabase.auth.signOut().catch(() => {}); // Non-blocking
+            // Session is invalid - recreate user
+            console.warn('⚠️ Invalid session detected, recreating user...');
+            supabase.auth.signOut().catch(() => {});
+            session = null; // Fall through to create new user below
+          } else {
+            // Valid session - auth is confirmed!
+            authenticatedUserId = session.user.id;
             
-            // 🔥 DEVICE-BASED USER: Recreate anonymous user with same device binding
-            try {
-              const { data: newData, error: newError } = await withTimeout(
-                supabase.auth.signInAnonymously({
-                  options: {
-                    data: {
-                      device_id: deviceId,
-                      is_anonymous: true,
-                      previous_user_id: storedUserId || undefined, // Include previous user ID if exists
-                    }
-                  }
-                }),
-                8000,
-                'Anonymous sign-in timeout'
-              );
-              
-              if (newError || !newData.user) {
-                throw new Error('Failed to create anonymous user');
-              }
-              
-              // 🔥 IMPORTANT: Store this user ID for this device
-              await SecureStore.setItemAsync(DEVICE_USER_ID_KEY, newData.user.id);
-              console.log('💾 Stored user ID for device:', newData.user.id);
-              
-              const userEmail = `device-${deviceId}@anonymous.local`;
-              setUser({
-                id: newData.user.id,
-                email: userEmail,
-              });
-              
-              // 🔓 Signal that auth is ready - all API calls can now proceed
-              setAuthReady();
-              
-              // Cache user profile for next app start
-              cacheUserProfile(newData.user.id, userEmail).catch(() => {});
-              
-              // Identify user in PostHog, TikTok and AppsFlyer (non-blocking)
-              identifyUser(newData.user.id, {
-                device_id: deviceId,
-                user_id: newData.user.id,
-                is_anonymous: true,
-                email: userEmail,
-              });
-              tiktokService.identifyUser(newData.user.id, `device-${deviceId}@anonymous.local`).catch(() => {});
-              appsFlyerService.setCustomerUserId(newData.user.id);
-              // Don't track registration for returning devices
-              if (!storedUserId) {
-                tiktokService.trackRegistration().catch(() => {});
-                appsFlyerService.trackRegistration('anonymous').catch(() => {});
-              }
-              
-              // 🔥 FIX: Wait for backend warmup to complete (it started earlier)
-              console.log('🔍 Waiting for backend warmup...');
-              await backendWarmupPromise;
-              
-              // Initialize with new user
-              try {
-                await Promise.race([
-                  Promise.all([
-                    initializePurchases(newData.user.id),
-                    loginUser(newData.user.id)
-                  ]),
-                  new Promise((_, reject) => 
-                    setTimeout(() => reject(new Error('Initialization timeout')), 10000)
-                  )
-                ]);
-              } catch (timeoutError) {
-                console.warn('⚠️ Initialization timeout, continuing anyway:', timeoutError);
-              }
-              
-              // Sync subscription status in background (non-blocking)
-              syncSubscriptionStatus()
-                .then(isSubscribed => updateSubscriptionStatus(isSubscribed))
-                .then(() => console.log('✅ Subscription status synced'))
-                .catch(syncError => console.warn('⚠️ Background sync failed:', syncError));
-              
-              return; // Exit early
-            } catch (createError) {
-              console.error('❌ Failed to create user:', createError);
-              // Continue anyway - app might work with cached data
-              return;
+            if (!storedUserId || storedUserId !== session.user.id) {
+              await SecureStore.setItemAsync(DEVICE_USER_ID_KEY, session.user.id).catch(() => {});
+              console.log('💾 Updated stored user ID for device:', session.user.id);
             }
+            
+            const userEmail = session.user.email || `device-${deviceId}@anonymous.local`;
+            setUser({ id: session.user.id, email: userEmail });
+            
+            // 🔓 AUTH IS READY - unblock all API calls
+            setAuthReady();
+            console.log('🔓 Auth ready - API calls unblocked');
+            
+            // Cache & identify (non-blocking)
+            cacheUserProfile(session.user.id, userEmail).catch(() => {});
+            identifyUser(session.user.id, {
+              device_id: deviceId,
+              user_id: session.user.id,
+              is_anonymous: !session.user.email,
+              email: userEmail,
+            });
+            tiktokService.identifyUser(session.user.id, userEmail).catch(() => {});
+            appsFlyerService.setCustomerUserId(session.user.id);
           }
-          
-          // 🔥 DEVICE-BASED USER: Store this user ID for the device if not already stored
-          if (!storedUserId || storedUserId !== session.user.id) {
-            await SecureStore.setItemAsync(DEVICE_USER_ID_KEY, session.user.id).catch(() => {});
-            console.log('💾 Updated stored user ID for device:', session.user.id);
-          }
-          
-          // Valid session found - AUTH IS READY
-          const userEmail = session.user.email || `device-${deviceId}@anonymous.local`;
-          setUser({
-            id: session.user.id,
-            email: userEmail,
-          });
-          
-          // 🔓 Signal that auth is ready - all API calls can now proceed
-          setAuthReady();
-          
-          // Cache user profile for next app start
-          cacheUserProfile(session.user.id, userEmail).catch(() => {});
-          
-          // Identify user in PostHog, TikTok and AppsFlyer (non-blocking)
-          identifyUser(session.user.id, {
-            device_id: deviceId,
-            user_id: session.user.id,
-            is_anonymous: !session.user.email,
-            email: userEmail,
-          });
-          tiktokService.identifyUser(
-            session.user.id,
-            session.user.email || `device-${deviceId}@anonymous.local`
-          ).catch(() => {});
-          appsFlyerService.setCustomerUserId(session.user.id);
-          
-          // 🔥 FIX: Wait for backend warmup to complete (it started earlier in parallel)
-          console.log('🔍 Waiting for backend warmup...');
-          await backendWarmupPromise;
-          
-          // Initialize purchases and login with timeout
-          try {
-            await Promise.race([
-              Promise.all([
-                initializePurchases(session.user.id),
-                loginUser(session.user.id)
-              ]),
-              new Promise((_, reject) => 
-                setTimeout(() => reject(new Error('Initialization timeout')), 10000)
-              )
-            ]);
-          } catch (timeoutError) {
-            console.warn('⚠️ Initialization timeout, continuing anyway:', timeoutError);
-          }
-          
-          // Sync subscription status in background (non-blocking)
-          syncSubscriptionStatus()
-            .then(isSubscribed => updateSubscriptionStatus(isSubscribed))
-            .then(() => console.log('✅ Subscription status synced'))
-            .catch(syncError => console.warn('⚠️ Background sync failed:', syncError));
-        } else {
-          // No session - create anonymous user for this device
+        }
+        
+        // If no valid session, create anonymous user
+        if (!authenticatedUserId) {
           const isReturningDevice = !!storedUserId;
           console.log(isReturningDevice ? '🔄 Recreating user for returning device' : '🆕 Creating new user for first-time device');
           
@@ -387,94 +208,139 @@ export default function RootLayout() {
                   data: {
                     device_id: deviceId,
                     is_anonymous: true,
-                    previous_user_id: storedUserId || undefined, // Include previous user ID if exists
+                    previous_user_id: storedUserId || undefined,
                   }
                 }
               }),
-              8000, // 8 second timeout
+              8000,
               'Anonymous sign-in timeout'
             );
             
-            if (error) {
-              console.error('❌ Failed to create anonymous user:', error);
-              throw error;
+            if (error || !data.user) {
+              throw new Error(error?.message || 'Failed to create anonymous user');
             }
             
-            if (data.user) {
-              console.log('✅ Anonymous user created:', data.user.id);
-              
-              // 🔥 IMPORTANT: Store this user ID for this device
-              await SecureStore.setItemAsync(DEVICE_USER_ID_KEY, data.user.id);
-              console.log('💾 Stored user ID for device:', data.user.id);
-              
-              const userEmail = `device-${deviceId}@anonymous.local`;
-              setUser({
-                id: data.user.id,
-                email: userEmail,
-              });
-              
-              // 🔓 Signal that auth is ready - all API calls can now proceed
-              setAuthReady();
-              
-              // Cache user profile for next app start
-              cacheUserProfile(data.user.id, userEmail).catch(() => {});
-              
-              // Identify user in PostHog, TikTok and AppsFlyer (non-blocking)
-              identifyUser(data.user.id, {
-                device_id: deviceId,
-                user_id: data.user.id,
-                is_anonymous: true,
-                email: userEmail,
-              });
-              tiktokService.identifyUser(data.user.id, `device-${deviceId}@anonymous.local`).catch(() => {});
-              appsFlyerService.setCustomerUserId(data.user.id);
-              // Only track registration for truly new devices
-              if (!isReturningDevice) {
-                tiktokService.trackRegistration().catch(() => {});
-                appsFlyerService.trackRegistration('anonymous').catch(() => {});
-              }
-              
-              // 🔥 FIX: Wait for backend warmup to complete (it started earlier in parallel)
-              console.log('🔍 Waiting for backend warmup...');
-              await backendWarmupPromise;
-              
-              // Initialize purchases and login with timeout
-              try {
-                await Promise.race([
-                  Promise.all([
-                    initializePurchases(data.user.id),
-                    loginUser(data.user.id)
-                  ]),
-                  new Promise((_, reject) => 
-                    setTimeout(() => reject(new Error('Initialization timeout')), 10000)
-                  )
-                ]);
-              } catch (timeoutError) {
-                console.warn('⚠️ Initialization timeout, continuing anyway:', timeoutError);
-              }
-              
-              // Sync subscription status in background (non-blocking)
-              syncSubscriptionStatus()
-                .then(isSubscribed => updateSubscriptionStatus(isSubscribed))
-                .then(() => console.log('✅ Subscription status synced'))
-                .catch(syncError => console.warn('⚠️ Background sync failed:', syncError));
+            authenticatedUserId = data.user.id;
+            console.log('✅ Anonymous user created:', data.user.id);
+            
+            await SecureStore.setItemAsync(DEVICE_USER_ID_KEY, data.user.id);
+            console.log('💾 Stored user ID for device:', data.user.id);
+            
+            const userEmail = `device-${deviceId}@anonymous.local`;
+            setUser({ id: data.user.id, email: userEmail });
+            
+            // 🔓 AUTH IS READY - unblock all API calls
+            setAuthReady();
+            console.log('🔓 Auth ready - API calls unblocked');
+            
+            // Cache & identify (non-blocking)
+            cacheUserProfile(data.user.id, userEmail).catch(() => {});
+            identifyUser(data.user.id, {
+              device_id: deviceId,
+              user_id: data.user.id,
+              is_anonymous: true,
+              email: userEmail,
+            });
+            tiktokService.identifyUser(data.user.id, userEmail).catch(() => {});
+            appsFlyerService.setCustomerUserId(data.user.id);
+            if (!isReturningDevice) {
+              tiktokService.trackRegistration().catch(() => {});
+              appsFlyerService.trackRegistration('anonymous').catch(() => {});
             }
-            } catch (createError) {
-              console.error('❌ Failed to create anonymous user:', createError);
-              // Continue anyway - user might see limited functionality
-            }
+          } catch (createError) {
+            console.error('❌ Failed to create anonymous user:', createError);
+            // Don't call setAuthReady() - auth genuinely failed
+          }
         }
+        
+        // ========================================
+        // 🎯 STEP 3: Initialize RevenueCat (does NOT need backend)
+        // ========================================
+        lastLoadingStepRef.current = 'init_purchases';
+        console.log('💳 [3/4] Initializing RevenueCat...');
+        if (authenticatedUserId) {
+          try {
+            await Promise.race([
+              Promise.all([
+                initializePurchases(authenticatedUserId),
+                loginUser(authenticatedUserId)
+              ]),
+              new Promise((_, reject) => 
+                setTimeout(() => reject(new Error('RevenueCat timeout')), 10000)
+              )
+            ]);
+            console.log('✅ RevenueCat initialized');
+          } catch (timeoutError) {
+            console.warn('⚠️ RevenueCat init timeout, continuing:', timeoutError);
+          }
+        }
+        
+        // ========================================
+        // 🎯 STEP 4: Initialize tracking SDKs (non-critical, can be slower)
+        // ========================================
+        lastLoadingStepRef.current = 'init_tracking';
+        console.log('📱 [4/4] Initializing tracking SDKs...');
+        
+        // AppsFlyer
+        try {
+          await withTimeout(appsFlyerService.initialize(), 5000, 'AppsFlyer timeout');
+          console.log('✅ AppsFlyer initialized');
+        } catch (e) {
+          console.error('❌ AppsFlyer init failed:', e);
+        }
+        
+        // TikTok
+        try {
+          await withTimeout(tiktokService.initialize(), 5000, 'TikTok SDK timeout');
+          console.log('✅ TikTok SDK initialized');
+        } catch (e) {
+          console.error('❌ TikTok SDK init failed:', e);
+        }
+        
+        // Track install/launch
+        try {
+          const hasTrackedInstall = await withTimeout(
+            SecureStore.getItemAsync(TIKTOK_INSTALL_TRACKED_KEY),
+            2000,
+            'SecureStore timeout'
+          );
+          
+          if (!hasTrackedInstall) {
+            console.log('🎯 FIRST INSTALL - Tracking InstallApp event');
+            await withTimeout(tiktokService.trackAppInstall(), 5000, 'Install tracking timeout');
+            await SecureStore.setItemAsync(TIKTOK_INSTALL_TRACKED_KEY, 'true');
+            console.log('✅ Install event tracked');
+          } else {
+            tiktokService.trackAppLaunch().catch(() => {});
+          }
+        } catch (e) {
+          console.error('❌ Install/Launch tracking failed:', e);
+        }
+        
+        // PostHog
+        analytics.appOpened();
+        
+        // ========================================
+        // 🔄 BACKGROUND: Sync subscription status (non-blocking, uses waitForAuth via getAuthHeaders)
+        // ========================================
+        if (authenticatedUserId) {
+          syncSubscriptionStatus()
+            .then(isSubscribed => updateSubscriptionStatus(isSubscribed))
+            .then(() => console.log('✅ Subscription status synced'))
+            .catch(syncError => console.warn('⚠️ Background sync failed:', syncError));
+        }
+        
       } catch (error) {
         console.error('❌ App initialization error:', error);
       } finally {
         isInitializing = false;
         clearTimeout(initTimeout);
-        console.log('✅ App initialization complete - ensuring app is ready');
+        console.log('✅ App initialization complete');
         
-        // 🔓 Safety net: ensure auth is signaled as ready even if something went wrong above
-        setAuthReady();
+        // NOTE: No safety net setAuthReady() here. If auth failed, API calls should NOT proceed.
+        // The waitForAuth() timeout (15s) in api.ts handles the edge case.
         
-        // Fetch credits one more time to check for trial (non-blocking)
+        // Fetch credits to check for trial (non-blocking, waits for auth via getAuthHeaders)
         getCredits()
           .then(async (creditsData) => {
             useAppStore.setState({ credits: creditsData });
@@ -495,18 +361,16 @@ export default function RootLayout() {
         const loadingDuration = Date.now() - loadingStartTime;
         analytics.loadingFinished(loadingDuration, true);
         
-        setAppReady(true); // Ensure app is ready (might already be true from cache)
+        setAppReady(true);
       }
     };
 
-    // Set a maximum timeout for the entire initialization
-    // 20 seconds should be enough now with parallel warmup
+    // Maximum timeout for entire initialization (15s - faster now with real health ping)
     initTimeout = setTimeout(() => {
-      console.warn('⚠️ Maximum initialization time exceeded (20s), forcing continue');
+      console.warn('⚠️ Maximum initialization time exceeded (15s), forcing continue');
       isInitializing = false;
-      setAuthReady(); // Signal auth ready even on timeout (safety net)
-      setAppReady(true); // Signal ready even on timeout
-    }, 20000); // 20 second max
+      setAppReady(true);
+    }, 15000);
 
     initApp();
 

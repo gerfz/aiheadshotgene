@@ -5,35 +5,46 @@ import { waitForAuth } from './authReady';
 import { CreditsInfo, Generation, GenerationResult } from '../types';
 
 /**
- * Check if backend is ready (warm) by making a lightweight API call
- * This prevents making real API calls while backend is cold starting
- * 
- * NOTE: We removed the /health endpoint, so we just use a simple delay
- * to give the backend time to wake up from cold start
+ * Check if backend is ready by pinging /health endpoint
+ * Retries with short intervals until the backend responds or timeout
  */
 export async function waitForBackendReady(
-  maxWaitMs: number = 30000,
+  maxWaitMs: number = 15000,
   onProgress?: (progress: number, attempt: number) => void
 ): Promise<boolean> {
-  console.log('🔍 Waiting for backend to be ready...');
+  console.log('🔍 Pinging backend /health...');
+  const startTime = Date.now();
+  let attempt = 0;
   
-  // Simple progressive wait to give backend time to wake up
-  // Most Render cold starts complete within 10-20 seconds
-  const steps = 10;
-  const stepDelay = Math.min(maxWaitMs / steps, 2000); // Max 2s per step
-  
-  for (let i = 0; i < steps; i++) {
-    const progress = ((i + 1) / steps) * 90; // 0-90%
-    onProgress?.(progress, i + 1);
+  while (Date.now() - startTime < maxWaitMs) {
+    attempt++;
+    const elapsed = Date.now() - startTime;
+    onProgress?.(Math.min((elapsed / maxWaitMs) * 90, 90), attempt);
     
-    if (i < steps - 1) { // Don't wait after last step
-      await new Promise(resolve => setTimeout(resolve, stepDelay));
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5s per attempt
+      
+      const response = await fetch(`${API_URL}/health`, {
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+      
+      if (response.ok) {
+        console.log(`✅ Backend is ready (attempt ${attempt}, ${Date.now() - startTime}ms)`);
+        onProgress?.(90, attempt);
+        return true;
+      }
+    } catch (e) {
+      // Backend not ready yet - retry
     }
+    
+    // Wait 2 seconds between attempts
+    await new Promise(resolve => setTimeout(resolve, 2000));
   }
   
-  console.log('✅ Backend warmup wait complete');
-  onProgress?.(90, steps);
-  return true;
+  console.warn(`⚠️ Backend not ready after ${maxWaitMs}ms (${attempt} attempts)`);
+  return false;
 }
 
 /**
