@@ -1,6 +1,7 @@
 import * as FileSystem from 'expo-file-system/legacy';
 import { API_URL } from '../constants/config';
 import { getAccessToken } from './supabase';
+import { waitForAuth } from './authReady';
 import { CreditsInfo, Generation, GenerationResult } from '../types';
 
 /**
@@ -115,41 +116,31 @@ async function fetchWithRetry<T>(
 
 /**
  * Get headers for authenticated requests
- * Retries up to 3 times with delays to wait for auth session to be restored
+ * Waits for auth to be confirmed before attempting to get token
+ * This guarantees the Supabase session is restored before any API call
  */
 async function getAuthHeaders(): Promise<Record<string, string>> {
-  const MAX_RETRIES = 3;
-  const RETRY_DELAYS = [1000, 2000, 3000]; // 1s, 2s, 3s
+  // Wait for auth to be ready (max 15 seconds)
+  const isReady = await waitForAuth(15000);
   
-  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
-    try {
-      const token = await getAccessToken();
-      if (token) {
-        return {
-          'Authorization': `Bearer ${token}`,
-        };
-      }
-      
-      // No token yet - session might still be restoring
-      if (attempt < MAX_RETRIES) {
-        console.warn(`⚠️ No auth token (attempt ${attempt + 1}/${MAX_RETRIES + 1}) - waiting for session...`);
-        await new Promise(resolve => setTimeout(resolve, RETRY_DELAYS[attempt]));
-      } else {
-        console.error('❌ No auth token after all retries - user session not available');
-        return {};
-      }
-    } catch (error: any) {
-      if (attempt < MAX_RETRIES) {
-        console.warn(`⚠️ Auth token error (attempt ${attempt + 1}): ${error.message} - retrying...`);
-        await new Promise(resolve => setTimeout(resolve, RETRY_DELAYS[attempt]));
-      } else {
-        console.error('❌ Failed to get auth token after all retries:', error.message);
-        return {};
-      }
-    }
+  if (!isReady) {
+    console.error('❌ Auth not ready after 15s - API call will fail');
+    return {};
   }
   
-  return {};
+  try {
+    const token = await getAccessToken();
+    if (token) {
+      return {
+        'Authorization': `Bearer ${token}`,
+      };
+    }
+    console.error('❌ Auth is ready but no token available');
+    return {};
+  } catch (error: any) {
+    console.error('❌ Failed to get auth token:', error.message);
+    return {};
+  }
 }
 
 /**

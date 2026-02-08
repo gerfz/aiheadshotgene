@@ -13,6 +13,7 @@ import { posthog, identifyUser, analytics } from '../src/services/posthog';
 import { clearCache, getCachedUserProfile, getCachedCredits, cacheUserProfile, getCachedSubscriptionStatus } from '../src/services/cache';
 import tiktokService from '../src/services/tiktok';
 import appsFlyerService from '../src/services/appsflyer';
+import { setAuthReady } from '../src/services/authReady';
 
 const FIRST_TIME_KEY = 'has_seen_welcome';
 const TIKTOK_INSTALL_TRACKED_KEY = 'tiktok_install_tracked';
@@ -264,6 +265,9 @@ export default function RootLayout() {
                 email: userEmail,
               });
               
+              // 🔓 Signal that auth is ready - all API calls can now proceed
+              setAuthReady();
+              
               // Cache user profile for next app start
               cacheUserProfile(newData.user.id, userEmail).catch(() => {});
               
@@ -321,12 +325,15 @@ export default function RootLayout() {
             console.log('💾 Updated stored user ID for device:', session.user.id);
           }
           
-          // Valid session found
+          // Valid session found - AUTH IS READY
           const userEmail = session.user.email || `device-${deviceId}@anonymous.local`;
           setUser({
             id: session.user.id,
             email: userEmail,
           });
+          
+          // 🔓 Signal that auth is ready - all API calls can now proceed
+          setAuthReady();
           
           // Cache user profile for next app start
           cacheUserProfile(session.user.id, userEmail).catch(() => {});
@@ -406,6 +413,9 @@ export default function RootLayout() {
                 email: userEmail,
               });
               
+              // 🔓 Signal that auth is ready - all API calls can now proceed
+              setAuthReady();
+              
               // Cache user profile for next app start
               cacheUserProfile(data.user.id, userEmail).catch(() => {});
               
@@ -461,6 +471,9 @@ export default function RootLayout() {
         clearTimeout(initTimeout);
         console.log('✅ App initialization complete - ensuring app is ready');
         
+        // 🔓 Safety net: ensure auth is signaled as ready even if something went wrong above
+        setAuthReady();
+        
         // Fetch credits one more time to check for trial (non-blocking)
         getCredits()
           .then(async (creditsData) => {
@@ -491,6 +504,7 @@ export default function RootLayout() {
     initTimeout = setTimeout(() => {
       console.warn('⚠️ Maximum initialization time exceeded (20s), forcing continue');
       isInitializing = false;
+      setAuthReady(); // Signal auth ready even on timeout (safety net)
       setAppReady(true); // Signal ready even on timeout
     }, 20000); // 20 second max
 
@@ -515,6 +529,9 @@ export default function RootLayout() {
               id: session.user.id,
               email: session.user.email || `device-${deviceId}@anonymous.local`,
             });
+            
+            // 🔓 Signal that auth is ready on session change
+            setAuthReady();
             
             // Login and refresh credits with timeout
             await withTimeout(
@@ -578,6 +595,10 @@ export default function RootLayout() {
                 id: data.user.id,
                 email: `device-${deviceId}@anonymous.local`,
               });
+              
+              // 🔓 Signal that auth is ready after session recreation
+              setAuthReady();
+              
               await withTimeout(loginUser(data.user.id), 5000, 'Login timeout');
             }
           } catch (error) {
