@@ -17,8 +17,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAppStore } from '../src/store/useAppStore';
-import { supabase } from '../src/services/supabase';
-import { API_URL } from '../src/constants/config';
+import { addCredits } from '../src/services/api';
 import { analytics } from '../src/services/posthog';
 import tiktokService from '../src/services/tiktok';
 import appsFlyerService from '../src/services/appsflyer';
@@ -169,73 +168,59 @@ export default function CreditPacksScreen() {
         if (transaction) {
           console.log('💳 Transaction confirmed:', transaction);
           
-          // Update backend with new credits
+          // Update backend with new credits (uses self-healing auth)
           try {
-            const session = await supabase.auth.getSession();
-            const response = await fetch(`${API_URL}/api/user/add-credits`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${session.data.session?.access_token}`,
-              },
-              body: JSON.stringify({ 
-                credits: credits,
-                transactionId: transaction.transactionIdentifier,
-                productId: pkg.product.identifier,
-              }),
+            const data = await addCredits(
+              credits,
+              transaction.transactionIdentifier,
+              pkg.product.identifier
+            );
+            console.log('✅ Credits added to backend:', data);
+            
+            // Update local state
+            setCredits({ 
+              totalCredits: data.totalCredits,
+              hasCredits: true,
             });
 
-            if (response.ok) {
-              const data = await response.json();
-              console.log('✅ Credits added to backend:', data);
-              
-              // Update local state
-              setCredits({ 
-                totalCredits: data.totalCredits,
-                hasCredits: true,
-              });
+            // Track successful purchase
+            analytics.creditPackPurchased(
+              pkg.identifier,
+              pkg.product.identifier,
+              credits,
+              pkg.product.priceString
+            );
 
-              // Track successful purchase
-              analytics.creditPackPurchased(
-                pkg.identifier,
-                pkg.product.identifier,
-                credits,
-                pkg.product.priceString
-              );
+            // Track in TikTok and AppsFlyer
+            await tiktokService.trackEvent('credit_pack_purchased', {
+              credits: credits,
+              price: pkg.product.price,
+              currency: pkg.product.currencyCode,
+            });
+            await appsFlyerService.trackEvent('credit_pack_purchased', {
+              credits: credits,
+              revenue: pkg.product.price,
+              currency: pkg.product.currencyCode,
+            });
 
-              // Track in TikTok and AppsFlyer
-              await tiktokService.trackEvent('credit_pack_purchased', {
-                credits: credits,
-                price: pkg.product.price,
-                currency: pkg.product.currencyCode,
-              });
-              await appsFlyerService.trackEvent('credit_pack_purchased', {
-                credits: credits,
-                revenue: pkg.product.price,
-                currency: pkg.product.currencyCode,
-              });
-
-              // Show success modal
-              setPurchasedCredits(credits);
-              setShowSuccessModal(true);
-              
-              // Animate success modal
-              Animated.parallel([
-                Animated.spring(successScale, {
-                  toValue: 1,
-                  tension: 50,
-                  friction: 7,
-                  useNativeDriver: true,
-                }),
-                Animated.timing(successOpacity, {
-                  toValue: 1,
-                  duration: 300,
-                  useNativeDriver: true,
-                }),
-              ]).start();
-            } else {
-              throw new Error('Failed to update backend');
-            }
+            // Show success modal
+            setPurchasedCredits(credits);
+            setShowSuccessModal(true);
+            
+            // Animate success modal
+            Animated.parallel([
+              Animated.spring(successScale, {
+                toValue: 1,
+                tension: 50,
+                friction: 7,
+                useNativeDriver: true,
+              }),
+              Animated.timing(successOpacity, {
+                toValue: 1,
+                duration: 300,
+                useNativeDriver: true,
+              }),
+            ]).start();
           } catch (backendError) {
             console.error('❌ Failed to update backend:', backendError);
             Alert.alert(

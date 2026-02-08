@@ -1,7 +1,8 @@
 import * as FileSystem from 'expo-file-system/legacy';
 import { API_URL } from '../constants/config';
-import { getAccessToken } from './supabase';
+import { supabase, getAccessToken } from './supabase';
 import { waitForAuth } from './authReady';
+import { getHardwareDeviceId } from './deviceId';
 import { CreditsInfo, Generation, GenerationResult } from '../types';
 
 /**
@@ -127,26 +128,80 @@ async function fetchWithRetry<T>(
 
 /**
  * Get headers for authenticated requests
- * Waits for auth to be confirmed before attempting to get token
- * This guarantees the Supabase session is restored before any API call
+ * Self-healing: if token is missing, tries to recover the session
+ * 
+ * Recovery chain:
+ * 1. Wait for initial auth to be ready
+ * 2. Try to get token from current session
+ * 3. If null → force session refresh (handles expired access tokens)
+ * 4. If still null → re-authenticate anonymously (handles lost sessions)
+ * 5. If all fail → return empty headers
  */
 async function getAuthHeaders(): Promise<Record<string, string>> {
-  // Wait for auth to be ready (max 15 seconds)
+  // Wait for initial auth to be ready (max 15 seconds)
   const isReady = await waitForAuth(15000);
   
   if (!isReady) {
-    console.error('❌ Auth not ready after 15s - API call will fail');
-    return {};
+    console.error('❌ Auth not ready after 15s - attempting recovery...');
+    // Don't return empty - try recovery below
   }
   
   try {
-    const token = await getAccessToken();
+    // Step 1: Try to get token from current session
+    let token = await getAccessToken();
     if (token) {
-      return {
-        'Authorization': `Bearer ${token}`,
-      };
+      return { 'Authorization': `Bearer ${token}` };
     }
-    console.error('❌ Auth is ready but no token available');
+    
+    // Step 2: Token is null - try to force refresh the session
+    console.warn('⚠️ No token available, forcing session refresh...');
+    try {
+      const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
+      if (!refreshError && refreshData.session) {
+        token = refreshData.session.access_token;
+        console.log('✅ Session refreshed successfully');
+      }
+    } catch (refreshErr) {
+      console.warn('⚠️ Session refresh failed:', refreshErr);
+    }
+    
+    if (token) {
+      return { 'Authorization': `Bearer ${token}` };
+    }
+    
+    // Step 3: Session completely lost - re-authenticate anonymously
+    console.warn('⚠️ Session lost, re-authenticating anonymously...');
+    try {
+      let deviceId: string;
+      try {
+        deviceId = await getHardwareDeviceId();
+      } catch {
+        deviceId = `fallback-${Date.now()}`;
+      }
+      
+      const { data: anonData, error: anonError } = await supabase.auth.signInAnonymously({
+        options: {
+          data: {
+            device_id: deviceId,
+            is_anonymous: true,
+            recovered_session: true,
+          }
+        }
+      });
+      
+      if (!anonError && anonData.session) {
+        token = anonData.session.access_token;
+        console.log('✅ Re-authenticated anonymously - session recovered');
+      }
+    } catch (anonErr) {
+      console.error('❌ Anonymous re-auth failed:', anonErr);
+    }
+    
+    if (token) {
+      return { 'Authorization': `Bearer ${token}` };
+    }
+    
+    console.error('❌ All auth recovery attempts failed - request will fail');
     return {};
   } catch (error: any) {
     console.error('❌ Failed to get auth token:', error.message);
@@ -250,7 +305,7 @@ export async function awardRatingCredits(): Promise<{ success: boolean; totalCre
   return response.json();
 }
 
-// Purchase credit pack
+// Purchase credit pack (deprecated endpoint)
 export async function purchaseCredits(packId: string, credits: number, transactionId: string): Promise<{ success: boolean; totalCredits: number }> {
   const headers = await getAuthHeaders();
   
@@ -265,6 +320,27 @@ export async function purchaseCredits(packId: string, credits: number, transacti
 
   if (!response.ok) {
     throw new Error('Failed to purchase credits');
+  }
+
+  return response.json();
+}
+
+// Add credits from credit pack purchase (uses self-healing auth)
+export async function addCredits(credits: number, transactionId: string, productId: string): Promise<{ success: boolean; totalCredits: number }> {
+  const headers = await getAuthHeaders();
+  
+  const response = await fetch(`${API_URL}/api/user/add-credits`, {
+    method: 'POST',
+    headers: {
+      ...headers,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ credits, transactionId, productId }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ error: 'Failed to add credits' }));
+    throw new Error(error.error || 'Failed to add credits');
   }
 
   return response.json();

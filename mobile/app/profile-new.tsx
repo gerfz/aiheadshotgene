@@ -17,7 +17,7 @@ import { router, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAppStore } from '../src/store/useAppStore';
 import { signOut } from '../src/services/supabase';
-import { getCredits, getGenerations } from '../src/services/api';
+import { getCredits, getGenerations, updateSubscriptionStatus } from '../src/services/api';
 import { restorePurchases, checkProStatus } from '../src/services/purchases';
 import { FeedbackModal } from '../src/components/FeedbackModal';
 import { trackEvent } from '../src/services/posthog';
@@ -162,28 +162,19 @@ export default function ProfileScreen() {
       const isPro = await checkProStatus();
       
       if (isPro) {
-        // Update subscription status in backend
+        // Update subscription status in backend (uses self-healing auth)
         try {
-          const response = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/api/user/subscription`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${user?.id}`,
-            },
-            body: JSON.stringify({ isSubscribed: true }),
-          });
+          await updateSubscriptionStatus(true);
           
-          if (response.ok) {
-            // Refresh credits to show updated subscription status
-            const creditsData = await getCredits();
-            setCredits(creditsData);
-            
-            Alert.alert(
-              '✅ Subscription Restored!',
-              'Your subscription has been successfully restored.',
-              [{ text: 'OK' }]
-            );
-          }
+          // Refresh credits to show updated subscription status
+          const creditsData = await getCredits();
+          setCredits(creditsData);
+          
+          Alert.alert(
+            '✅ Subscription Restored!',
+            'Your subscription has been successfully restored.',
+            [{ text: 'OK' }]
+          );
         } catch (error) {
           console.error('Failed to update subscription status:', error);
           Alert.alert('⚠️ Partially Restored', 'Subscription found but failed to sync. Please restart the app.');
