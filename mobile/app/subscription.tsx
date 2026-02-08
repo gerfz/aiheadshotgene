@@ -59,6 +59,7 @@ export default function SubscriptionScreen() {
   const successScale = useRef(new Animated.Value(0)).current;
   const successOpacity = useRef(new Animated.Value(0)).current;
   const screenViewTimeRef = useRef<number>(Date.now());
+  const packagesLoadedRef = useRef(false);
 
   useEffect(() => {
     screenViewTimeRef.current = Date.now();
@@ -70,6 +71,16 @@ export default function SubscriptionScreen() {
       analytics.subscriptionScreenViewed(source as any);
       tiktokService.trackSubscriptionView();
     });
+    
+    // Background retry: if packages don't load, keep trying every 5s
+    const retryInterval = setInterval(() => {
+      if (!packagesLoadedRef.current) {
+        console.log('🔄 Background retry: loading offerings...');
+        loadOfferings();
+      }
+    }, 5000);
+    
+    return () => clearInterval(retryInterval);
   }, []);
 
   // Auto-scroll background images
@@ -98,6 +109,7 @@ export default function SubscriptionScreen() {
         
         if (availablePackages.length > 0) {
           setPackages(availablePackages);
+          packagesLoadedRef.current = true;
           console.log(`✅ Loaded ${availablePackages.length} packages (attempt ${attempt + 1})`);
           availablePackages.forEach(pkg => {
             console.log(`📦 Package: ${pkg.identifier} - ${pkg.product.priceString}`);
@@ -249,31 +261,16 @@ export default function SubscriptionScreen() {
     }
   };
 
-  const getMockPackages = () => [
-    { 
-      identifier: '$rc_weekly', 
-      product: { priceString: '$7.79', identifier: 'weekly_pro' } 
-    },
-    { 
-      identifier: '$rc_monthly', 
-      product: { priceString: '$14.79', identifier: 'monthly_pro' } 
-    },
-    { 
-      identifier: '$rc_annual', 
-      product: { priceString: '$79.79', identifier: 'yearly_pro' } 
-    }
-  ];
-
-  // Helper to safely find package in real data, or fallback to mock
-  const resolvePackage = (keyword: string, mockIndex: number) => {
-    const found = packages.find(p => 
+  // Find the real package from RevenueCat - NO mock/fallback data
+  const resolvePackage = (keyword: string) => {
+    return packages.find(p => 
       p.identifier.toLowerCase().includes(keyword.toLowerCase()) || 
       (p.product.identifier && p.product.identifier.toLowerCase().includes(keyword.toLowerCase()))
-    );
-    return found || getMockPackages()[mockIndex];
+    ) || null;
   };
 
-  const weeklyPkg = resolvePackage('weekly', 0);
+  const weeklyPkg = resolvePackage('weekly');
+  const packagesLoaded = packages.length > 0 && weeklyPkg !== null;
 
   // Auto-select weekly if not set
   useEffect(() => {
@@ -505,10 +502,15 @@ export default function SubscriptionScreen() {
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={[styles.ctaButton, purchasing && styles.ctaButtonDisabled]}
+              style={[styles.ctaButton, (purchasing || !packagesLoaded) && styles.ctaButtonDisabled]}
               onPress={() => {
+                if (!packagesLoaded) {
+                  // Packages not loaded - retry loading
+                  loadOfferings();
+                  return;
+                }
                 if (weeklyPkg) {
-                  // Track start free trial clicked
+                  // Track start free trial clicked with REAL price
                   analytics.startFreeTrialClicked(
                     freeTrialEnabled, 
                     weeklyPkg.product.priceString
@@ -520,11 +522,13 @@ export default function SubscriptionScreen() {
             >
               {purchasing ? (
                 <ActivityIndicator color="#FFF" />
+              ) : !packagesLoaded ? (
+                <Text style={styles.ctaText}>Loading prices...</Text>
               ) : (
                 <Text style={styles.ctaText}>
                   {freeTrialEnabled 
                     ? 'Start Free Trial' 
-                    : `Subscribe Now • ${weeklyPkg?.product?.priceString || '$7.79'}`
+                    : `Subscribe Now • ${weeklyPkg?.product?.priceString}`
                   }
                 </Text>
               )}
